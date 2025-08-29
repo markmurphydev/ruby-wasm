@@ -1,0 +1,6 @@
+
+From https://kddnewton.com/2023/12/01/advent-of-prism-part-1:
+> Clearly, there’s a balancing act to be performed here. In prism, we’ve made a couple of decisions that we think strike a good balance:
+> - You should never have to look at a child node or field to determine the type of a node. For example, we don’t have a generic `Assignment` node, which would mean you would have to go and look at the target of the assignment to know how to handle it.
+> - Nodes should be split on semantic boundaries, not syntactic boundaries. For example, we have a `CaseNode` and a `CaseMatchNode`, for `case ... when` and `case ... in`respectively. While these nodes do use the same `case` keyword, semantically they are vastly different.
+> - Nodes should use flags to indicate divergence within their type rather than creating new nodes. For example, we could have created a `BinaryIntegerNode` any time an integer used the `0b` prefix. However, this would have meant every consumer would have had to handle all bases for all number types, which would quickly have gotten out of hand.

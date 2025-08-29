@@ -1,4 +1,4 @@
 - [[Download & compile Hoot Scheme compiler]]
-- [[Create Parser Structure]]
+- [[Write easy part of lexer]]
 
 # Completed

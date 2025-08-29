@@ -1,3 +1,5 @@
+// Precedence table. I don't know why these steps were chosen.
+// For forwards compatibility?
 const PREC = {
   COMMENT: -2,
   CURLY_BLOCK: 1,
@@ -27,6 +29,7 @@ const PREC = {
   COMPLEMENT: 85,
 };
 
+// Very helpful. I will be stealing these.
 const IDENTIFIER_CHARS = /[^\x00-\x1F\s:;`"'@$#.,|^&<=>+\-*/\\%?!~()\[\]{}]*/;
 const LOWER_ALPHA_CHAR = /[^\x00-\x1F\sA-Z0-9:;`"'@$#.,|^&<=>+\-*/\\%?!~()\[\]{}]/;
 const ALPHA_CHAR = /[^\x00-\x1F\s0-9:;`"'@$#.,|^&<=>+\-*/\\%?!~()\[\]{}]/;
@@ -34,6 +37,7 @@ const ALPHA_CHAR = /[^\x00-\x1F\s0-9:;`"'@$#.,|^&<=>+\-*/\\%?!~()\[\]{}]/;
 module.exports = grammar({
   name: 'ruby',
 
+  // Tokens read by the external scanner `scanner.cc`
   externals: $ => [
     $._line_break,
 
@@ -793,7 +797,7 @@ module.exports = grammar({
     character: $ => /\?(\\\S({[0-9A-Fa-f]*}|[0-9A-Fa-f]*|-\S([MC]-\S)?)?|\S)/,
 
     interpolation: $ => seq(
-      '#{', optional($._statements),'}'
+      '#{', optional($._statements), '}'
     ),
 
     string: $ => seq(
@@ -915,18 +919,18 @@ module.exports = grammar({
   }
 });
 
-function sep (rule, separator) {
+function sep(rule, separator) {
   return optional(sep1(rule, separator));
 }
 
-function sep1 (rule, separator) {
+function sep1(rule, separator) {
   return seq(rule, repeat(seq(separator, rule)));
 }
 
-function commaSep1 (rule) {
+function commaSep1(rule) {
   return sep1(rule, ',');
 }
 
-function commaSep (rule) {
+function commaSep(rule) {
   return optional(commaSep1(rule));
 }
