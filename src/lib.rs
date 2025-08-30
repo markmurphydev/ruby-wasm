@@ -1,5 +1,5 @@
 pub mod parse;
-pub mod token;
+pub mod lexeme;
 pub mod tokenize;
 pub mod wasm;
 pub mod wat;

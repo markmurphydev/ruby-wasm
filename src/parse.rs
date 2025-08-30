@@ -1,6 +1,6 @@
 //! Ruby token -> wasm struct parser
 
-use crate::token::Token;
+use crate::lexeme::Lexeme;
 use crate::wasm::{Expr, Function, FunctionIndex, Instruction, Module};
 use itertools::PeekNth;
 use std::vec;
@@ -10,7 +10,7 @@ const TRUE_VALUE: u64 = 0b0011;
 const NIL_VALUE: u64 = 0b0111;
 
 pub struct Parser {
-    tokens: PeekNth<vec::IntoIter<Token>>,
+    tokens: PeekNth<vec::IntoIter<Lexeme>>,
     /// Instructions in the body of the function being constructed...
     instructions: Vec<Instruction>,
     functions: Vec<Function>,
@@ -18,7 +18,7 @@ pub struct Parser {
 }
 
 impl Parser {
-    pub fn new(tokens: Vec<Token>) -> Self {
+    pub fn new(tokens: Vec<Lexeme>) -> Self {
         Self {
             tokens: itertools::peek_nth(tokens.into_iter()),
             instructions: vec![],
@@ -36,7 +36,7 @@ impl Parser {
         // TODO -- Fix.
 
         while let Some(token) = self.tokens.peek() {
-            use Token::*;
+            use Lexeme::*;
             match token {
                 True | False | Nil => self.expression(),
                 Newline | Semicolon => {
@@ -59,19 +59,19 @@ impl Parser {
     /// Consume an expression.
     fn expression(&mut self) {
         match self.tokens.next().unwrap() {
-            first_token @ (Token::True | Token::False | Token::Nil) => {
+            first_token @ (Lexeme::True | Lexeme::False | Lexeme::Nil) => {
                 match self.tokens.peek() {
                     None => {
                         // An expression followed by end-of-file returns the value.
                         // TODO -- Fill out the wasm const instructions for each of these values.
                         match first_token {
-                            Token::True => self.instructions.push(Instruction::TRUE),
-                            Token::False => self.instructions.push(Instruction::FALSE),
-                            Token::Nil => self.instructions.push(Instruction::NIL),
+                            Lexeme::True => self.instructions.push(Instruction::TRUE),
+                            Lexeme::False => self.instructions.push(Instruction::FALSE),
+                            Lexeme::Nil => self.instructions.push(Instruction::NIL),
                             _ => panic!(),
                         }
                     }
-                    Some(Token::Newline | Token::Semicolon) => {
+                    Some(Lexeme::Newline | Lexeme::Semicolon) => {
                         self.tokens.next().unwrap();
 
                         // A value expression followed by a terminator is a no-op.
@@ -86,7 +86,7 @@ impl Parser {
 
     /// Consume terminators \n and ;
     fn terminators(&mut self) {
-        while let Some(Token::Semicolon | Token::Newline) = self.tokens.peek() {
+        while let Some(Lexeme::Semicolon | Lexeme::Newline) = self.tokens.peek() {
             self.tokens.next();
         }
     }

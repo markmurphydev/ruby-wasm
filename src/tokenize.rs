@@ -1,10 +1,10 @@
 use itertools::PeekNth;
 use std::str::Chars;
-use crate::token::Token;
+use crate::lexeme::Lexeme;
 
 pub struct Tokenizer<'text> {
     chars: PeekNth<Chars<'text>>,
-    tokens: Vec<Token>,
+    tokens: Vec<Lexeme>,
 }
 
 impl <'text> Tokenizer<'text> {
@@ -15,12 +15,12 @@ impl <'text> Tokenizer<'text> {
         }
     }
 
-    pub fn tokenize(mut self) -> Vec<Token> {
+    pub fn tokenize(mut self) -> Vec<Lexeme> {
 
         /// Any number of trailing newlines are semantically identical to zero trailing newlines.
         /// It's more convenient for our parsing to assume zero.
-        fn trim_trailing_newlines(tokens: &mut Vec<Token>) {
-            let trailing_newline_count = tokens.iter().rev().take_while(|tok| **tok == Token::Newline).count();
+        fn trim_trailing_newlines(tokens: &mut Vec<Lexeme>) {
+            let trailing_newline_count = tokens.iter().rev().take_while(|tok| **tok == Lexeme::Newline).count();
             tokens.truncate(tokens.len() - trailing_newline_count);
         }
 
@@ -29,8 +29,8 @@ impl <'text> Tokenizer<'text> {
             match self.chars.peek() {
                 None => break,
                 Some(&c) => match c {
-                    '\n' => self.tokens.push(Token::Newline),
-                    ';' => self.tokens.push(Token::Semicolon),
+                    '\n' => self.tokens.push(Lexeme::Newline),
+                    ';' => self.tokens.push(Lexeme::Semicolon),
                     c if c.is_ascii_alphabetic() => self.keyword_or_identifier(),
                     _ => panic!("Unexpected character: {:#?}", c)
                 }
@@ -55,9 +55,9 @@ impl <'text> Tokenizer<'text> {
         }
 
         match name.as_str() {
-            "false" => self.tokens.push(Token::False),
-            "true" => self.tokens.push(Token::True),
-            "nil" => self.tokens.push(Token::Nil),
+            "false" => self.tokens.push(Lexeme::False),
+            "true" => self.tokens.push(Lexeme::True),
+            "nil" => self.tokens.push(Lexeme::Nil),
             _ => todo!("Not a keyword: {}", name)
         }
     }
@@ -73,12 +73,12 @@ impl <'text> Tokenizer<'text> {
 #[cfg(test)]
 mod tests {
     use super::*;
-    use Token::*;
+    use Lexeme::*;
 
     #[test]
     pub fn empty() {
         let text = "";
-        let expected_tokens: Vec<Token> = vec![];
+        let expected_tokens: Vec<Lexeme> = vec![];
 
         let test_tokens = Tokenizer::new(text).tokenize();
 
@@ -89,7 +89,7 @@ mod tests {
     pub fn keywords() {
         {
             let text = "nil";
-            let expected_tokens: Vec<Token> = vec![Nil];
+            let expected_tokens: Vec<Lexeme> = vec![Nil];
 
             let test_tokens = Tokenizer::new(text).tokenize();
 
@@ -97,7 +97,7 @@ mod tests {
         }
         {
             let text = "true";
-            let expected_tokens: Vec<Token> = vec![True];
+            let expected_tokens: Vec<Lexeme> = vec![True];
 
             let test_tokens = Tokenizer::new(text).tokenize();
 
@@ -105,7 +105,7 @@ mod tests {
         }
         {
             let text = "true false";
-            let expected_tokens: Vec<Token> = vec![True, False];
+            let expected_tokens: Vec<Lexeme> = vec![True, False];
 
             let test_tokens = Tokenizer::new(text).tokenize();
 
