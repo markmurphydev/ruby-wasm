@@ -20,6 +20,18 @@ https://tanishiking.github.io/posts/wasm-gc/
 Binaryen's GC lowering tips
 https://github.com/WebAssembly/binaryen/wiki/GC-Implementation---Lowering-Tips
 
+
+# Binutils
+Hoot has some. Allegedly.
+
+https://github.com/WebAssembly/wabt
+- No WasmGC support
+https://github.com/WebAssembly/wabt/issues/2348
+
+https://github.com/bytecodealliance/wasm-tools
+
+- `binaryen`'s `wasm-as` – it may modify instruction sequences to fit its IR
+	- But `binaryen` is a Wasm optimizer so it should give accurate output...
 # Misc
 Oh, there's an ACM Queue edition on wasm!
 

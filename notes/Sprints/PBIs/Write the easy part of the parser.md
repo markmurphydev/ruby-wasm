@@ -1,0 +1,2 @@
+Like Prism, the Crafting Interpreters parser, Rust Analyzer, ..., it'll be handwritten recursive descent with Pratt parsing for operator precedence/ambiguity/whatever it is that it solves.
+I am not an intellectual.

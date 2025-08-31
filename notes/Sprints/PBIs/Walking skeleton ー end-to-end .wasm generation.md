@@ -11,10 +11,6 @@ This will require:
 	- It's correct to call this "serializing" right?
 
 I don't want to worry about the Wasm binary format just yet.
-I can output `.wat` and convert it with one of:
-- `wat2wasm` – Doesn't support WasmGC, but there's some PRs for it
-- `hoot` – v0.1.0 claims to have a `.wat` parser, but idk
-- `binaryen`'s `wasm-as` – it may modify instruction sequences to fit its IR
-	- But `binaryen` is a Wasm optimizer so it should give accurate output...
+I can output `.wat` and convert it with one of the [[Wasm#Binutils]] programs
 
 Then should just test that the compiled programs give expected output when run.
