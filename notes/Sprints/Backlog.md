@@ -3,16 +3,58 @@
 - [[Write the easy part of lexer]]
 	- Week 0
 - Install utilities
+- Research Ruby parsing situation
 - [[Lexer end-to-end testing]]
+- Get a Ruby tool to produce reference ASTs
 - [[Walking skeleton ー end-to-end .wasm generation]]
 - [[Browser .wasm runner page]]
 - Research and write up dynamic-language value representation
 	- Especially look at Hoot's Wasm repr
+- Research Ruby fixnum, bignum system
+- Document integration/e2e testing structure
+- Document our value representation
 - Research Prism's AST nodes, copy into my project mostly-wholesale
-- Research Pratt parsing (again...)
+- Research parsing algorithms – recursive descent & Pratt parsing (again...)
 - Write the easy part of the parser
 - Research and write up the hard parts of the lexer
+- Codegen for numbers
+- Codegen for basic control structures
+- Research, write up Ruby scoping rules
+- Research, write up Wasm scope handling
+- Codegen for local variable assignment, loading
+- Codegen for global variable assignment, loading
+- Research Hoot's mapping of functions -> Wasm functions
+- Research closure implementation
+- Codegen for top-level method (function) definitions
+- Codegen for closures/blocks
+- Research Ruby object system
+- Research strings
+	- Research Ruby strings
+	- Research string representation in other WasmGC projects
+- Document our string strategy
+- Codegen for strings
+- Codegen to Wasm binary format
+- Research strategies for stdlib in WasmGC
+- Document our stdlib strategy
+- Research Wasm linking
+- Add basic stdlib methods for numbers, strings
+- Add wasm-linked hashtable implementation
+- Codegen for interned symbols
+- Research class definition, object instantiation, method dispatch
+- Codegen for class definition
+- Codegen for object instantiation
+- Codegen for method dispatch
+- Research Javascript FFI
+- Codegen for Javascript FFI
+- Document final plan for demo project
+- Implement demo project
+- Final presentation planning
+- Produce final presentation materials
+- Final presentation practice
+- Capstone writeup
+- Polish up the project documentation
 
 ## Not immediate priorities
 - Research Binaryen ー Viable post-compilation optimizer? Do I want one?
+- "Wasm spec explained" posts
 # Completed
