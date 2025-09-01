@@ -1,44 +1,43 @@
-- [[Download & compile Hoot Scheme compiler]]
+- [[Install, run, document Hoot Scheme compiler]]
 	- Week 0
 - [[Write the easy part of lexer]]
 	- Week 0
-- Install utilities
-- Research Ruby parsing situation
+- [[Install wasm utilities]]
+- [[Document Ruby parsing situation]]
 - [[Lexer end-to-end testing]]
-- Get a Ruby tool to produce reference ASTs
+- [[Get a Ruby parser to produce reference ASTs]]
 - [[Walking skeleton ー end-to-end .wasm generation]]
 - [[Browser .wasm runner page]]
-- Research and write up dynamic-language value representation
-	- Especially look at Hoot's Wasm repr
-- Research Ruby fixnum, bignum system
-- Document integration/e2e testing structure
-- Document our value representation
-- Research Prism's AST nodes, copy into my project mostly-wholesale
-- Research parsing algorithms – recursive descent & Pratt parsing (again...)
-- Write the easy part of the parser
-- Research and write up the hard parts of the lexer
-- Codegen for numbers
-- Codegen for basic control structures
-- Research, write up Ruby scoping rules
-- Research, write up Wasm scope handling
-- Codegen for local variable assignment, loading
-- Codegen for global variable assignment, loading
-- Research Hoot's mapping of functions -> Wasm functions
-- Research closure implementation
-- Codegen for top-level method (function) definitions
-- Codegen for closures/blocks
-- Research Ruby object system
-- Research strings
-	- Research Ruby strings
-	- Research string representation in other WasmGC projects
-- Document our string strategy
-- Codegen for strings
-- Codegen to Wasm binary format
-- Research strategies for stdlib in WasmGC
-- Document our stdlib strategy
-- Research Wasm linking
-- Add basic stdlib methods for numbers, strings
-- Add wasm-linked hashtable implementation
+- [[Research value representation in dynamic languages]]
+- [[Document how we'll use Ruby spec]]
+- [[Research Ruby fixnum, bignum system]]
+- [[Document integration, e2e testing structure, environment]]
+- [[Document our value representation]]
+- [[Research Prism's AST nodes, copy into my project mostly-wholesale]]
+- [[Research parsing algorithms – recursive descent & Pratt parsing (again...)]]
+- [[Write the easy part of the parser]]
+- [[Document the hard parts of the lexer]]
+- [[Codegen for integers]]
+- [[Codegen for integer operations]]
+- [[Codegen for basic control structures]]
+- [[Research, write up Ruby scoping rules]]
+- [[Research, write up Wasm scope handling]]
+- [[Codegen for local variable assignment, loading]]
+- [[Codegen for global variable assignment, loading]]
+- [[Research Hoot's mapping of functions -> Wasm functions]]
+- [[Research closure implementation]]
+- [[Codegen for top-level method (function) definitions]]
+- [[Codegen for closures, blocks]]
+- [[Research Ruby object system]]
+- [[Research strings]]
+- [[Document our string strategy]]
+- [[Codegen for strings]]
+- [[Codegen to Wasm binary format]]
+- [[Research strategies for stdlib in WasmGC]]
+- [[Document our stdlib strategy]]
+- [[Research Wasm linking]]
+- [[Add basic stdlib methods for numbers, strings]]
+- [[Add wasm-linked hashtable implementation]]
 - Codegen for interned symbols
 - Research class definition, object instantiation, method dispatch
 - Codegen for class definition
@@ -57,4 +56,7 @@
 ## Not immediate priorities
 - Research Binaryen ー Viable post-compilation optimizer? Do I want one?
 - "Wasm spec explained" posts
+
+## Administrative
+- Check if Obsidian has a metadata system for item point values, etc.
 # Completed

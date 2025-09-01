@@ -1,3 +1,5 @@
+Points: 4
+
 The whole compiler pipeline. Take in a `.rb` file and output an executable (vm-able?) `.wasm` file.
 The point is just to show that we can output a Wasm-compliant file.
 

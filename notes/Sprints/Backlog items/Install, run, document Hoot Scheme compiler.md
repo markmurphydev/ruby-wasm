@@ -1,3 +1,5 @@
+Points: 4
+
 This is the simplest compiler I'm aware of that compiles to a Wasm 3.0 / WasmGC target.
 
 I'd like to start by investigating the 0.1.0 release:

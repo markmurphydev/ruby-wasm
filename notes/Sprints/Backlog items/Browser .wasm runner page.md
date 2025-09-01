@@ -1,3 +1,5 @@
+Points: 2
+
 Needs to load the given .wasm file, run its start function, then `console.log` the result.
 I'm certain MDN or someone has a guide on this.
 

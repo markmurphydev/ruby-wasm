@@ -1,3 +1,5 @@
+Points: 4
+
 The final lexer probably requires parser-only information, and must thus be driven by the parser.
 Even so, I should add the option to get a flat token stream from the compiler binary.
 I should test that the output of my lexer matches the output of Prism.
