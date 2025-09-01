@@ -7,9 +7,9 @@ Week 1:
 - [[Lexer end-to-end testing]]
 - [[Get a Ruby parser to produce reference ASTs]]
 - [[Walking skeleton ー end-to-end .wasm generation]]
+- [[Research value representation in dynamic languages]]
 Later:
 - [[Browser .wasm runner page]]
-- [[Research value representation in dynamic languages]]
 - [[Document how we'll use Ruby spec]]
 - [[Research Ruby fixnum, bignum system]]
 - [[Document integration, e2e testing structure, environment]]
