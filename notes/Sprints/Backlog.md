@@ -1,12 +1,13 @@
+
+Week 1:
 - [[Install, run, document Hoot Scheme compiler]]
-	- Week 0
 - [[Write the easy part of lexer]]
-	- Week 0
 - [[Install wasm utilities]]
 - [[Document Ruby parsing situation]]
 - [[Lexer end-to-end testing]]
 - [[Get a Ruby parser to produce reference ASTs]]
 - [[Walking skeleton ー end-to-end .wasm generation]]
+Later:
 - [[Browser .wasm runner page]]
 - [[Research value representation in dynamic languages]]
 - [[Document how we'll use Ruby spec]]
@@ -37,21 +38,21 @@
 - [[Document our stdlib strategy]]
 - [[Research Wasm linking]]
 - [[Add basic stdlib methods for numbers, strings]]
-- [[Add wasm-linked hashtable implementation]]
-- Codegen for interned symbols
-- Research class definition, object instantiation, method dispatch
-- Codegen for class definition
-- Codegen for object instantiation
-- Codegen for method dispatch
-- Research Javascript FFI
-- Codegen for Javascript FFI
-- Document final plan for demo project
-- Implement demo project
-- Final presentation planning
-- Produce final presentation materials
-- Final presentation practice
-- Capstone writeup
-- Polish up the project documentation
+- [[Add internal hash table implementation]]
+- [[Codegen for interned symbols]]
+- [[Research class definition, object instantiation, method dispatch]]
+- [[Codegen for class definition]]
+- [[Codegen for object instantiation]]
+- [[Codegen for method dispatch]]
+- [[Research Wasm <-> Javascript FFI]]
+- [[Codegen for Wasm <-> Javascript FFI]]
+- [[Document final plan for demo project]]
+- [[Implement demo project]]
+- [[Final presentation planning]]
+- [[Produce final presentation materials]]
+- [[Final presentation practice]]
+- [[Polish up the project documentation]]
+- [[Capstone writeup]]
 
 ## Not immediate priorities
 - Research Binaryen ー Viable post-compilation optimizer? Do I want one?
