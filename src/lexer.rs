@@ -221,9 +221,22 @@ impl<'text> Lexer<'text> {
                 },
                 _ => 1,
             },
-            'd' => match self.check_rest_of_keyword("do", Do, 2) {
-                Ok(kw) => return kw,
-                Err(consumed) => consumed + 1,
+            'd' => match self.chars.peek() {
+                Some('e') => match self.check_rest_of_keyword("f", Def, 3) {
+                    Ok(kw) => return kw,
+                    Err(consumed) => consumed + 1,
+                },
+                Some('o') => {
+                    self.chars.next();
+                    match self.chars.peek() {
+                        Some(&c) if is_identifier_char(c) => 2,
+                        _ => {
+                            self.chars.next();
+                            return self.simple_lexeme(Do, 2);
+                        }
+                    }
+                }
+                _ => 1,
             },
             'e' => match self.chars.peek() {
                 Some('l') => {
@@ -235,17 +248,19 @@ impl<'text> Lexer<'text> {
                                 Some('e') => {
                                     self.chars.next();
                                     match self.chars.peek() {
-                                        Some('i') => match self.check_rest_of_keyword("f", Elsif, 6) {
-                                            Ok(kw) => return kw,
-                                            Err(consumed) => consumed + 4,
+                                        Some('i') => {
+                                            match self.check_rest_of_keyword("f", Elsif, 6) {
+                                                Ok(kw) => return kw,
+                                                Err(consumed) => consumed + 4,
+                                            }
                                         }
                                         Some(&c) if is_identifier_char(c) => 4,
                                         _ => {
                                             self.chars.next();
                                             return self.simple_lexeme(Else, 4);
-                                        },
+                                        }
                                     }
-                                },
+                                }
                                 _ => 3,
                             }
                         }
@@ -260,7 +275,7 @@ impl<'text> Lexer<'text> {
                             _ => {
                                 self.chars.next();
                                 return self.simple_lexeme(End, 3);
-                            },
+                            }
                         }
                     }
                     Some('s') => match self.check_rest_of_keyword("ensure", Ensure, 6) {
@@ -278,7 +293,7 @@ impl<'text> Lexer<'text> {
             'i' => match self.check_rest_of_keyword("in", In, 2) {
                 Ok(kw) => return kw,
                 Err(consumed) => consumed + 1,
-            }
+            },
             'n' => match self.chars.peek() {
                 Some('i') => match self.check_rest_of_keyword("nil", Nil, 3) {
                     Ok(kw) => return kw,
@@ -293,9 +308,124 @@ impl<'text> Lexer<'text> {
             'o' => match self.check_rest_of_keyword("or", Or, 2) {
                 Ok(kw) => return kw,
                 Err(consumed) => consumed + 1,
-            }
+            },
+            'r' => match self.chars.peek() {
+                Some('e') => {
+                    self.chars.next();
+                    match self.chars.peek() {
+                        Some('d') => match self.check_rest_of_keyword("o", Redo, 4) {
+                            Ok(kw) => return kw,
+                            Err(consumed) => consumed + 2,
+                        },
+                        Some('s') => match self.check_rest_of_keyword("cue", Rescue, 6) {
+                            Ok(kw) => return kw,
+                            Err(consumed) => consumed + 2,
+                        },
+                        Some('t') => {
+                            self.chars.next();
+                            match self.chars.peek() {
+                                Some('r') => match self.check_rest_of_keyword("y", Retry, 5) {
+                                    Ok(kw) => return kw,
+                                    Err(consumed) => consumed + 3,
+                                },
+                                Some('u') => match self.check_rest_of_keyword("rn", Return, 6) {
+                                    Ok(kw) => return kw,
+                                    Err(consumed) => consumed + 3,
+                                },
+                                _ => 3,
+                            }
+                        }
+                        _ => 2,
+                    }
+                }
+                _ => 1,
+            },
+            's' => match self.chars.peek() {
+                Some('e') => match self.check_rest_of_keyword("lf", SelfKeyword, 4) {
+                    Ok(kw) => return kw,
+                    Err(consumed) => consumed + 1, // 'l' wasn't consumed by us.
+                },
+                Some('u') => match self.check_rest_of_keyword("per", Super, 5) {
+                    Ok(kw) => return kw,
+                    Err(consumed) => consumed + 1,
+                },
+                _ => 1,
+            },
+            't' => match self.chars.peek() {
+                Some('h') => match self.check_rest_of_keyword("en", Then, 4) {
+                    Ok(kw) => return kw,
+                    Err(consumed) => consumed + 1, // 'l' wasn't consumed by us.
+                },
+                Some('r') => match self.check_rest_of_keyword("ue", True, 4) {
+                    Ok(kw) => return kw,
+                    Err(consumed) => consumed + 1,
+                },
+                _ => 1,
+            },
+            'u' => match self.chars.peek() {
+                Some('n') => {
+                    self.chars.next();
+                    match self.chars.peek() {
+                        Some('d') => match self.check_rest_of_keyword("ef", Undef, 5) {
+                            Ok(kw) => return kw,
+                            Err(consumed) => consumed + 2,
+                        },
+                        Some('l') => match self.check_rest_of_keyword("ess", Unless, 6) {
+                            Ok(kw) => return kw,
+                            Err(consumed) => consumed + 2,
+                        },
+                        Some('t') => match self.check_rest_of_keyword("il", Until, 5) {
+                            Ok(kw) => return kw,
+                            Err(consumed) => consumed + 2,
+                        },
+                        _ => 2,
+                    }
+                }
+                _ => 1,
+            },
+            'w' => match self.chars.peek() {
+                Some('h') => {
+                    self.chars.next();
+                    match self.chars.peek() {
+                        Some('e') => match self.check_rest_of_keyword("n", When, 4) {
+                            Ok(kw) => return kw,
+                            Err(consumed) => consumed + 2,
+                        },
+                        Some('i') => match self.check_rest_of_keyword("le", While, 5) {
+                            Ok(kw) => return kw,
+                            Err(consumed) => consumed + 2,
+                        },
+                        _ => 2,
+                    }
+                }
+                _ => 1,
+            },
+            'y' => match self.check_rest_of_keyword("ield", Yield, 5) {
+                Ok(kw) => return kw,
+                Err(consumed) => consumed + 1,
+            },
+            '_' => match self.chars.peek() {
+                Some('_') => {
+                    self.chars.next();
+                    match self.chars.peek() {
+                        Some('E') => match self.check_rest_of_keyword("NCODING__", UnderscoreEncoding, 12) {
+                            Ok(kw) => return kw,
+                            Err(consumed) => consumed + 2,
+                        },
+                        Some('F') => match self.check_rest_of_keyword("ILE__", UnderscoreFile, 8) {
+                            Ok(kw) => return kw,
+                            Err(consumed) => consumed + 2,
+                        },
+                        Some('L') => match self.check_rest_of_keyword("INE__", UnderscoreLine, 8) {
+                            Ok(kw) => return kw,
+                            Err(consumed) => consumed + 2,
+                        },
+                        _ => 2,
+                    }
+                }
+                _ => 1,
+            },
             _ => 1,
-            // TODO: The rest of the keywords
         };
 
         // This is not a keyword, so consume until we reach a non-identifier character.
@@ -305,7 +435,7 @@ impl<'text> Lexer<'text> {
                     len += 1;
                     self.chars.next();
                 }
-                _ => return self.simple_lexeme(Identifier, len)
+                _ => return self.simple_lexeme(Identifier, len),
             }
         }
     }
@@ -335,27 +465,6 @@ impl<'text> Lexer<'text> {
             _ => Ok(self.simple_lexeme(kind, len)),
         }
     }
-
-    // fn keyword_or_identifier(&mut self) {
-    //     // TODO -- Only keyword right now
-    //     assert!(!self.chars.peek().unwrap().is_numeric());
-    //     let mut name = String::new();
-    //
-    //     while let Some(c) = self.chars.peek() {
-    //         if c.is_ascii_alphanumeric() {
-    //             name.push(self.chars.next().unwrap());
-    //         } else {
-    //             break;
-    //         }
-    //     }
-    //
-    //     match name.as_str() {
-    //         "false" => self.tokens.push(LexemeKind::False),
-    //         "true" => self.tokens.push(LexemeKind::True),
-    //         "nil" => self.tokens.push(LexemeKind::Nil),
-    //         _ => todo!("Not a keyword: {}", name),
-    //     }
-    // }
 
     /// Pre: '\n' has been consumed.
     fn newline(&mut self) -> Lexeme {
