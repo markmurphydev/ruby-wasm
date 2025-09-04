@@ -45,96 +45,128 @@ pub enum LexemeKind {
     Eof,
     /// Newline character outside of other tokens.
     Newline,
+    /// Character literal of the form `?<CHAR>`
+    CharacterLiteral,
 
     // Punctuation
-        Ampersand,
-        AmpersandAmpersand,
-        AmpersandAmpersandEqual,
-        AmpersandEqual,
-        AmpersandPeriod,
-        /// `` ` ``
-        Backtick,
-        /// From Prism: "! or !@" ??? I'm not doing that rn.
-        Bang,
-        /// `!=`
-        BangEqual,
-        /// `!~`
-        BangTilde,
-        /// '{'
-        BraceLeft,
-        /// '}'
-        BraceRight,
-        /// `[`
-        BracketLeft,
-        /// `[]`
-        BracketLeftRight,
-        /// `[]=`
-        BracketLeftRightEqual,
-        /// `]`
-        BracketRight,
-        /// `^`
-        Caret,
-        /// `^=`
-        CaretEqual,
-        /// `:`
-        Colon,
-        /// `::`
-        ColonColon,
-        /// `,`
-        Comma,
-        /// `.`
-        Dot,
-        /// `..`
-        DotDot,
-        /// `...`
-        DotDotDot,
-        /// `=`
-        Equal,
-        /// `==`
-        EqualEqual,
-        /// `===`
-        EqualEqualEqual,
-        /// `=>`
-        EqualGreater,
-        /// `=~`
-        EqualTilde,
-        /// `>`
-        Greater,
-        /// `>=`
-        GreaterEqual,
-        /// `>>`
-        GreaterGreater,
-        /// `>>=`
-        GreaterGreaterEqual,
+    Ampersand,
+    AmpersandAmpersand,
+    AmpersandAmpersandEqual,
+    AmpersandEqual,
+    AmpersandPeriod,
+    /// `` ` ``
+    Backtick,
+    /// From Prism: "! or !@" ??? I'm not doing that rn.
+    Bang,
+    /// `!=`
+    BangEqual,
+    /// `!~`
+    BangTilde,
+    /// '{'
+    BraceLeft,
+    /// '}'
+    BraceRight,
+    /// `[`
+    BracketLeft,
+    /// `[]`
+    BracketLeftRight,
+    /// `[]=`
+    BracketLeftRightEqual,
+    /// `]`
+    BracketRight,
+    /// `^`
+    Caret,
+    /// `^=`
+    CaretEqual,
+    /// `:`
+    Colon,
+    /// `::`
+    ColonColon,
+    /// `,`
+    Comma,
+    /// `.`
+    Dot,
+    /// `..`
+    DotDot,
+    /// `...`
+    DotDotDot,
+    /// `=`
+    Equal,
+    /// `==`
+    EqualEqual,
+    /// `===`
+    EqualEqualEqual,
+    /// `=>`
+    EqualGreater,
+    /// `=~`
+    EqualTilde,
+    /// `>`
+    Greater,
+    /// `>=`
+    GreaterEqual,
+    /// `>>`
+    GreaterGreater,
+    /// `>>=`
+    GreaterGreaterEqual,
+    /// '<'
     Less,
+    /// '<='
     LessEqual,
+    /// '<=>'
     LessEqualGreater,
+    /// '<<'
     LessLess,
+    /// '<<='
     LessLessEqual,
+    /// '-'
     Minus,
+    /// '-@'
     MinusAt,
+    /// '-='
     MinusEqual,
+    /// '->'
     MinusGreater,
+    /// '%'
     Percent,
+    /// '%='
     PercentEqual,
+    /// '%i'
     PercentLowerI,
+    /// '%w'
     PercentLowerW,
+    /// '%x'
     PercentLowerX,
+    /// '%I'
     PercentUpperI,
+    /// '%W'
     PercentUpperW,
+    /// '|'
     Pipe,
+    /// '|='
     PipeEqual,
+    /// '||'
     PipePipe,
+    /// '||='
     PipePipeEqual,
+    /// '+'
     Plus,
+    /// '+@'
     PlusAt,
+    /// '+='
     PlusEqual,
+    /// '?'
     Question,
+    /// '/'
     Slash,
+    /// '/='
     SlashEqual,
+    /// '*'
     Star,
+    /// '*='
     StarEqual,
+    /// '**'
     StarStar,
+    /// '**='
     StarStarEqual,
     /// `~` or `~@`
     /// TODO: ???
@@ -176,8 +208,11 @@ pub enum LexemeKind {
     When,
     While,
     Yield,
+    /// "__ENCODING__"
     UnderscoreEncoding,
+    /// "__FILE__"
     UnderscoreFile,
+    /// "__LINE__"
     UnderscoreLine,
 
     Identifier,

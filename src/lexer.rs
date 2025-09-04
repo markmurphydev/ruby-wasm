@@ -1,5 +1,5 @@
 use crate::lexeme::{Col, Lexeme, LexemeKind, Line};
-use itertools::PeekNth;
+use itertools::{Itertools, PeekNth};
 use std::str::Chars;
 
 use LexemeKind::*;
@@ -30,13 +30,8 @@ impl<'text> Lexer<'text> {
     }
 
     /// Consume and return a single lexeme
-    pub fn tokenize(&mut self) -> Vec<Lexeme> {
-        // /// Any number of trailing newlines are semantically identical to zero trailing newlines.
-        // /// It's more convenient for our parsing to assume zero.
-        // fn trim_trailing_newlines(tokens: &mut Vec<LexemeKind>) {
-        //     let trailing_newline_count = tokens.iter().rev().take_while(|tok| **tok == LexemeKind::Newline).count();
-        //     tokens.truncate(tokens.len() - trailing_newline_count);
-        // }
+    pub fn lex(&mut self) -> Lexeme {
+        // Strategy: For punctuation, simple matching.
 
         // Prism doesn't include whitespace in token width.
         self.skip_whitespace();
@@ -46,6 +41,15 @@ impl<'text> Lexer<'text> {
             None => Lexeme::new(Eof, self.line, self.col, self.line, self.col),
             Some(c) => match c {
                 '\n' => self.newline(),
+                
+                // Character literal
+
+                // '?' can be the start of a character literal, or a ternary operator
+                '?' => match self.chars.peek() {
+                    None => self.simple_lexeme(Question, 1),
+                    Some(c) if c.is_whitespace() => self.simple_lexeme(Question, 1),
+                    _ => self.character_literal()
+                }
 
                 // Punctuation
                 '&' => match self.chars.peek() {
@@ -154,27 +158,140 @@ impl<'text> Lexer<'text> {
                     Some('=') => self.simple_lexeme(GreaterEqual, 2),
                     _ => self.simple_lexeme(Greater, 1),
                 },
+                '<' => match self.chars.peek() {
+                    Some('=') => {
+                        self.chars.next();
+                        match self.chars.peek() {
+                            Some('>') => {
+                                self.chars.next();
+                                self.simple_lexeme(LessEqualGreater, 3)
+                            }
+                            _ => self.simple_lexeme(LessEqualGreater, 2),
+                        }
+                    }
+                    Some('<') => self.simple_lexeme(LessLess, 2),
+                    _ => self.simple_lexeme(Less, 1),
+                },
+                '-' => match self.chars.peek() {
+                    Some('@') => {
+                        self.chars.next();
+                        self.simple_lexeme(MinusAt, 2)
+                    }
+                    Some('=') => {
+                        self.chars.next();
+                        self.simple_lexeme(MinusEqual, 2)
+                    }
+                    Some('>') => {
+                        self.chars.next();
+                        self.simple_lexeme(MinusGreater, 2)
+                    }
+                    _ => self.simple_lexeme(Minus, 1),
+                },
+                '%' => match self.chars.peek() {
+                    Some('=') => {
+                        self.chars.next();
+                        self.simple_lexeme(PercentEqual, 2)
+                    }
+                    Some('i') => {
+                        self.chars.next();
+                        self.simple_lexeme(PercentLowerI, 2)
+                    }
+                    Some('w') => {
+                        self.chars.next();
+                        self.simple_lexeme(PercentLowerW, 2)
+                    }
+                    Some('x') => {
+                        self.chars.next();
+                        self.simple_lexeme(PercentLowerX, 2)
+                    }
+                    Some('I') => {
+                        self.chars.next();
+                        self.simple_lexeme(PercentUpperI, 2)
+                    }
+                    Some('W') => {
+                        self.chars.next();
+                        self.simple_lexeme(PercentUpperW, 2)
+                    }
+                    _ => self.simple_lexeme(Percent, 1),
+                },
+                '|' => match self.chars.peek() {
+                    Some('=') => self.simple_lexeme(PipeEqual, 2),
+                    Some('|') => {
+                        self.chars.next();
+                        match self.chars.peek() {
+                            Some('=') => {
+                                self.chars.next();
+                                self.simple_lexeme(PipePipeEqual, 3)
+                            }
+                            _ => self.simple_lexeme(PipePipe, 2),
+                        }
+                    }
+                    _ => self.simple_lexeme(Pipe, 1),
+                },
+                '+' => match self.chars.peek() {
+                    Some('@') => {
+                        self.chars.next();
+                        self.simple_lexeme(PlusAt, 2)
+                    }
+                    Some('=') => {
+                        self.chars.next();
+                        self.simple_lexeme(PlusEqual, 2)
+                    }
+                    _ => self.simple_lexeme(Plus, 1),
+                },
+                '/' => match self.chars.peek() {
+                    Some('=') => {
+                        self.chars.next();
+                        self.simple_lexeme(SlashEqual, 2)
+                    }
+                    _ => self.simple_lexeme(Slash, 1),
+                },
+                '*' => match self.chars.peek() {
+                    Some('=') => self.simple_lexeme(StarEqual, 2),
+                    Some('*') => {
+                        self.chars.next();
+                        match self.chars.peek() {
+                            Some('=') => {
+                                self.chars.next();
+                                self.simple_lexeme(StarStarEqual, 3)
+                            }
+                            _ => self.simple_lexeme(StarStar, 2),
+                        }
+                    }
+                    _ => self.simple_lexeme(Star, 1),
+                },
+                '~' => match self.chars.peek() {
+                    Some('@') => {
+                        self.chars.next();
+                        self.simple_lexeme(TildeOrTildeAt, 2)
+                    }
+                    _ => self.simple_lexeme(TildeOrTildeAt, 1),
+                },
+                ';' => self.simple_lexeme(Semicolon, 1),
                 c if is_identifier_start(c) => self.identifier_or_keyword(c),
-                _ => todo!("The rest of the punctuation"),
+                _ => panic!(),
             },
         };
         todo!()
+    }
 
-        // loop {
-        //     self.whitespace();
-        //     match self.chars.peek() {
-        //         None => break,
-        //         Some(&c) => match c {
-        //             '\n' => self.tokens.push(LexemeKind::Newline),
-        //             ';' => self.tokens.push(LexemeKind::Semicolon),
-        //             c if c.is_ascii_alphabetic() => self.keyword_or_identifier(),
-        //             _ => panic!("Unexpected character: {:#?}", c)
-        //         }
-        //     }
-        // }
-        //
-        // trim_trailing_newlines(&mut self.tokens);
-        // self.tokens
+    /// Lexes a character literal of the form `?<CHAR>`
+    /// TODO: Allow remaining escape sequences. See Prism `lex_question_mark`
+    /// Pre: `?` has been consumed.
+    ///     `self.chars.peek()` is some non-whitespace character.
+    fn character_literal(&mut self) -> Lexeme {
+        match self.chars.peek() {
+            Some('\\') => match self.chars.peek() {
+                None => panic!(),
+                Some('\\') | Some('n') | Some('t') => self.simple_lexeme(CharacterLiteral, 3),
+                _ => panic!(),
+            }
+            Some(c) if !c.is_whitespace() => {
+                self.chars.next();
+                self.simple_lexeme(CharacterLiteral, 2)
+            },
+            _ => unreachable!()
+        }
     }
 
     /// Lexes an identifier or a keyword starting with one of:
@@ -408,10 +525,12 @@ impl<'text> Lexer<'text> {
                 Some('_') => {
                     self.chars.next();
                     match self.chars.peek() {
-                        Some('E') => match self.check_rest_of_keyword("NCODING__", UnderscoreEncoding, 12) {
-                            Ok(kw) => return kw,
-                            Err(consumed) => consumed + 2,
-                        },
+                        Some('E') => {
+                            match self.check_rest_of_keyword("NCODING__", UnderscoreEncoding, 12) {
+                                Ok(kw) => return kw,
+                                Err(consumed) => consumed + 2,
+                            }
+                        }
                         Some('F') => match self.check_rest_of_keyword("ILE__", UnderscoreFile, 8) {
                             Ok(kw) => return kw,
                             Err(consumed) => consumed + 2,
@@ -509,7 +628,7 @@ fn is_identifier_start(c: char) -> bool {
 }
 
 fn is_identifier_char(c: char) -> bool {
-    c.is_alphanumeric()
+    c.is_alphanumeric() || c == '?'
 }
 
 #[cfg(test)]
@@ -521,12 +640,12 @@ mod tests {
     pub fn empty() {
         let text = "";
         let expected: Vec<Lexeme> = vec![Lexeme::new(Eof, 1, 0, 1, 0)];
-        let actual = Lexer::new(text).tokenize();
+        let actual = Lexer::new(text).lex();
         assert_eq!(expected, actual);
 
         let text = "     ";
         let expected: Vec<Lexeme> = vec![];
-        let actual = Lexer::new(text).tokenize();
+        let actual = Lexer::new(text).lex();
         assert_eq!(expected, actual);
     }
 
@@ -537,7 +656,7 @@ mod tests {
             let expected: Vec<Lexeme> =
                 vec![Lexeme::new(Nil, 1, 0, 1, 3), Lexeme::new(Eof, 1, 3, 1, 3)];
 
-            let test_tokens = Lexer::new(text).tokenize();
+            let test_tokens = Lexer::new(text).lex();
 
             assert_eq!(expected, test_tokens);
         }

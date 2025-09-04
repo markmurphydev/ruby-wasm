@@ -10,7 +10,7 @@ fn main() {
     let file_name = args.nth(1).unwrap();
 
     let text = fs::read_to_string(file_name).unwrap();
-    let tokens = Lexer::new(&text).tokenize();
+    let tokens = Lexer::new(&text).lex();
     let module = Parser::new(tokens).parse();
     let wat = Printer::new().print_module(&module);
     fs::write("output.wat", wat).unwrap();
