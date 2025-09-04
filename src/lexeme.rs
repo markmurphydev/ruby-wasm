@@ -38,7 +38,7 @@ impl Lexeme {
 }
 
 /// Largely copied from Prism's token list
-/// https://github.com/ruby/prism
+/// https://github.com/ruby/prism (MIT license)
 /// These are all "dumb" enum values -- they don't store their values (for eg. integers)
 #[derive(Debug, Eq, PartialEq)]
 pub enum LexemeKind {
@@ -46,6 +46,8 @@ pub enum LexemeKind {
     Eof,
     /// Newline character outside of other tokens.
     Newline,
+    /// Single-line comment of the form `#[^\n]*`
+    InlineComment,
     /// Character literal of the form `?<CHAR>`
     CharacterLiteral,
     /// Integer of the form `\d[\d_]+\d`

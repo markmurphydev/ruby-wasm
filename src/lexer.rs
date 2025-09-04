@@ -41,6 +41,13 @@ impl<'text> Lexer<'text> {
             None => Lexeme::new(Eof, self.line, self.col, self.line, self.col),
             Some(c) => match c {
                 '\n' => self.newline(),
+
+                '#' => {
+                    let start_line = self.line;
+                    let start_col = self.col;
+                    self.skip_to_next_line();
+                    Lexeme::new(InlineComment, start_line, start_col, self.line, self.col)
+                }
                 
                 // '?' can be the start of a character literal, or a ternary operator
                 '?' => match self.chars.peek() {
@@ -751,6 +758,14 @@ impl<'text> Lexer<'text> {
         let start_col = self.col;
         self.col += len;
         Lexeme::new(kind, self.line, start_col, self.line, self.col)
+    }
+
+    /// Skip until the start (column 0) of the next line.
+    /// Updates `self.row` and `self.col`
+    fn skip_to_next_line(&mut self) {
+        while self.chars.next().is_some_and(|c| c != '\n') {}
+        self.line += 1;
+        self.col = 0;
     }
 
     /// Skip non-newline whitespace, incrementing `self.col`.
