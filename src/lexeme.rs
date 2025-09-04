@@ -64,6 +64,8 @@ pub enum LexemeKind {
     /// Class variable of the form `@@<IDENTIFIER>`
     ClassVariable,
 
+    /// Constant. Starts with an uppercase letter, then can be any `<IDENTIFIER>` characters
+    Constant,
     Identifier,
 
     // Punctuation

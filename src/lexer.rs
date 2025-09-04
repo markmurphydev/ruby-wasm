@@ -290,6 +290,7 @@ impl<'text> Lexer<'text> {
                     _ => self.simple_lexeme(TildeOrTildeAt, 1),
                 },
                 ';' => self.simple_lexeme(Semicolon, 1),
+                c if c.is_ascii_uppercase() => self.constant(),
                 c if is_identifier_start(c) => self.identifier_or_keyword(c),
                 _ => panic!(),
             },
@@ -419,6 +420,22 @@ impl<'text> Lexer<'text> {
                     self.chars.next();
                 }
                 _ => return self.simple_lexeme(ClassVariable, len),
+            }
+        }
+    }
+
+    /// Lexes a constant of the form `[A-Z]<IDENTIFIER>`
+    /// Pre: Initial uppercase character has been consumed.
+    fn constant(&mut self) -> Lexeme {
+        let mut len = 1;
+
+        loop {
+            match self.chars.peek() {
+                Some(&c) if is_identifier_char(c) => {
+                    len += 1;
+                    self.chars.next();
+                }
+                _ => return self.simple_lexeme(Constant, len),
             }
         }
     }
