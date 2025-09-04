@@ -58,6 +58,14 @@ pub enum LexemeKind {
     /// Allows only the escape characters `\'` and `\\`
     SingleQuoteStringLiteral,
 
+    /// Instance variable of the form `@<IDENTIFIER>`
+    InstanceVariable,
+
+    /// Class variable of the form `@@<IDENTIFIER>`
+    ClassVariable,
+
+    Identifier,
+
     // Punctuation
     Ampersand,
     AmpersandAmpersand,
@@ -224,6 +232,4 @@ pub enum LexemeKind {
     UnderscoreFile,
     /// "__LINE__"
     UnderscoreLine,
-
-    Identifier,
 }

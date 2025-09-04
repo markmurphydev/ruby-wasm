@@ -56,7 +56,24 @@ impl<'text> Lexer<'text> {
                     self.single_quote_string()
                 },
 
+                '@' => {
+                    self.chars.next();
+                    match self.chars.peek() {
+                        Some('@') => {
+                            self.chars.next();
+                            self.class_variable()
+                        }
+                        Some(c) if !c.is_whitespace() => self.instance_variable(),
+                        Some(_) => panic!("Bare `@`"),
+                        None => panic!("Bare `@`"),
+                    }
+                }
+
                 // Punctuation
+                // TODO: This can definitely be replaced by a macro that generates the match chain.
+                //  Only problem would be losing error reporting.
+                //  Which is one reason not to use regexes in the first place...
+                //  Ditto keywords tho
                 '&' => match self.chars.peek() {
                     Some('&') => {
                         self.chars.next();
@@ -368,6 +385,41 @@ impl<'text> Lexer<'text> {
                 Some('\'') => return self.simple_lexeme(SingleQuoteStringLiteral, len + 1),
                 Some(_) => (),
             };
+        }
+    }
+
+    /// Lexes an instance variable of the form `@<IDENTIFIER>`
+    /// Pre: `@` has been consumed.
+    /// TODO: This identifier-recognition code is duplicated like 4 times.
+    ///     But I'm afraid it might eventually be different between identifier types?
+    ///     Ruby _would_ do something obnoxious like that.
+    fn instance_variable(&mut self) -> Lexeme {
+        let mut len = 1;
+
+        loop {
+            match self.chars.peek() {
+                Some(&c) if is_identifier_char(c) => {
+                    len += 1;
+                    self.chars.next();
+                }
+                _ => return self.simple_lexeme(InstanceVariable, len),
+            }
+        }
+    }
+
+    /// Lexes a class variable of the form `@@<IDENTIFIER>`
+    /// Pre: `@@` has been consumed.
+    fn class_variable(&mut self) -> Lexeme {
+        let mut len = 1;
+
+        loop {
+            match self.chars.peek() {
+                Some(&c) if is_identifier_char(c) => {
+                    len += 1;
+                    self.chars.next();
+                }
+                _ => return self.simple_lexeme(ClassVariable, len),
+            }
         }
     }
 
