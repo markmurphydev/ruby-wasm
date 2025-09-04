@@ -48,7 +48,15 @@ pub enum LexemeKind {
     Newline,
     /// Character literal of the form `?<CHAR>`
     CharacterLiteral,
-    Integer,
+    /// Integer of the form `\d[\d_]+\d`
+    /// TODO: Recognize 0x, 0b, ...
+    IntegerLiteral,
+    /// Float of the form `\d[\d_]+\d(\.\d[\d_]+\d)?`
+    /// TODO: Recognize float exponents
+    FloatLiteral,
+    /// String literal surrounded by single quotes.
+    /// Allows only the escape characters `\'` and `\\`
+    SingleQuoteStringLiteral,
 
     // Punctuation
     Ampersand,

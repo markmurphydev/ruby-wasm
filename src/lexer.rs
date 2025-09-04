@@ -49,7 +49,12 @@ impl<'text> Lexer<'text> {
                     _ => self.character_literal()
                 }
 
-                c if c.is_ascii_digit() => self.integer(),
+                c if c.is_ascii_digit() => self.integer_or_float(),
+
+                '\'' => {
+                    self.chars.next();
+                    self.single_quote_string()
+                },
 
                 // Punctuation
                 '&' => match self.chars.peek() {
@@ -294,11 +299,37 @@ impl<'text> Lexer<'text> {
         }
     }
 
-    fn integer(&mut self) -> Lexeme {
-        let mut len = 0;
+    fn integer_or_float(&mut self) -> Lexeme {
+        let mut len = 1;
         loop {
             match self.chars.peek() {
-                // Integers can contain `_`, but can't end on it.
+                // Integers and floats can contain `_`, but can't end on it.
+                // Floats also can't have an underscore directly before the period.
+                Some('_') => {
+                    len += 1;
+                    self.chars.next();
+                    match self.chars.peek() {
+                        Some(c) if c.is_ascii_digit() => continue,
+                        _ => panic!()
+                    }
+                }
+                Some('.') => {
+                    len += 1;
+                    break
+                },
+                Some(&c) if c.is_ascii_digit() => {
+                    len += 1;
+                    self.chars.next();
+                }
+                Some(c) if c.is_whitespace() => return self.simple_lexeme(IntegerLiteral, len),
+                _ => panic!(),
+            }
+        };
+
+        // This is a float.
+        loop {
+            match self.chars.peek() {
+                // Floats can contain `_` in the decimal part, but can't end on it.
                 Some('_') => {
                     len += 1;
                     self.chars.next();
@@ -311,8 +342,32 @@ impl<'text> Lexer<'text> {
                     len += 1;
                     self.chars.next();
                 }
-                _ => return self.simple_lexeme(Integer, len),
+                Some(c) if c.is_whitespace() => return self.simple_lexeme(FloatLiteral, len),
+                _ => panic!(),
             }
+        }
+    }
+
+    /// Lexes a string surrounded by single quotes.
+    /// Allows only the escape characters `\'` and `\\`
+    /// Pre: `'` has been consumed.
+    fn single_quote_string(&mut self) -> Lexeme {
+        let mut len = 1;
+        loop {
+            len += 1;
+            match self.chars.next() {
+                None => panic!("Unterminated single-quote string literal"),
+                // Consume `\'` without returning.
+                Some('\\') => {
+                    len += 1;
+                    match self.chars.next() {
+                        None => panic!("Unterminated single-quote string literal"),
+                        Some(_) => (),
+                    }
+                }
+                Some('\'') => return self.simple_lexeme(SingleQuoteStringLiteral, len + 1),
+                Some(_) => (),
+            };
         }
     }
 
