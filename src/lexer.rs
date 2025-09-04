@@ -42,14 +42,14 @@ impl<'text> Lexer<'text> {
             Some(c) => match c {
                 '\n' => self.newline(),
                 
-                // Character literal
-
                 // '?' can be the start of a character literal, or a ternary operator
                 '?' => match self.chars.peek() {
                     None => self.simple_lexeme(Question, 1),
                     Some(c) if c.is_whitespace() => self.simple_lexeme(Question, 1),
                     _ => self.character_literal()
                 }
+
+                c if c.is_ascii_digit() => self.integer(),
 
                 // Punctuation
                 '&' => match self.chars.peek() {
@@ -291,6 +291,28 @@ impl<'text> Lexer<'text> {
                 self.simple_lexeme(CharacterLiteral, 2)
             },
             _ => unreachable!()
+        }
+    }
+
+    fn integer(&mut self) -> Lexeme {
+        let mut len = 0;
+        loop {
+            match self.chars.peek() {
+                // Integers can contain `_`, but can't end on it.
+                Some('_') => {
+                    len += 1;
+                    self.chars.next();
+                    match self.chars.peek() {
+                        Some(c) if c.is_ascii_digit() => continue,
+                        _ => panic!()
+                    }
+                }
+                Some(&c) if c.is_ascii_digit() => {
+                    len += 1;
+                    self.chars.next();
+                }
+                _ => return self.simple_lexeme(Integer, len),
+            }
         }
     }
 

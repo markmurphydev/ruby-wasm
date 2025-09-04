@@ -37,8 +37,9 @@ impl Lexeme {
     }
 }
 
-// Largely copied from Prism's token list
-// https://github.com/ruby/prism
+/// Largely copied from Prism's token list
+/// https://github.com/ruby/prism
+/// These are all "dumb" enum values -- they don't store their values (for eg. integers)
 #[derive(Debug, Eq, PartialEq)]
 pub enum LexemeKind {
     /// The final token in a file.
@@ -47,6 +48,7 @@ pub enum LexemeKind {
     Newline,
     /// Character literal of the form `?<CHAR>`
     CharacterLiteral,
+    Integer,
 
     // Punctuation
     Ampersand,
