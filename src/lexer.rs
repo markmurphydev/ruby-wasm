@@ -347,6 +347,7 @@ impl<'text> Lexer<'text> {
                     self.chars.next();
                 }
                 Some(c) if c.is_whitespace() => return self.simple_lexeme(IntegerLiteral, len),
+                None => return self.simple_lexeme(IntegerLiteral, len),
                 _ => panic!(),
             }
         };
