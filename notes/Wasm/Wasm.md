@@ -1,5 +1,7 @@
 Using wasm 3.0 draft
 https://webassembly.github.io/spec/
+HTML (outdated?):
+https://webassembly.github.io/memory64/core/intro/overview.html
 
 From the 2.0 announcement:
 https://webassembly.org/news/2025-03-20-wasm-2.0/#:~:text=Published%20on%20March%2020%2C%202025,rather%20old%20news%20to%20you.

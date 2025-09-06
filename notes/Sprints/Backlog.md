@@ -57,6 +57,8 @@ Later:
 ## Not immediate priorities
 - Research Binaryen ー Viable post-compilation optimizer? Do I want one?
 - "Wasm spec explained" posts
+- Find every conference talk I can about wasm
+- Type up, print, annotate notes on [[Talks#Is wasm becoming garbage?]]
 
 ## Administrative
 - Check if Obsidian has a metadata system for item point values, etc.
