@@ -1,17 +1,36 @@
 use std::{env, fs};
-use itertools::Itertools;
-use ruby_wasm::parse::Parser;
+use clap::{Parser, Subcommand};
 use ruby_wasm::lexer::Lexer;
-use ruby_wasm::wat::Printer;
+use ruby_wasm::lexeme::{Lexeme, LexemeKind};
+
+#[derive(clap::Parser)]
+#[command(version, about, long_about = None)]
+struct Cli {
+    #[command(subcommand)]
+    command: Command
+}
+
+#[derive(Subcommand)]
+enum Command {
+    /// Lexes the given program, returning a list of its tokens.
+    Lex {
+        /// Text to lex
+        text: String,
+    }
+}
 
 fn main() {
-    let mut args = env::args();
-    assert_eq!(args.len(), 2);
-    let file_name = args.nth(1).unwrap();
+    let cli = Cli::parse();
 
-    let text = fs::read_to_string(file_name).unwrap();
-    let tokens = Lexer::new(&text).lex();
-    let module = Parser::new(tokens).parse();
-    let wat = Printer::new().print_module(&module);
-    fs::write("output.wat", wat).unwrap();
+    match cli.command {
+        Command::Lex { text } => {
+            loop {
+                let lexeme = Lexer::new(&text).lex();
+                println!("{:?}", lexeme);
+                if let LexemeKind::Eof = lexeme.kind {
+                    return;
+                }
+            }
+        }
+    }
 }

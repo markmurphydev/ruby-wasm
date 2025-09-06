@@ -8,15 +8,15 @@ pub type Col = u64;
 /// The identity of the file will remain implicit until it causes me problems.
 #[derive(Debug, Eq, PartialEq)]
 pub struct Lexeme {
-    kind: LexemeKind,
+    pub kind: LexemeKind,
     /// Starts with line 1.
-    start_line: Line,
+    pub start_line: Line,
     /// Starts with col 0.
-    start_col: Col,
+    pub start_col: Col,
     /// Starts with line 1. Inclusive.
-    end_line: Line,
+    pub end_line: Line,
     /// Starts with col 0. Exclusive.
-    end_col: Col,
+    pub end_col: Col,
 }
 
 impl Lexeme {
