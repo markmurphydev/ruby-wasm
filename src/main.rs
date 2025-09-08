@@ -24,8 +24,9 @@ fn main() {
 
     match cli.command {
         Command::Lex { text } => {
+            let mut lexer = Lexer::new(&text);
             loop {
-                let lexeme = Lexer::new(&text).lex();
+                let lexeme = lexer.lex();
                 println!("{:?}", lexeme);
                 if let LexemeKind::Eof = lexeme.kind {
                     return;

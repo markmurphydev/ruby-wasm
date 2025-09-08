@@ -301,8 +301,7 @@ impl<'text> Lexer<'text> {
                 c if is_identifier_start(c) => self.identifier_or_keyword(c),
                 _ => panic!(),
             },
-        };
-        todo!()
+        }
     }
 
     /// Lexes a character literal of the form `?<CHAR>`
