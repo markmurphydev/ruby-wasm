@@ -4,7 +4,7 @@ Week 1:
 - [[Write the easy part of lexer]]
 - [[Install wasm utilities]]
 - [[Document Ruby parsing situation]]
-- [[Lexer end-to-end testing]]
+- [[Lexer end-to-end test infrastructure]]
 - [[Get a Ruby parser to produce reference ASTs]]
 - [[Walking skeleton ー end-to-end .wasm generation]]
 - [[Research value representation in dynamic languages]]
