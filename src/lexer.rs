@@ -48,20 +48,20 @@ impl<'text> Lexer<'text> {
                     self.skip_to_next_line();
                     Lexeme::new(InlineComment, start_line, start_col, self.line, self.col)
                 }
-                
+
                 // '?' can be the start of a character literal, or a ternary operator
                 '?' => match self.chars.peek() {
                     None => self.simple_lexeme(Question, 1),
                     Some(c) if c.is_whitespace() => self.simple_lexeme(Question, 1),
-                    _ => self.character_literal()
-                }
+                    _ => self.character_literal(),
+                },
 
                 c if c.is_ascii_digit() => self.integer_or_float(),
 
                 '\'' => {
                     self.chars.next();
                     self.single_quote_string()
-                },
+                }
 
                 '@' => {
                     self.chars.next();
@@ -314,12 +314,12 @@ impl<'text> Lexer<'text> {
                 None => panic!(),
                 Some('\\') | Some('n') | Some('t') => self.simple_lexeme(CharacterLiteral, 3),
                 _ => panic!(),
-            }
+            },
             Some(c) if !c.is_whitespace() => {
                 self.chars.next();
                 self.simple_lexeme(CharacterLiteral, 2)
-            },
-            _ => unreachable!()
+            }
+            _ => unreachable!(),
         }
     }
 
@@ -334,13 +334,13 @@ impl<'text> Lexer<'text> {
                     self.chars.next();
                     match self.chars.peek() {
                         Some(c) if c.is_ascii_digit() => continue,
-                        _ => panic!()
+                        _ => panic!(),
                     }
                 }
                 Some('.') => {
                     len += 1;
-                    break
-                },
+                    break;
+                }
                 Some(&c) if c.is_ascii_digit() => {
                     len += 1;
                     self.chars.next();
@@ -349,7 +349,7 @@ impl<'text> Lexer<'text> {
                 None => return self.simple_lexeme(IntegerLiteral, len),
                 _ => panic!(),
             }
-        };
+        }
 
         // This is a float.
         loop {
@@ -360,7 +360,7 @@ impl<'text> Lexer<'text> {
                     self.chars.next();
                     match self.chars.peek() {
                         Some(c) if c.is_ascii_digit() => continue,
-                        _ => panic!()
+                        _ => panic!(),
                     }
                 }
                 Some(&c) if c.is_ascii_digit() => {
@@ -481,7 +481,7 @@ impl<'text> Lexer<'text> {
                 _ => 1,
             },
             'c' => match self.chars.peek() {
-                Some('c') => match self.check_rest_of_keyword("ase", Case, 4) {
+                Some('a') => match self.check_rest_of_keyword("ase", Case, 4) {
                     Ok(kw) => return kw,
                     Err(consumed) => consumed + 1,
                 },
@@ -492,7 +492,7 @@ impl<'text> Lexer<'text> {
                 _ => 1,
             },
             'd' => match self.chars.peek() {
-                Some('e') => match self.check_rest_of_keyword("f", Def, 3) {
+                Some('e') => match self.check_rest_of_keyword("ef", Def, 3) {
                     Ok(kw) => return kw,
                     Err(consumed) => consumed + 1,
                 },
@@ -519,7 +519,7 @@ impl<'text> Lexer<'text> {
                                     self.chars.next();
                                     match self.chars.peek() {
                                         Some('i') => {
-                                            match self.check_rest_of_keyword("f", Elsif, 6) {
+                                            match self.check_rest_of_keyword("if", Elsif, 6) {
                                                 Ok(kw) => return kw,
                                                 Err(consumed) => consumed + 4,
                                             }
@@ -548,7 +548,7 @@ impl<'text> Lexer<'text> {
                             }
                         }
                     }
-                    Some('s') => match self.check_rest_of_keyword("ensure", Ensure, 6) {
+                    Some('s') => match self.check_rest_of_keyword("sure", Ensure, 6) {
                         Ok(kw) => return kw,
                         Err(consumed) => consumed + 1,
                     },
@@ -556,7 +556,7 @@ impl<'text> Lexer<'text> {
                 },
                 _ => 1,
             },
-            'f' => match self.check_rest_of_keyword("false", False, 5) {
+            'f' => match self.check_rest_of_keyword("alse", False, 5) {
                 Ok(kw) => return kw,
                 Err(consumed) => consumed + 1,
             },
@@ -565,11 +565,11 @@ impl<'text> Lexer<'text> {
                 Err(consumed) => consumed + 1,
             },
             'n' => match self.chars.peek() {
-                Some('i') => match self.check_rest_of_keyword("nil", Nil, 3) {
+                Some('i') => match self.check_rest_of_keyword("il", Nil, 3) {
                     Ok(kw) => return kw,
                     Err(consumed) => consumed + 1, // 'l' wasn't consumed by us.
                 },
-                Some('o') => match self.check_rest_of_keyword("not", Not, 3) {
+                Some('o') => match self.check_rest_of_keyword("ot", Not, 3) {
                     Ok(kw) => return kw,
                     Err(consumed) => consumed + 1,
                 },
@@ -583,22 +583,22 @@ impl<'text> Lexer<'text> {
                 Some('e') => {
                     self.chars.next();
                     match self.chars.peek() {
-                        Some('d') => match self.check_rest_of_keyword("o", Redo, 4) {
+                        Some('d') => match self.check_rest_of_keyword("do", Redo, 4) {
                             Ok(kw) => return kw,
                             Err(consumed) => consumed + 2,
                         },
-                        Some('s') => match self.check_rest_of_keyword("cue", Rescue, 6) {
+                        Some('s') => match self.check_rest_of_keyword("scue", Rescue, 6) {
                             Ok(kw) => return kw,
                             Err(consumed) => consumed + 2,
                         },
                         Some('t') => {
                             self.chars.next();
                             match self.chars.peek() {
-                                Some('r') => match self.check_rest_of_keyword("y", Retry, 5) {
+                                Some('r') => match self.check_rest_of_keyword("ry", Retry, 5) {
                                     Ok(kw) => return kw,
                                     Err(consumed) => consumed + 3,
                                 },
-                                Some('u') => match self.check_rest_of_keyword("rn", Return, 6) {
+                                Some('u') => match self.check_rest_of_keyword("urn", Return, 6) {
                                     Ok(kw) => return kw,
                                     Err(consumed) => consumed + 3,
                                 },
@@ -611,22 +611,22 @@ impl<'text> Lexer<'text> {
                 _ => 1,
             },
             's' => match self.chars.peek() {
-                Some('e') => match self.check_rest_of_keyword("lf", SelfKeyword, 4) {
+                Some('e') => match self.check_rest_of_keyword("elf", SelfKeyword, 4) {
                     Ok(kw) => return kw,
                     Err(consumed) => consumed + 1, // 'l' wasn't consumed by us.
                 },
-                Some('u') => match self.check_rest_of_keyword("per", Super, 5) {
+                Some('u') => match self.check_rest_of_keyword("uper", Super, 5) {
                     Ok(kw) => return kw,
                     Err(consumed) => consumed + 1,
                 },
                 _ => 1,
             },
             't' => match self.chars.peek() {
-                Some('h') => match self.check_rest_of_keyword("en", Then, 4) {
+                Some('h') => match self.check_rest_of_keyword("hen", Then, 4) {
                     Ok(kw) => return kw,
                     Err(consumed) => consumed + 1, // 'l' wasn't consumed by us.
                 },
-                Some('r') => match self.check_rest_of_keyword("ue", True, 4) {
+                Some('r') => match self.check_rest_of_keyword("rue", True, 4) {
                     Ok(kw) => return kw,
                     Err(consumed) => consumed + 1,
                 },
@@ -636,15 +636,15 @@ impl<'text> Lexer<'text> {
                 Some('n') => {
                     self.chars.next();
                     match self.chars.peek() {
-                        Some('d') => match self.check_rest_of_keyword("ef", Undef, 5) {
+                        Some('d') => match self.check_rest_of_keyword("def", Undef, 5) {
                             Ok(kw) => return kw,
                             Err(consumed) => consumed + 2,
                         },
-                        Some('l') => match self.check_rest_of_keyword("ess", Unless, 6) {
+                        Some('l') => match self.check_rest_of_keyword("less", Unless, 6) {
                             Ok(kw) => return kw,
                             Err(consumed) => consumed + 2,
                         },
-                        Some('t') => match self.check_rest_of_keyword("il", Until, 5) {
+                        Some('t') => match self.check_rest_of_keyword("til", Until, 5) {
                             Ok(kw) => return kw,
                             Err(consumed) => consumed + 2,
                         },
@@ -657,11 +657,11 @@ impl<'text> Lexer<'text> {
                 Some('h') => {
                     self.chars.next();
                     match self.chars.peek() {
-                        Some('e') => match self.check_rest_of_keyword("n", When, 4) {
+                        Some('e') => match self.check_rest_of_keyword("en", When, 4) {
                             Ok(kw) => return kw,
                             Err(consumed) => consumed + 2,
                         },
-                        Some('i') => match self.check_rest_of_keyword("le", While, 5) {
+                        Some('i') => match self.check_rest_of_keyword("ile", While, 5) {
                             Ok(kw) => return kw,
                             Err(consumed) => consumed + 2,
                         },
@@ -679,19 +679,23 @@ impl<'text> Lexer<'text> {
                     self.chars.next();
                     match self.chars.peek() {
                         Some('E') => {
-                            match self.check_rest_of_keyword("NCODING__", UnderscoreEncoding, 12) {
+                            match self.check_rest_of_keyword("ENCODING__", UnderscoreEncoding, 12) {
                                 Ok(kw) => return kw,
                                 Err(consumed) => consumed + 2,
                             }
                         }
-                        Some('F') => match self.check_rest_of_keyword("ILE__", UnderscoreFile, 8) {
-                            Ok(kw) => return kw,
-                            Err(consumed) => consumed + 2,
-                        },
-                        Some('L') => match self.check_rest_of_keyword("INE__", UnderscoreLine, 8) {
-                            Ok(kw) => return kw,
-                            Err(consumed) => consumed + 2,
-                        },
+                        Some('F') => {
+                            match self.check_rest_of_keyword("FILE__", UnderscoreFile, 8) {
+                                Ok(kw) => return kw,
+                                Err(consumed) => consumed + 2,
+                            }
+                        }
+                        Some('L') => {
+                            match self.check_rest_of_keyword("LINE__", UnderscoreLine, 8) {
+                                Ok(kw) => return kw,
+                                Err(consumed) => consumed + 2,
+                            }
+                        }
                         _ => 2,
                     }
                 }
@@ -794,32 +798,67 @@ fn is_identifier_char(c: char) -> bool {
 
 #[cfg(test)]
 mod tests {
-    // use super::*;
-    // use LexemeKind::*;
-    //
-    // #[test]
-    // pub fn empty() {
-    //     let text = "";
-    //     let expected: Vec<Lexeme> = vec![Lexeme::new(Eof, 1, 0, 1, 0)];
-    //     let actual = Lexer::new(text).lex();
-    //     assert_eq!(expected, actual);
-    //
-    //     let text = "     ";
-    //     let expected: Vec<Lexeme> = vec![];
-    //     let actual = Lexer::new(text).lex();
-    //     assert_eq!(expected, actual);
-    // }
-    //
-    // #[test]
-    // pub fn keywords() {
-    //     {
-    //         let text = "nil";
-    //         let expected: Vec<Lexeme> =
-    //             vec![Lexeme::new(Nil, 1, 0, 1, 3), Lexeme::new(Eof, 1, 3, 1, 3)];
-    //
-    //         let test_tokens = Lexer::new(text).lex();
-    //
-    //         assert_eq!(expected, test_tokens);
-    //     }
-    // }
+    use super::*;
+    use LexemeKind::*;
+
+    /// This only works so long as the lexer can be driven independently of the parser.
+    fn lex_to_eof(text: &str) -> Vec<Lexeme> {
+        let mut actual = vec![];
+        let mut lexer = Lexer::new(text);
+        loop {
+            let lexeme = lexer.lex();
+            actual.push(lexeme);
+            if lexeme.kind == Eof {
+                return actual;
+            }
+        }
+    }
+
+    #[test]
+    pub fn empty() {
+        let text = "";
+        let expected: Vec<Lexeme> = vec![Lexeme::new(Eof, 1, 0, 1, 0)];
+        let actual = lex_to_eof(text);
+        assert_eq!(expected, actual);
+
+        let text = "     ";
+        let expected: Vec<Lexeme> = vec![Lexeme::new(Eof, 1, 5, 1, 5)];
+        let actual = lex_to_eof(text);
+        assert_eq!(expected, actual);
+    }
+
+    #[test]
+    pub fn keywords() {
+        {
+            let text = "nil";
+            let expected: Vec<Lexeme> =
+                vec![Lexeme::new(Nil, 1, 0, 1, 3), Lexeme::new(Eof, 1, 3, 1, 3)];
+            let test_tokens = lex_to_eof(text);
+            assert_eq!(expected, test_tokens);
+
+            let text = "true";
+            let expected: Vec<Lexeme> =
+                vec![Lexeme::new(True, 1, 0, 1, 4), Lexeme::new(Eof, 1, 4, 1, 4)];
+            let test_tokens = lex_to_eof(text);
+            assert_eq!(expected, test_tokens);
+
+            let text = "false";
+            let expected: Vec<Lexeme> =
+                vec![Lexeme::new(False, 1, 0, 1, 5), Lexeme::new(Eof, 1, 5, 1, 5)];
+            let test_tokens = lex_to_eof(text);
+            assert_eq!(expected, test_tokens);
+
+            let text = "nil\ntrue\tfalse\n";
+            let expected: Vec<Lexeme> = vec![
+                Lexeme::new(Nil, 1, 0, 1, 3),
+                Lexeme::new(Newline, 1, 3, 2, 0),
+                Lexeme::new(True, 2, 0, 2, 4),
+                Lexeme::new(False, 2, 5, 2, 10),
+                Lexeme::new(Newline, 2, 10, 3, 0),
+                Lexeme::new(Eof, 3, 0, 3, 0),
+            ];
+            let test_tokens = lex_to_eof(text);
+            assert_eq!(expected, test_tokens);
+        }
+    }
 }

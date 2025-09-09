@@ -6,7 +6,7 @@ pub type Col = u64;
 
 /// A lexeme lexed from a text file.
 /// The identity of the file will remain implicit until it causes me problems.
-#[derive(Debug, Eq, PartialEq)]
+#[derive(Debug, Eq, PartialEq, Copy, Clone)]
 pub struct Lexeme {
     pub kind: LexemeKind,
     /// Starts with line 1.
@@ -40,7 +40,7 @@ impl Lexeme {
 /// Largely copied from Prism's token list
 /// https://github.com/ruby/prism (MIT license)
 /// These are all "dumb" enum values -- they don't store their values (for eg. integers)
-#[derive(Debug, Eq, PartialEq)]
+#[derive(Debug, Eq, PartialEq, Copy, Clone)]
 pub enum LexemeKind {
     /// The final token in a file.
     Eof,
