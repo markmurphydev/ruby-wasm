@@ -1,5 +1,6 @@
 use clap::Parser as ParserTrait;
 use clap::{Subcommand};
+use ruby_wasm::compiler::Compiler;
 use ruby_wasm::lexeme::LexemeKind;
 use ruby_wasm::lexer::Lexer;
 use ruby_wasm::parser::Parser;
@@ -22,6 +23,12 @@ enum Command {
     /// Parses the given program, returning an abstract syntax tree
     Parse {
         /// Text to parse
+        text: String,
+    },
+
+    /// Compiles the given program, returning a Wasm module
+    Compile {
+        /// Text of program to compile
         text: String,
     }
 }
@@ -49,6 +56,13 @@ fn main() {
         Command::Parse { text } => {
             let parser = Parser::new(Lexer::new(&text));
             println!("{:?}", parser.parse());
+        }
+
+        Command::Compile { text} => {
+            let parser = Parser::new(Lexer::new(&text));
+            let program = parser.parse();
+            let wasm = Compiler.compile(program);
+            println!("{:?}", wasm);
         }
     }
 }
