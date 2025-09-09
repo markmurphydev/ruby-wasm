@@ -19,6 +19,7 @@ impl Printer {
         self.indent();
         write!(self.output, "(module").unwrap();
         self.indent += 2;
+        self.print_exports(module);
         self.print_functions(module);
         self.print_start_function(module);
         writeln!(self.output, ")").unwrap();
@@ -26,6 +27,21 @@ impl Printer {
         assert_eq!(self.indent, 0);
 
         self.output
+    }
+
+    fn print_exports(&mut self, module: &Module) {
+        for export in &module.exports {
+            self.print_export(export);
+        }
+    }
+
+    fn print_export(&mut self, export: &FunctionIndex) {
+        match export {
+            FunctionIndex::Index(_) => panic!(),
+            FunctionIndex::Name(name) => {
+                write!(self.output, "(export (func {}))", name).unwrap()
+            }
+        }
     }
 
     fn print_functions(&mut self, module: &Module) {
@@ -41,7 +57,7 @@ impl Printer {
         if let Some(name) = &function.name {
             write!(self.output, " ${}", name).unwrap();
         }
-        // TODO -- (type ...)
+        write!(self.output, " (result (ref i31))").unwrap();
         self.indent += 2;
         self.print_function_body(&function.body);
         write!(self.output, ")").unwrap();
@@ -59,6 +75,7 @@ impl Printer {
         self.indent();
         match instr {
             Instruction::ConstI32(n) => write!(self.output, "i32.const {}", n).unwrap(),
+            Instruction::RefI31 => write!(self.output, "ref.i31").unwrap(),
         }
     }
 
