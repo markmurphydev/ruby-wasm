@@ -1,7 +1,8 @@
-use std::{env, fs};
-use clap::{Parser, Subcommand};
+use clap::Parser as ParserTrait;
+use clap::{Subcommand};
+use ruby_wasm::lexeme::LexemeKind;
 use ruby_wasm::lexer::Lexer;
-use ruby_wasm::lexeme::{Lexeme, LexemeKind};
+use ruby_wasm::parser::Parser;
 
 #[derive(clap::Parser)]
 #[command(version, about, long_about = None)]
@@ -12,9 +13,15 @@ struct Cli {
 
 #[derive(Subcommand)]
 enum Command {
-    /// Lexes the given program, returning a list of its tokens.
+    /// Lexes the given program, returning a list of its lexemes.
     Lex {
         /// Text to lex
+        text: String,
+    },
+
+    /// Parses the given program, returning an abstract syntax tree
+    Parse {
+        /// Text to parse
         text: String,
     }
 }
@@ -27,11 +34,21 @@ fn main() {
             let mut lexer = Lexer::new(&text);
             loop {
                 let lexeme = lexer.lex();
-                println!("{:?}", lexeme);
-                if let LexemeKind::Eof = lexeme.kind {
-                    return;
+                match lexeme {
+                    None => return,
+                    Some(lexeme) => {
+                        println!("{:?}", lexeme);
+                        if let LexemeKind::Eof = lexeme.kind {
+                            return;
+                        }
+                    }
                 }
             }
+        },
+
+        Command::Parse { text } => {
+            let parser = Parser::new(Lexer::new(&text));
+            println!("{:?}", parser.parse());
         }
     }
 }

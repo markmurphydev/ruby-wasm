@@ -797,6 +797,10 @@ impl<'text> Lexer<'text> {
     }
 }
 
+/// TODO -- This is probably bad.
+///     Iterator semantics are that we return `None` when iteration is finished
+///     But that's what the Eof lexeme signifies. Mushy.
+///     BUT, we want `Peekable<Lexer>`. Probably should just implement `peek()` manually.
 impl <'text> Iterator for Lexer<'text> {
     type Item = Lexeme;
 
