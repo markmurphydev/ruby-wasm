@@ -15,6 +15,8 @@ pub struct Lexer<'text> {
     chars: PeekNth<Chars<'text>>,
     line: Line,
     col: Col,
+    /// Have we lexed Eof?
+    lexed_eof: bool,
 }
 
 impl<'text> Lexer<'text> {
@@ -26,19 +28,27 @@ impl<'text> Lexer<'text> {
             chars: itertools::peek_nth(text.chars()),
             line: 1,
             col: 0,
+            lexed_eof: false,
         }
     }
 
     /// Consume and return a single lexeme
-    pub fn lex(&mut self) -> Lexeme {
+    pub fn lex(&mut self) -> Option<Lexeme> {
         // Strategy: For punctuation, simple matching.
+
+        if self.lexed_eof {
+            return None;
+        }
 
         // Prism doesn't include whitespace in token width.
         self.skip_whitespace();
 
-        match self.chars.next() {
+        let lexeme = match self.chars.next() {
             // Prism EOF is 0-width.
-            None => Lexeme::new(Eof, self.line, self.col, self.line, self.col),
+            None => {
+                self.lexed_eof = true;
+                Lexeme::new(Eof, self.line, self.col, self.line, self.col)
+            },
             Some(c) => match c {
                 '\n' => self.newline(),
 
@@ -301,7 +311,9 @@ impl<'text> Lexer<'text> {
                 c if is_identifier_start(c) => self.identifier_or_keyword(c),
                 _ => panic!(),
             },
-        }
+        };
+
+        Some(lexeme)
     }
 
     /// Lexes a character literal of the form `?<CHAR>`
@@ -785,6 +797,14 @@ impl<'text> Lexer<'text> {
     }
 }
 
+impl <'text> Iterator for Lexer<'text> {
+    type Item = Lexeme;
+
+    fn next(&mut self) -> Option<Self::Item> {
+        self.lex()
+    }
+}
+
 /// Is `c` alphabetic or an underscore?
 /// TODO: I think Ruby allows certain other chars in UTF-8.
 ///     It also has many other encodings I'm going to ignore.
@@ -803,15 +823,7 @@ mod tests {
 
     /// This only works so long as the lexer can be driven independently of the parser.
     fn lex_to_eof(text: &str) -> Vec<Lexeme> {
-        let mut actual = vec![];
-        let mut lexer = Lexer::new(text);
-        loop {
-            let lexeme = lexer.lex();
-            actual.push(lexeme);
-            if lexeme.kind == Eof {
-                return actual;
-            }
-        }
+        Lexer::new(text).into_iter().collect()
     }
 
     #[test]
