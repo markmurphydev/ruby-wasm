@@ -31,7 +31,7 @@ pub fn return_zero() {
     let return_zero = Module {
         functions: vec![Function {
             name: Some("main".to_string()),
-            body: Expr(vec![Instruction::ConstI64(Integer(0))]),
+            body: Expr(vec![Instruction::ConstI32(Integer(0))]),
         }],
         start: Some(FunctionIndex::Name("main".to_string())),
     };

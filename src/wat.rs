@@ -58,7 +58,7 @@ impl Printer {
         writeln!(self.output).unwrap();
         self.indent();
         match instr {
-            Instruction::ConstI64(n) => write!(self.output, "i64.const {}", n).unwrap(),
+            Instruction::ConstI32(n) => write!(self.output, "i32.const {}", n).unwrap(),
         }
     }
 

@@ -3,19 +3,15 @@
 
 pub mod values;
 
-use values::Integer;
+pub use values::Integer;
 
 // ==== Wasm Types ====
 
 #[derive(Copy, Clone)]
 pub enum Instruction {
-    ConstI64(Integer),
-}
-
-impl Instruction {
-    pub const FALSE: Instruction = Instruction::ConstI64(Integer(0b0001));
-    pub const TRUE: Instruction = Instruction::ConstI64(Integer(0b0011));
-    pub const NIL: Instruction = Instruction::ConstI64(Integer(0b0111));
+    ConstI32(Integer),
+    /// Convert an `i32` to a `(ref i31)`
+    RefI31,
 }
 
 pub enum FunctionIndex {
@@ -36,5 +32,8 @@ pub struct Expr(pub Vec<Instruction>);
 
 pub struct Module {
     pub functions: Vec<Function>,
+    pub exports: Vec<FunctionIndex>,
+    /// A function `() -> ()` which _initializes_ the wasm module
+    /// NB: _not_ a main function
     pub start: Option<FunctionIndex>,
 }
