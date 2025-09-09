@@ -4,6 +4,7 @@ use ruby_wasm::compiler::Compiler;
 use ruby_wasm::lexeme::LexemeKind;
 use ruby_wasm::lexer::Lexer;
 use ruby_wasm::parser::Parser;
+use ruby_wasm::wat::Printer;
 
 #[derive(clap::Parser)]
 #[command(version, about, long_about = None)]
@@ -29,6 +30,11 @@ enum Command {
     /// Compiles the given program, returning a Wasm module
     Compile {
         /// Text of program to compile
+        text: String,
+    },
+
+    /// Compiles the given program, printing a `.wat` text representation
+    Wat {
         text: String,
     }
 }
@@ -63,6 +69,14 @@ fn main() {
             let program = parser.parse();
             let wasm = Compiler.compile(program);
             println!("{:?}", wasm);
+        }
+
+        Command::Wat { text } => {
+            let parser = Parser::new(Lexer::new(&text));
+            let program = parser.parse();
+            let wasm = Compiler.compile(program);
+            let wat = Printer::new().print_module(&wasm);
+            println!("{}", wat);
         }
     }
 }

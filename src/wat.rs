@@ -36,10 +36,12 @@ impl Printer {
     }
 
     fn print_export(&mut self, export: &FunctionIndex) {
+        writeln!(self.output).unwrap();
+        self.indent();
         match export {
             FunctionIndex::Index(_) => panic!(),
             FunctionIndex::Name(name) => {
-                write!(self.output, "(export (func {}))", name).unwrap()
+                write!(self.output, "(export \"_start\" (func ${}))", name).unwrap()
             }
         }
     }
