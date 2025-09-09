@@ -1,15 +1,16 @@
-#[derive(Debug, Copy, Clone)]
+/// Root of the AST
+#[derive(Debug, Clone)]
 pub struct Program {
-    expr: Expr
+    pub statements: Statements
 }
 
-#[derive(Debug, Copy, Clone)]
+#[derive(Debug, Clone)]
+pub struct Statements {
+    pub body: Vec<Expr>,
+}
+
+#[derive(Debug, Clone)]
 pub enum Expr {
-    Literal(Literal)
-}
-
-#[derive(Debug, Copy, Clone)]
-pub enum Literal {
     True,
     False,
     Nil
