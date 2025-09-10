@@ -1,5 +1,6 @@
 use clap::Parser as ParserTrait;
 use clap::{Subcommand};
+use ruby_wasm::binary;
 use ruby_wasm::compiler::Compiler;
 use ruby_wasm::lexeme::LexemeKind;
 use ruby_wasm::lexer::Lexer;
@@ -35,6 +36,11 @@ enum Command {
 
     /// Compiles the given program, printing a `.wat` text representation
     Wat {
+        text: String,
+    },
+
+    /// Compiles the given program, printing a `.wasm` binary representation
+    Wasm {
         text: String,
     }
 }
@@ -77,6 +83,14 @@ fn main() {
             let wasm = Compiler.compile(program);
             let wat = WatPrinter::new().print_module(&wasm);
             println!("{}", wat);
+        }
+
+        Command::Wasm { text } => {
+            let parser = Parser::new(Lexer::new(&text));
+            let program = parser.parse();
+            let module = Compiler.compile(program);
+            let bytes = binary::module_to_binary(&module);
+            binary::print_bytes(&bytes);
         }
     }
 }
