@@ -1,0 +1,19 @@
+<!--
+Template for single-page Wasm load & run.
+Template format is `%{var_name}`
+
+Strategy from:
+https://stackoverflow.com/questions/52582367/a-single-file-webassembly-html-demo
+-->
+<script>
+    function compile_run_wasm() {
+        const wasm_base64 = "%{wasm_base64}";
+        const wasm_buffer = Uint8Array.from(atob(wasm_base64), c => c.charCodeAt(0)).buffer;
+        WebAssembly.compile(wasm_buffer).then(wasm => {
+            const wasm_instance = new WebAssembly.Instance(wasm);
+            const output = wasm_instance.exports["_start"]();
+            console.log(output);
+        });
+    }
+</script>
+<button onclick="compile_run_wasm()">Compile and run Wasm</button>

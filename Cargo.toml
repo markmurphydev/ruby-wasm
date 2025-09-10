@@ -4,6 +4,7 @@ version = "0.1.0"
 edition = "2024"
 
 [dependencies]
+base64 = "0.22.1"
 clap = { version = "4.5.47", features = ["derive"] }
 itertools = "0.14.0"
 wat = { version = "1.239.0", default-features = false }
