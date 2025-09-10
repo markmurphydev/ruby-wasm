@@ -2,14 +2,14 @@ use crate::wasm::{Expr, Function, FunctionIndex, Instruction, Module};
 use std::fmt::Write;
 use std::iter;
 
-pub struct Printer {
+pub struct WatPrinter {
     output: String,
     indent: usize,
 }
 
-impl Printer {
+impl WatPrinter {
     pub fn new() -> Self {
-        Printer {
+        WatPrinter {
             output: String::new(),
             indent: 0,
         }

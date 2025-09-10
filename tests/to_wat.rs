@@ -1,6 +1,6 @@
 use std::fs;
 use std::path::PathBuf;
-use ruby_wasm::wat::Printer;
+use ruby_wasm::wat::WatPrinter;
 use ruby_wasm::wasm::{Expr, Function, FunctionIndex, Instruction, Module};
 use ruby_wasm::wasm::values::Integer;
 
@@ -11,7 +11,7 @@ fn compare(test_name: &str, module: Module) {
     let expected_out =
         fs::read_to_string(expected_out_file).expect(&format!("output/{} should exist", test_name));
 
-    let test_out = Printer::new().print_module(&module);
+    let test_out = WatPrinter::new().print_module(&module);
 
     assert_eq!(expected_out, test_out);
 }

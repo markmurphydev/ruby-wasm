@@ -4,7 +4,7 @@ use ruby_wasm::compiler::Compiler;
 use ruby_wasm::lexeme::LexemeKind;
 use ruby_wasm::lexer::Lexer;
 use ruby_wasm::parser::Parser;
-use ruby_wasm::wat::Printer;
+use ruby_wasm::wat::WatPrinter;
 
 #[derive(clap::Parser)]
 #[command(version, about, long_about = None)]
@@ -75,7 +75,7 @@ fn main() {
             let parser = Parser::new(Lexer::new(&text));
             let program = parser.parse();
             let wasm = Compiler.compile(program);
-            let wat = Printer::new().print_module(&wasm);
+            let wat = WatPrinter::new().print_module(&wasm);
             println!("{}", wat);
         }
     }
