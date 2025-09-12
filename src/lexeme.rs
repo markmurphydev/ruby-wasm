@@ -62,11 +62,6 @@ impl Lexeme {
         }
     }
 
-    /// Get the line and column range of this lexeme in the given program text. O(n).
-    pub fn to_line_col_range(self, program_text: &str) -> String {
-        todo!()
-    }
-
     /// Get the text spanned by this lexeme. O(n).
     pub fn to_source(self, program_text: &str) -> String {
         program_text.chars().skip(self.start.0).take(self.len.0).collect()

@@ -61,6 +61,7 @@ impl Compiler {
         }
 
         match ruby_expr {
+            R::Expr::Integer(_) => todo!(),
             R::Expr::True => const_i31(W::Integer::TRUE),
             R::Expr::False => const_i31(W::Integer::FALSE),
             R::Expr::Nil => const_i31(W::Integer::NIL),
