@@ -1,4 +1,4 @@
-use std::ops::{Add, AddAssign};
+use std::ops::{Add, AddAssign, Sub};
 
 /// Starts with line 1.
 #[derive(Debug, Eq, PartialEq, Copy, Clone)]
@@ -11,19 +11,30 @@ pub struct Col(pub u32);
 #[derive(Debug, Eq, PartialEq, Copy, Clone)]
 pub struct CharIdx(pub usize);
 
-impl Add for CharIdx {
+impl Add<CharDifference> for CharIdx {
     type Output = Self;
 
-    fn add(self, rhs: Self) -> Self::Output {
+    fn add(self, rhs: CharDifference) -> Self::Output {
         Self(self.0 + rhs.0)
     }
 }
 
-impl AddAssign for CharIdx {
-    fn add_assign(&mut self, rhs: Self) {
+// impl Sub for CharIdx {
+//     type Output = CharDifference;
+//
+//     fn sub(self, rhs: Self) -> Self::Output {
+//         CharDifference(self.0 - rhs.0)
+//     }
+// }
+
+impl AddAssign<CharDifference> for CharIdx {
+    fn add_assign(&mut self, rhs: CharDifference) {
         *self = *self + rhs;
     }
 }
+
+#[derive(Debug, Eq, PartialEq, Copy, Clone)]
+pub struct CharDifference(pub usize);
 
 /// A lexeme lexed from a text file.
 /// The identity of the file will remain implicit until it causes me problems.
@@ -31,19 +42,19 @@ impl AddAssign for CharIdx {
 pub struct Lexeme {
     pub kind: LexemeKind,
     pub start: CharIdx,
-    pub end: CharIdx,
+    pub len: CharDifference,
 }
 
 impl Lexeme {
     pub fn new(
         kind: LexemeKind,
         start: CharIdx,
-        end: CharIdx
+        len: CharDifference,
     ) -> Self {
         Self {
             kind,
             start,
-            end
+            len
         }
     }
 
@@ -54,8 +65,7 @@ impl Lexeme {
 
     /// Get the text spanned by this lexeme. O(n).
     pub fn to_source(self, program_text: &str) -> String {
-        let len = self.end.0 - self.start.0;
-        program_text.chars().skip(self.start.0).take(len).collect()
+        program_text.chars().skip(self.start.0).take(self.len.0).collect()
     }
 }
 

@@ -13,13 +13,13 @@ use crate::lexeme::LexemeKind as L;
 /// - Recursive descent
 /// - Use call stack as implicit stack of half-finished nodes
 pub struct Parser<'text> {
-    lexer: Peekable<Lexer<'text>>
+    lexer: Lexer<'text>
 }
 
 impl <'text> Parser<'text> {
     pub fn new(lexer: Lexer<'text>) -> Self {
         Self {
-            lexer: lexer.peekable()
+            lexer
         }
     }
 
@@ -58,22 +58,24 @@ impl <'text> Parser<'text> {
     /// EXPR = keyword
     /// ```
     fn expr(&mut self) -> Option<Expr> {
-        let expr = match self.lexer.peek() {
-            // TODO -- This is erroneously made possible by `impl <'text> Iterator for Lexer<'text>`
-            None => panic!("Lexer finished iteration before EOF"),
-            Some(lexeme) => match lexeme.kind {
-                L::True => Some(Expr::True),
-                L::False => Some(Expr::False),
-                L::Nil => Some(Expr::Nil),
-                _ => None
-            }
-        };
-
-        if let Some(_) = expr {
-            self.lexer.next();
-        }
-
-        expr
+        // self.lexer.peek
+        // let expr = match todo!() {
+        //     // TODO -- This is erroneously made possible by `impl <'text> Iterator for Lexer<'text>`
+        //     None => panic!("Lexer finished iteration before EOF"),
+        //     Some(_) => match todo!() {
+        //         L::True => Some(Expr::True),
+        //         L::False => Some(Expr::False),
+        //         L::Nil => Some(Expr::Nil),
+        //         _ => None
+        //     }
+        // };
+        //
+        // if let Some(_) = expr {
+        //     // self.lexer.next();
+        // }
+        //
+        // expr
+        todo!()
     }
 
     // pub fn parse(mut self) -> Program {
