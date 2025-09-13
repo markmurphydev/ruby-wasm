@@ -1,40 +1,69 @@
+use std::ops::{Add, AddAssign};
+
 /// Starts with line 1.
-pub type Line = u64;
+#[derive(Debug, Eq, PartialEq, Copy, Clone)]
+pub struct Line(pub u32);
 
 /// Starts with col 0.
-pub type Col = u64;
+#[derive(Debug, Eq, PartialEq, Copy, Clone)]
+pub struct Col(pub u32);
+
+#[derive(Debug, Eq, PartialEq, Copy, Clone)]
+pub struct CharIdx(pub usize);
+
+impl Add for CharIdx {
+    type Output = Self;
+
+    fn add(self, rhs: Self) -> Self::Output {
+        Self(self.0 + rhs.0)
+    }
+}
+
+impl AddAssign for CharIdx {
+    fn add_assign(&mut self, rhs: Self) {
+        *self = *self + rhs;
+    }
+}
 
 /// A lexeme lexed from a text file.
 /// The identity of the file will remain implicit until it causes me problems.
 #[derive(Debug, Eq, PartialEq, Copy, Clone)]
 pub struct Lexeme {
     pub kind: LexemeKind,
-    /// Starts with line 1.
-    pub start_line: Line,
-    /// Starts with col 0.
-    pub start_col: Col,
-    /// Starts with line 1. Inclusive.
-    pub end_line: Line,
-    /// Starts with col 0. Exclusive.
-    pub end_col: Col,
+    pub start: CharIdx,
+    pub end: CharIdx,
 }
 
 impl Lexeme {
     pub fn new(
         kind: LexemeKind,
-        start_line: Line,
-        start_col: Col,
-        end_line: Line,
-        end_col: Col,
+        start: CharIdx,
+        end: CharIdx
     ) -> Self {
         Self {
             kind,
-            start_line,
-            start_col,
-            end_line,
-            end_col,
+            start,
+            end
         }
     }
+
+    /// Get the line and column range of this lexeme in the given program text. O(n).
+    pub fn to_line_col_range(self, program_text: &str) -> String {
+        todo!()
+    }
+
+    /// Get the text spanned by this lexeme. O(n).
+    pub fn to_source(self, program_text: &str) -> String {
+        let len = self.end.0 - self.start.0;
+        program_text.chars().skip(self.start.0).take(len).collect()
+    }
+}
+
+pub struct LineColRange {
+    pub start_line: Line,
+    pub start_col: Col,
+    pub end_line: Line,
+    pub end_col: Col,
 }
 
 /// Largely copied from Prism's token list

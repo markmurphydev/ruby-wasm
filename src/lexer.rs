@@ -1,5 +1,7 @@
-use crate::lexeme::{Col, Lexeme, LexemeKind, Line};
+use crate::lexeme::{CharIdx, Col, Lexeme, LexemeKind, Line};
 use itertools::{Itertools, PeekNth};
+use std::iter::{Enumerate, Peekable};
+use std::ops::{AddAssign, Index};
 use std::str::Chars;
 
 use LexemeKind::*;
@@ -9,803 +11,798 @@ use LexemeKind::*;
 /// NOTE: If we find ourselves adding state to this struct, consider whether
 /// it would be better added as parser-driven input to the lex method
 pub struct Lexer<'text> {
-    /// I think `PeekNth` is the most convenient way to interact with a
-    /// sequence of characters in Rust, so I'm using it here.
-    /// TODO: Do we need multi-character peek?
-    chars: PeekNth<Chars<'text>>,
-    line: Line,
-    col: Col,
+    /// Peekable iterator of `(char_idx, char)`
+    iter: LexerIter<'text>,
     /// Have we lexed Eof?
     lexed_eof: bool,
 }
 
 impl<'text> Lexer<'text> {
-    //! Invariant:
-    //!     Coords are not updated (outside skips) until directly before returning the lexeme.
-
-    pub fn new(text: &'text str) -> Self {
-        Self {
-            chars: itertools::peek_nth(text.chars()),
-            line: 1,
-            col: 0,
-            lexed_eof: false,
-        }
-    }
-
-    /// Consume and return a single lexeme
-    pub fn lex(&mut self) -> Option<Lexeme> {
-        // Strategy: For punctuation, simple matching.
-
-        if self.lexed_eof {
-            return None;
-        }
-
-        // Prism doesn't include whitespace in token width.
-        self.skip_whitespace();
-
-        let lexeme = match self.chars.next() {
-            // Prism EOF is 0-width.
-            None => {
-                self.lexed_eof = true;
-                Lexeme::new(Eof, self.line, self.col, self.line, self.col)
-            },
-            Some(c) => match c {
-                '\n' => self.newline(),
-
-                '#' => {
-                    let start_line = self.line;
-                    let start_col = self.col;
-                    self.skip_to_next_line();
-                    Lexeme::new(InlineComment, start_line, start_col, self.line, self.col)
-                }
-
-                // '?' can be the start of a character literal, or a ternary operator
-                '?' => match self.chars.peek() {
-                    None => self.simple_lexeme(Question, 1),
-                    Some(c) if c.is_whitespace() => self.simple_lexeme(Question, 1),
-                    _ => self.character_literal(),
-                },
-
-                c if c.is_ascii_digit() => self.integer_or_float(),
-
-                '\'' => {
-                    self.chars.next();
-                    self.single_quote_string()
-                }
-
-                '@' => {
-                    self.chars.next();
-                    match self.chars.peek() {
-                        Some('@') => {
-                            self.chars.next();
-                            self.class_variable()
-                        }
-                        Some(c) if !c.is_whitespace() => self.instance_variable(),
-                        Some(_) => panic!("Bare `@`"),
-                        None => panic!("Bare `@`"),
-                    }
-                }
-
-                // Punctuation
-                // TODO: This can definitely be replaced by a macro that generates the match chain.
-                //  Only problem would be losing error reporting.
-                //  Which is one reason not to use regexes in the first place...
-                //  Ditto keywords tho
-                '&' => match self.chars.peek() {
-                    Some('&') => {
-                        self.chars.next();
-                        match self.chars.peek() {
-                            Some('=') => {
-                                self.chars.next();
-                                self.simple_lexeme(AmpersandAmpersandEqual, 3)
-                            }
-                            _ => self.simple_lexeme(AmpersandAmpersand, 2),
-                        }
-                    }
-                    Some('=') => {
-                        self.chars.next();
-                        self.simple_lexeme(AmpersandEqual, 2)
-                    }
-                    Some('.') => {
-                        self.chars.next();
-                        self.simple_lexeme(AmpersandPeriod, 2)
-                    }
-                    _ => self.simple_lexeme(Ampersand, 1),
-                },
-                '`' => self.simple_lexeme(Backtick, 1),
-                '!' => match self.chars.peek() {
-                    Some('=') => {
-                        self.chars.next();
-                        self.simple_lexeme(BangEqual, 2)
-                    }
-                    Some('~') => {
-                        self.chars.next();
-                        self.simple_lexeme(BangTilde, 2)
-                    }
-                    _ => self.simple_lexeme(Bang, 1),
-                },
-                '{' => self.simple_lexeme(BraceLeft, 1),
-                '}' => self.simple_lexeme(BraceRight, 1),
-                '[' => match self.chars.peek() {
-                    Some(']') => {
-                        self.chars.next();
-                        match self.chars.peek() {
-                            Some('=') => {
-                                self.chars.next();
-                                self.simple_lexeme(BracketLeftRightEqual, 3)
-                            }
-                            _ => self.simple_lexeme(BracketLeftRight, 2),
-                        }
-                    }
-                    _ => self.simple_lexeme(BracketLeft, 1),
-                },
-                ']' => self.simple_lexeme(BracketRight, 1),
-                '^' => match self.chars.peek() {
-                    Some('=') => {
-                        self.chars.next();
-                        self.simple_lexeme(CaretEqual, 2)
-                    }
-                    _ => self.simple_lexeme(Caret, 1),
-                },
-                ':' => match self.chars.peek() {
-                    Some(':') => {
-                        self.chars.next();
-                        self.simple_lexeme(ColonColon, 2)
-                    }
-                    _ => self.simple_lexeme(Colon, 1),
-                },
-                ',' => self.simple_lexeme(Comma, 1),
-                '.' => match self.chars.peek() {
-                    Some('.') => {
-                        self.chars.next();
-                        match self.chars.peek() {
-                            Some('.') => {
-                                self.chars.next();
-                                self.simple_lexeme(DotDotDot, 3)
-                            }
-                            _ => self.simple_lexeme(DotDot, 2),
-                        }
-                    }
-                    _ => self.simple_lexeme(Dot, 1),
-                },
-                '=' => match self.chars.peek() {
-                    Some('=') => {
-                        self.chars.next();
-                        match self.chars.peek() {
-                            Some('=') => {
-                                self.chars.next();
-                                self.simple_lexeme(EqualEqualEqual, 3)
-                            }
-                            _ => self.simple_lexeme(EqualEqual, 2),
-                        }
-                    }
-                    Some('>') => self.simple_lexeme(EqualGreater, 2),
-                    Some('~') => self.simple_lexeme(EqualTilde, 2),
-                    _ => self.simple_lexeme(Equal, 1),
-                },
-                '>' => match self.chars.peek() {
-                    Some('>') => {
-                        self.chars.next();
-                        match self.chars.peek() {
-                            Some('=') => {
-                                self.chars.next();
-                                self.simple_lexeme(GreaterGreaterEqual, 3)
-                            }
-                            _ => self.simple_lexeme(GreaterGreater, 2),
-                        }
-                    }
-                    Some('=') => self.simple_lexeme(GreaterEqual, 2),
-                    _ => self.simple_lexeme(Greater, 1),
-                },
-                '<' => match self.chars.peek() {
-                    Some('=') => {
-                        self.chars.next();
-                        match self.chars.peek() {
-                            Some('>') => {
-                                self.chars.next();
-                                self.simple_lexeme(LessEqualGreater, 3)
-                            }
-                            _ => self.simple_lexeme(LessEqualGreater, 2),
-                        }
-                    }
-                    Some('<') => self.simple_lexeme(LessLess, 2),
-                    _ => self.simple_lexeme(Less, 1),
-                },
-                '-' => match self.chars.peek() {
-                    Some('@') => {
-                        self.chars.next();
-                        self.simple_lexeme(MinusAt, 2)
-                    }
-                    Some('=') => {
-                        self.chars.next();
-                        self.simple_lexeme(MinusEqual, 2)
-                    }
-                    Some('>') => {
-                        self.chars.next();
-                        self.simple_lexeme(MinusGreater, 2)
-                    }
-                    _ => self.simple_lexeme(Minus, 1),
-                },
-                '%' => match self.chars.peek() {
-                    Some('=') => {
-                        self.chars.next();
-                        self.simple_lexeme(PercentEqual, 2)
-                    }
-                    Some('i') => {
-                        self.chars.next();
-                        self.simple_lexeme(PercentLowerI, 2)
-                    }
-                    Some('w') => {
-                        self.chars.next();
-                        self.simple_lexeme(PercentLowerW, 2)
-                    }
-                    Some('x') => {
-                        self.chars.next();
-                        self.simple_lexeme(PercentLowerX, 2)
-                    }
-                    Some('I') => {
-                        self.chars.next();
-                        self.simple_lexeme(PercentUpperI, 2)
-                    }
-                    Some('W') => {
-                        self.chars.next();
-                        self.simple_lexeme(PercentUpperW, 2)
-                    }
-                    _ => self.simple_lexeme(Percent, 1),
-                },
-                '|' => match self.chars.peek() {
-                    Some('=') => self.simple_lexeme(PipeEqual, 2),
-                    Some('|') => {
-                        self.chars.next();
-                        match self.chars.peek() {
-                            Some('=') => {
-                                self.chars.next();
-                                self.simple_lexeme(PipePipeEqual, 3)
-                            }
-                            _ => self.simple_lexeme(PipePipe, 2),
-                        }
-                    }
-                    _ => self.simple_lexeme(Pipe, 1),
-                },
-                '+' => match self.chars.peek() {
-                    Some('@') => {
-                        self.chars.next();
-                        self.simple_lexeme(PlusAt, 2)
-                    }
-                    Some('=') => {
-                        self.chars.next();
-                        self.simple_lexeme(PlusEqual, 2)
-                    }
-                    _ => self.simple_lexeme(Plus, 1),
-                },
-                '/' => match self.chars.peek() {
-                    Some('=') => {
-                        self.chars.next();
-                        self.simple_lexeme(SlashEqual, 2)
-                    }
-                    _ => self.simple_lexeme(Slash, 1),
-                },
-                '*' => match self.chars.peek() {
-                    Some('=') => self.simple_lexeme(StarEqual, 2),
-                    Some('*') => {
-                        self.chars.next();
-                        match self.chars.peek() {
-                            Some('=') => {
-                                self.chars.next();
-                                self.simple_lexeme(StarStarEqual, 3)
-                            }
-                            _ => self.simple_lexeme(StarStar, 2),
-                        }
-                    }
-                    _ => self.simple_lexeme(Star, 1),
-                },
-                '~' => match self.chars.peek() {
-                    Some('@') => {
-                        self.chars.next();
-                        self.simple_lexeme(TildeOrTildeAt, 2)
-                    }
-                    _ => self.simple_lexeme(TildeOrTildeAt, 1),
-                },
-                ';' => self.simple_lexeme(Semicolon, 1),
-                c if c.is_ascii_uppercase() => self.constant(),
-                c if is_identifier_start(c) => self.identifier_or_keyword(c),
-                _ => panic!(),
-            },
-        };
-
-        Some(lexeme)
-    }
-
-    /// Lexes a character literal of the form `?<CHAR>`
-    /// TODO: Allow remaining escape sequences. See Prism `lex_question_mark`
-    /// Pre: `?` has been consumed.
-    ///     `self.chars.peek()` is some non-whitespace character.
-    fn character_literal(&mut self) -> Lexeme {
-        match self.chars.peek() {
-            Some('\\') => match self.chars.peek() {
-                None => panic!(),
-                Some('\\') | Some('n') | Some('t') => self.simple_lexeme(CharacterLiteral, 3),
-                _ => panic!(),
-            },
-            Some(c) if !c.is_whitespace() => {
-                self.chars.next();
-                self.simple_lexeme(CharacterLiteral, 2)
-            }
-            _ => unreachable!(),
-        }
-    }
-
-    fn integer_or_float(&mut self) -> Lexeme {
-        let mut len = 1;
-        loop {
-            match self.chars.peek() {
-                // Integers and floats can contain `_`, but can't end on it.
-                // Floats also can't have an underscore directly before the period.
-                Some('_') => {
-                    len += 1;
-                    self.chars.next();
-                    match self.chars.peek() {
-                        Some(c) if c.is_ascii_digit() => continue,
-                        _ => panic!(),
-                    }
-                }
-                Some('.') => {
-                    len += 1;
-                    break;
-                }
-                Some(&c) if c.is_ascii_digit() => {
-                    len += 1;
-                    self.chars.next();
-                }
-                Some(c) if c.is_whitespace() => return self.simple_lexeme(IntegerLiteral, len),
-                None => return self.simple_lexeme(IntegerLiteral, len),
-                _ => panic!(),
-            }
-        }
-
-        // This is a float.
-        loop {
-            match self.chars.peek() {
-                // Floats can contain `_` in the decimal part, but can't end on it.
-                Some('_') => {
-                    len += 1;
-                    self.chars.next();
-                    match self.chars.peek() {
-                        Some(c) if c.is_ascii_digit() => continue,
-                        _ => panic!(),
-                    }
-                }
-                Some(&c) if c.is_ascii_digit() => {
-                    len += 1;
-                    self.chars.next();
-                }
-                Some(c) if c.is_whitespace() => return self.simple_lexeme(FloatLiteral, len),
-                _ => panic!(),
-            }
-        }
-    }
-
-    /// Lexes a string surrounded by single quotes.
-    /// Allows only the escape characters `\'` and `\\`
-    /// Pre: `'` has been consumed.
-    fn single_quote_string(&mut self) -> Lexeme {
-        let mut len = 1;
-        loop {
-            len += 1;
-            match self.chars.next() {
-                None => panic!("Unterminated single-quote string literal"),
-                // Consume `\'` without returning.
-                Some('\\') => {
-                    len += 1;
-                    match self.chars.next() {
-                        None => panic!("Unterminated single-quote string literal"),
-                        Some(_) => (),
-                    }
-                }
-                Some('\'') => return self.simple_lexeme(SingleQuoteStringLiteral, len + 1),
-                Some(_) => (),
-            };
-        }
-    }
-
-    /// Lexes an instance variable of the form `@<IDENTIFIER>`
-    /// Pre: `@` has been consumed.
-    /// TODO: This identifier-recognition code is duplicated like 4 times.
-    ///     But I'm afraid it might eventually be different between identifier types?
-    ///     Ruby _would_ do something obnoxious like that.
-    fn instance_variable(&mut self) -> Lexeme {
-        let mut len = 1;
-
-        loop {
-            match self.chars.peek() {
-                Some(&c) if is_identifier_char(c) => {
-                    len += 1;
-                    self.chars.next();
-                }
-                _ => return self.simple_lexeme(InstanceVariable, len),
-            }
-        }
-    }
-
-    /// Lexes a class variable of the form `@@<IDENTIFIER>`
-    /// Pre: `@@` has been consumed.
-    fn class_variable(&mut self) -> Lexeme {
-        let mut len = 1;
-
-        loop {
-            match self.chars.peek() {
-                Some(&c) if is_identifier_char(c) => {
-                    len += 1;
-                    self.chars.next();
-                }
-                _ => return self.simple_lexeme(ClassVariable, len),
-            }
-        }
-    }
-
-    /// Lexes a constant of the form `[A-Z]<IDENTIFIER>`
-    /// Pre: Initial uppercase character has been consumed.
-    fn constant(&mut self) -> Lexeme {
-        let mut len = 1;
-
-        loop {
-            match self.chars.peek() {
-                Some(&c) if is_identifier_char(c) => {
-                    len += 1;
-                    self.chars.next();
-                }
-                _ => return self.simple_lexeme(Constant, len),
-            }
-        }
-    }
-
-    /// Lexes an identifier or a keyword starting with one of:
-    /// - A lowercase letter
-    /// - `_`
-    /// Pre: `first_character` has been consumed.
-    fn identifier_or_keyword(&mut self, first_character: char) -> Lexeme {
-        // Strategy taken from Robert Nystrom -- Crafting Interpreters chapter 16
-        // We use nested cases until we reach non-ambiguity between keywords.
-        // Then we check against that keyword in particular.
-
-        // len includes 1 for `first_character`
-        let mut len = match first_character {
-            'a' => match self.chars.peek() {
-                Some('l') => match self.check_rest_of_keyword("lias", Alias, 5) {
-                    Ok(kw) => return kw,
-                    Err(consumed) => consumed + 1, // 'l' wasn't consumed by us.
-                },
-                Some('n') => match self.check_rest_of_keyword("nd", Begin, 3) {
-                    Ok(kw) => return kw,
-                    Err(consumed) => consumed + 1,
-                },
-                _ => 1,
-            },
-            'b' => match self.chars.peek() {
-                Some('e') => match self.check_rest_of_keyword("egin", Begin, 5) {
-                    Ok(kw) => return kw,
-                    Err(consumed) => consumed + 1,
-                },
-                Some('r') => match self.check_rest_of_keyword("reak", Break, 5) {
-                    Ok(kw) => return kw,
-                    Err(consumed) => consumed + 1,
-                },
-                _ => 1,
-            },
-            'c' => match self.chars.peek() {
-                Some('a') => match self.check_rest_of_keyword("ase", Case, 4) {
-                    Ok(kw) => return kw,
-                    Err(consumed) => consumed + 1,
-                },
-                Some('l') => match self.check_rest_of_keyword("lass", Class, 5) {
-                    Ok(kw) => return kw,
-                    Err(consumed) => consumed + 1,
-                },
-                _ => 1,
-            },
-            'd' => match self.chars.peek() {
-                Some('e') => match self.check_rest_of_keyword("ef", Def, 3) {
-                    Ok(kw) => return kw,
-                    Err(consumed) => consumed + 1,
-                },
-                Some('o') => {
-                    self.chars.next();
-                    match self.chars.peek() {
-                        Some(&c) if is_identifier_char(c) => 2,
-                        _ => {
-                            self.chars.next();
-                            return self.simple_lexeme(Do, 2);
-                        }
-                    }
-                }
-                _ => 1,
-            },
-            'e' => match self.chars.peek() {
-                Some('l') => {
-                    self.chars.next();
-                    match self.chars.peek() {
-                        Some('s') => {
-                            self.chars.next();
-                            match self.chars.peek() {
-                                Some('e') => {
-                                    self.chars.next();
-                                    match self.chars.peek() {
-                                        Some('i') => {
-                                            match self.check_rest_of_keyword("if", Elsif, 6) {
-                                                Ok(kw) => return kw,
-                                                Err(consumed) => consumed + 4,
-                                            }
-                                        }
-                                        Some(&c) if is_identifier_char(c) => 4,
-                                        _ => {
-                                            self.chars.next();
-                                            return self.simple_lexeme(Else, 4);
-                                        }
-                                    }
-                                }
-                                _ => 3,
-                            }
-                        }
-                        _ => 2,
-                    }
-                }
-                Some('n') => match self.chars.peek() {
-                    Some('d') => {
-                        self.chars.next();
-                        match self.chars.peek() {
-                            Some(&c) if is_identifier_char(c) => 3,
-                            _ => {
-                                self.chars.next();
-                                return self.simple_lexeme(End, 3);
-                            }
-                        }
-                    }
-                    Some('s') => match self.check_rest_of_keyword("sure", Ensure, 6) {
-                        Ok(kw) => return kw,
-                        Err(consumed) => consumed + 1,
-                    },
-                    _ => 1,
-                },
-                _ => 1,
-            },
-            'f' => match self.check_rest_of_keyword("alse", False, 5) {
-                Ok(kw) => return kw,
-                Err(consumed) => consumed + 1,
-            },
-            'i' => match self.check_rest_of_keyword("in", In, 2) {
-                Ok(kw) => return kw,
-                Err(consumed) => consumed + 1,
-            },
-            'n' => match self.chars.peek() {
-                Some('i') => match self.check_rest_of_keyword("il", Nil, 3) {
-                    Ok(kw) => return kw,
-                    Err(consumed) => consumed + 1, // 'l' wasn't consumed by us.
-                },
-                Some('o') => match self.check_rest_of_keyword("ot", Not, 3) {
-                    Ok(kw) => return kw,
-                    Err(consumed) => consumed + 1,
-                },
-                _ => 1,
-            },
-            'o' => match self.check_rest_of_keyword("or", Or, 2) {
-                Ok(kw) => return kw,
-                Err(consumed) => consumed + 1,
-            },
-            'r' => match self.chars.peek() {
-                Some('e') => {
-                    self.chars.next();
-                    match self.chars.peek() {
-                        Some('d') => match self.check_rest_of_keyword("do", Redo, 4) {
-                            Ok(kw) => return kw,
-                            Err(consumed) => consumed + 2,
-                        },
-                        Some('s') => match self.check_rest_of_keyword("scue", Rescue, 6) {
-                            Ok(kw) => return kw,
-                            Err(consumed) => consumed + 2,
-                        },
-                        Some('t') => {
-                            self.chars.next();
-                            match self.chars.peek() {
-                                Some('r') => match self.check_rest_of_keyword("ry", Retry, 5) {
-                                    Ok(kw) => return kw,
-                                    Err(consumed) => consumed + 3,
-                                },
-                                Some('u') => match self.check_rest_of_keyword("urn", Return, 6) {
-                                    Ok(kw) => return kw,
-                                    Err(consumed) => consumed + 3,
-                                },
-                                _ => 3,
-                            }
-                        }
-                        _ => 2,
-                    }
-                }
-                _ => 1,
-            },
-            's' => match self.chars.peek() {
-                Some('e') => match self.check_rest_of_keyword("elf", SelfKeyword, 4) {
-                    Ok(kw) => return kw,
-                    Err(consumed) => consumed + 1, // 'l' wasn't consumed by us.
-                },
-                Some('u') => match self.check_rest_of_keyword("uper", Super, 5) {
-                    Ok(kw) => return kw,
-                    Err(consumed) => consumed + 1,
-                },
-                _ => 1,
-            },
-            't' => match self.chars.peek() {
-                Some('h') => match self.check_rest_of_keyword("hen", Then, 4) {
-                    Ok(kw) => return kw,
-                    Err(consumed) => consumed + 1, // 'l' wasn't consumed by us.
-                },
-                Some('r') => match self.check_rest_of_keyword("rue", True, 4) {
-                    Ok(kw) => return kw,
-                    Err(consumed) => consumed + 1,
-                },
-                _ => 1,
-            },
-            'u' => match self.chars.peek() {
-                Some('n') => {
-                    self.chars.next();
-                    match self.chars.peek() {
-                        Some('d') => match self.check_rest_of_keyword("def", Undef, 5) {
-                            Ok(kw) => return kw,
-                            Err(consumed) => consumed + 2,
-                        },
-                        Some('l') => match self.check_rest_of_keyword("less", Unless, 6) {
-                            Ok(kw) => return kw,
-                            Err(consumed) => consumed + 2,
-                        },
-                        Some('t') => match self.check_rest_of_keyword("til", Until, 5) {
-                            Ok(kw) => return kw,
-                            Err(consumed) => consumed + 2,
-                        },
-                        _ => 2,
-                    }
-                }
-                _ => 1,
-            },
-            'w' => match self.chars.peek() {
-                Some('h') => {
-                    self.chars.next();
-                    match self.chars.peek() {
-                        Some('e') => match self.check_rest_of_keyword("en", When, 4) {
-                            Ok(kw) => return kw,
-                            Err(consumed) => consumed + 2,
-                        },
-                        Some('i') => match self.check_rest_of_keyword("ile", While, 5) {
-                            Ok(kw) => return kw,
-                            Err(consumed) => consumed + 2,
-                        },
-                        _ => 2,
-                    }
-                }
-                _ => 1,
-            },
-            'y' => match self.check_rest_of_keyword("ield", Yield, 5) {
-                Ok(kw) => return kw,
-                Err(consumed) => consumed + 1,
-            },
-            '_' => match self.chars.peek() {
-                Some('_') => {
-                    self.chars.next();
-                    match self.chars.peek() {
-                        Some('E') => {
-                            match self.check_rest_of_keyword("ENCODING__", UnderscoreEncoding, 12) {
-                                Ok(kw) => return kw,
-                                Err(consumed) => consumed + 2,
-                            }
-                        }
-                        Some('F') => {
-                            match self.check_rest_of_keyword("FILE__", UnderscoreFile, 8) {
-                                Ok(kw) => return kw,
-                                Err(consumed) => consumed + 2,
-                            }
-                        }
-                        Some('L') => {
-                            match self.check_rest_of_keyword("LINE__", UnderscoreLine, 8) {
-                                Ok(kw) => return kw,
-                                Err(consumed) => consumed + 2,
-                            }
-                        }
-                        _ => 2,
-                    }
-                }
-                _ => 1,
-            },
-            _ => 1,
-        };
-
-        // This is not a keyword, so consume until we reach a non-identifier character.
-        loop {
-            match self.chars.peek() {
-                Some(&c) if is_identifier_char(c) => {
-                    len += 1;
-                    self.chars.next();
-                }
-                _ => return self.simple_lexeme(Identifier, len),
-            }
-        }
-    }
-
-    /// Checks if the rest of this keyword/const/identifier is the given keyword.
-    fn check_rest_of_keyword(
-        &mut self,
-        expected: &str,
-        kind: LexemeKind,
-        len: u64,
-    ) -> Result<Lexeme, u64> {
-        let mut consumed = 0;
-        for expected_char in expected.chars() {
-            match self.chars.peek() {
-                Some(&actual_char) if expected_char == actual_char => {
-                    self.chars.next();
-                    consumed += 1;
-                }
-                _ => return Err(consumed),
-            }
-        }
-
-        // We've reached the end of the keyword text.
-        // Check whether there's any additional characters in this keyword/const/identifier.
-        match self.chars.peek() {
-            Some(&c) if is_identifier_char(c) => Err(consumed),
-            _ => Ok(self.simple_lexeme(kind, len)),
-        }
-    }
-
-    /// Pre: '\n' has been consumed.
-    fn newline(&mut self) -> Lexeme {
-        let start_line = self.line;
-        let start_col = self.col;
-        self.line += 1;
-        self.col = 0;
-        Lexeme::new(Newline, start_line, start_col, self.line, 0)
-    }
-
-    /// Updates coordinates and returns a simple (no linebreaks) lexeme.
-    /// Pre:
-    ///     Coords at start of lexeme.
-    ///     All lexeme characters have been consumed.
-    fn simple_lexeme(&mut self, kind: LexemeKind, len: u64) -> Lexeme {
-        // NB: Compound punctuation can't be separated by whitespace.
-        //  `& =` -> `AMPERSAND, EQUALS`
-        //  `&=` -> `AMPERSAND_EQUALS`
-        let start_col = self.col;
-        self.col += len;
-        Lexeme::new(kind, self.line, start_col, self.line, self.col)
-    }
-
-    /// Skip until the start (column 0) of the next line.
-    /// Updates `self.row` and `self.col`
-    fn skip_to_next_line(&mut self) {
-        while self.chars.next().is_some_and(|c| c != '\n') {}
-        self.line += 1;
-        self.col = 0;
-    }
-
-    /// Skip non-newline whitespace, incrementing `self.col`.
-    fn skip_whitespace(&mut self) {
-        while self
-            .chars
-            .peek()
-            .is_some_and(|&c| c.is_whitespace() && c != '\n')
-        {
-            self.col += 1;
-            self.chars.next();
-        }
-    }
+    // //! Invariant:
+    // //!     Coords are not updated (outside skips) until directly before returning the lexeme.
+    //
+    // pub fn new(text: &'text str) -> Self {
+    //     Self {
+    //         iter: LexerIter::from(text.chars()),
+    //         lexed_eof: false,
+    //     }
+    // }
+    //
+    // /// Consume and return a single lexeme
+    // pub fn lex(&mut self) -> Option<Lexeme> {
+    //     // Strategy: For punctuation, simple matching.
+    //
+    //     if self.lexed_eof {
+    //         return None;
+    //     }
+    //
+    //     // Prism doesn't include whitespace in token width.
+    //     self.skip_whitespace();
+    //
+    //     let lexeme = match self.iter.next() {
+    //         // Prism EOF is 0-width.
+    //         None => {
+    //             self.lexed_eof = true;
+    //             Lexeme::new(Eof, self.iter.highest_idx(), self.iter.highest_idx())
+    //         },
+    //         Some((idx, c)) => match c {
+    //             '\n' => self.newline(),
+    //
+    //             '#' => {
+    //                 let start_line = self.line;
+    //                 let start_col = self.col;
+    //                 self.skip_to_next_line();
+    //                 Lexeme::new(InlineComment, start_line, start_col, self.line, self.col)
+    //             }
+    //
+    //             // '?' can be the start of a character literal, or a ternary operator
+    //             '?' => match self.iter.peek() {
+    //                 None => self.simple_lexeme(Question, 1),
+    //                 Some(c) if c.is_whitespace() => self.simple_lexeme(Question, 1),
+    //                 _ => self.character_literal(),
+    //             },
+    //
+    //             c if c.is_ascii_digit() => self.integer_or_float(),
+    //
+    //             '\'' => {
+    //                 self.iter.next();
+    //                 self.single_quote_string()
+    //             }
+    //
+    //             '@' => {
+    //                 self.iter.next();
+    //                 match self.iter.peek() {
+    //                     Some('@') => {
+    //                         self.iter.next();
+    //                         self.class_variable()
+    //                     }
+    //                     Some(c) if !c.is_whitespace() => self.instance_variable(),
+    //                     Some(_) => panic!("Bare `@`"),
+    //                     None => panic!("Bare `@`"),
+    //                 }
+    //             }
+    //
+    //             // Punctuation
+    //             // TODO: This can definitely be replaced by a macro that generates the match chain.
+    //             //  Only problem would be losing error reporting.
+    //             //  Which is one reason not to use regexes in the first place...
+    //             //  Ditto keywords tho
+    //             '&' => match self.iter.peek() {
+    //                 Some('&') => {
+    //                     self.iter.next();
+    //                     match self.iter.peek() {
+    //                         Some('=') => {
+    //                             self.iter.next();
+    //                             self.simple_lexeme(AmpersandAmpersandEqual, 3)
+    //                         }
+    //                         _ => self.simple_lexeme(AmpersandAmpersand, 2),
+    //                     }
+    //                 }
+    //                 Some('=') => {
+    //                     self.iter.next();
+    //                     self.simple_lexeme(AmpersandEqual, 2)
+    //                 }
+    //                 Some('.') => {
+    //                     self.iter.next();
+    //                     self.simple_lexeme(AmpersandPeriod, 2)
+    //                 }
+    //                 _ => self.simple_lexeme(Ampersand, 1),
+    //             },
+    //             '`' => self.simple_lexeme(Backtick, 1),
+    //             '!' => match self.iter.peek() {
+    //                 Some('=') => {
+    //                     self.iter.next();
+    //                     self.simple_lexeme(BangEqual, 2)
+    //                 }
+    //                 Some('~') => {
+    //                     self.iter.next();
+    //                     self.simple_lexeme(BangTilde, 2)
+    //                 }
+    //                 _ => self.simple_lexeme(Bang, 1),
+    //             },
+    //             '{' => self.simple_lexeme(BraceLeft, 1),
+    //             '}' => self.simple_lexeme(BraceRight, 1),
+    //             '[' => match self.iter.peek() {
+    //                 Some(']') => {
+    //                     self.iter.next();
+    //                     match self.iter.peek() {
+    //                         Some('=') => {
+    //                             self.iter.next();
+    //                             self.simple_lexeme(BracketLeftRightEqual, 3)
+    //                         }
+    //                         _ => self.simple_lexeme(BracketLeftRight, 2),
+    //                     }
+    //                 }
+    //                 _ => self.simple_lexeme(BracketLeft, 1),
+    //             },
+    //             ']' => self.simple_lexeme(BracketRight, 1),
+    //             '^' => match self.iter.peek() {
+    //                 Some('=') => {
+    //                     self.iter.next();
+    //                     self.simple_lexeme(CaretEqual, 2)
+    //                 }
+    //                 _ => self.simple_lexeme(Caret, 1),
+    //             },
+    //             ':' => match self.iter.peek() {
+    //                 Some(':') => {
+    //                     self.iter.next();
+    //                     self.simple_lexeme(ColonColon, 2)
+    //                 }
+    //                 _ => self.simple_lexeme(Colon, 1),
+    //             },
+    //             ',' => self.simple_lexeme(Comma, 1),
+    //             '.' => match self.iter.peek() {
+    //                 Some('.') => {
+    //                     self.iter.next();
+    //                     match self.iter.peek() {
+    //                         Some('.') => {
+    //                             self.iter.next();
+    //                             self.simple_lexeme(DotDotDot, 3)
+    //                         }
+    //                         _ => self.simple_lexeme(DotDot, 2),
+    //                     }
+    //                 }
+    //                 _ => self.simple_lexeme(Dot, 1),
+    //             },
+    //             '=' => match self.iter.peek() {
+    //                 Some('=') => {
+    //                     self.iter.next();
+    //                     match self.iter.peek() {
+    //                         Some('=') => {
+    //                             self.iter.next();
+    //                             self.simple_lexeme(EqualEqualEqual, 3)
+    //                         }
+    //                         _ => self.simple_lexeme(EqualEqual, 2),
+    //                     }
+    //                 }
+    //                 Some('>') => self.simple_lexeme(EqualGreater, 2),
+    //                 Some('~') => self.simple_lexeme(EqualTilde, 2),
+    //                 _ => self.simple_lexeme(Equal, 1),
+    //             },
+    //             '>' => match self.iter.peek() {
+    //                 Some('>') => {
+    //                     self.iter.next();
+    //                     match self.iter.peek() {
+    //                         Some('=') => {
+    //                             self.iter.next();
+    //                             self.simple_lexeme(GreaterGreaterEqual, 3)
+    //                         }
+    //                         _ => self.simple_lexeme(GreaterGreater, 2),
+    //                     }
+    //                 }
+    //                 Some('=') => self.simple_lexeme(GreaterEqual, 2),
+    //                 _ => self.simple_lexeme(Greater, 1),
+    //             },
+    //             '<' => match self.iter.peek() {
+    //                 Some('=') => {
+    //                     self.iter.next();
+    //                     match self.iter.peek() {
+    //                         Some('>') => {
+    //                             self.iter.next();
+    //                             self.simple_lexeme(LessEqualGreater, 3)
+    //                         }
+    //                         _ => self.simple_lexeme(LessEqualGreater, 2),
+    //                     }
+    //                 }
+    //                 Some('<') => self.simple_lexeme(LessLess, 2),
+    //                 _ => self.simple_lexeme(Less, 1),
+    //             },
+    //             '-' => match self.iter.peek() {
+    //                 Some('@') => {
+    //                     self.iter.next();
+    //                     self.simple_lexeme(MinusAt, 2)
+    //                 }
+    //                 Some('=') => {
+    //                     self.iter.next();
+    //                     self.simple_lexeme(MinusEqual, 2)
+    //                 }
+    //                 Some('>') => {
+    //                     self.iter.next();
+    //                     self.simple_lexeme(MinusGreater, 2)
+    //                 }
+    //                 _ => self.simple_lexeme(Minus, 1),
+    //             },
+    //             '%' => match self.iter.peek() {
+    //                 Some('=') => {
+    //                     self.iter.next();
+    //                     self.simple_lexeme(PercentEqual, 2)
+    //                 }
+    //                 Some('i') => {
+    //                     self.iter.next();
+    //                     self.simple_lexeme(PercentLowerI, 2)
+    //                 }
+    //                 Some('w') => {
+    //                     self.iter.next();
+    //                     self.simple_lexeme(PercentLowerW, 2)
+    //                 }
+    //                 Some('x') => {
+    //                     self.iter.next();
+    //                     self.simple_lexeme(PercentLowerX, 2)
+    //                 }
+    //                 Some('I') => {
+    //                     self.iter.next();
+    //                     self.simple_lexeme(PercentUpperI, 2)
+    //                 }
+    //                 Some('W') => {
+    //                     self.iter.next();
+    //                     self.simple_lexeme(PercentUpperW, 2)
+    //                 }
+    //                 _ => self.simple_lexeme(Percent, 1),
+    //             },
+    //             '|' => match self.iter.peek() {
+    //                 Some('=') => self.simple_lexeme(PipeEqual, 2),
+    //                 Some('|') => {
+    //                     self.iter.next();
+    //                     match self.iter.peek() {
+    //                         Some('=') => {
+    //                             self.iter.next();
+    //                             self.simple_lexeme(PipePipeEqual, 3)
+    //                         }
+    //                         _ => self.simple_lexeme(PipePipe, 2),
+    //                     }
+    //                 }
+    //                 _ => self.simple_lexeme(Pipe, 1),
+    //             },
+    //             '+' => match self.iter.peek() {
+    //                 Some('@') => {
+    //                     self.iter.next();
+    //                     self.simple_lexeme(PlusAt, 2)
+    //                 }
+    //                 Some('=') => {
+    //                     self.iter.next();
+    //                     self.simple_lexeme(PlusEqual, 2)
+    //                 }
+    //                 _ => self.simple_lexeme(Plus, 1),
+    //             },
+    //             '/' => match self.iter.peek() {
+    //                 Some('=') => {
+    //                     self.iter.next();
+    //                     self.simple_lexeme(SlashEqual, 2)
+    //                 }
+    //                 _ => self.simple_lexeme(Slash, 1),
+    //             },
+    //             '*' => match self.iter.peek() {
+    //                 Some('=') => self.simple_lexeme(StarEqual, 2),
+    //                 Some('*') => {
+    //                     self.iter.next();
+    //                     match self.iter.peek() {
+    //                         Some('=') => {
+    //                             self.iter.next();
+    //                             self.simple_lexeme(StarStarEqual, 3)
+    //                         }
+    //                         _ => self.simple_lexeme(StarStar, 2),
+    //                     }
+    //                 }
+    //                 _ => self.simple_lexeme(Star, 1),
+    //             },
+    //             '~' => match self.iter.peek() {
+    //                 Some('@') => {
+    //                     self.iter.next();
+    //                     self.simple_lexeme(TildeOrTildeAt, 2)
+    //                 }
+    //                 _ => self.simple_lexeme(TildeOrTildeAt, 1),
+    //             },
+    //             ';' => self.simple_lexeme(Semicolon, 1),
+    //             c if c.is_ascii_uppercase() => self.constant(),
+    //             c if is_identifier_start(c) => self.identifier_or_keyword(c),
+    //             _ => panic!(),
+    //         },
+    //     };
+    //
+    //     Some(lexeme)
+    // }
+    //
+    // /// Lexes a character literal of the form `?<CHAR>`
+    // /// TODO: Allow remaining escape sequences. See Prism `lex_question_mark`
+    // /// Pre: `?` has been consumed.
+    // ///     `self.chars.peek()` is some non-whitespace character.
+    // fn character_literal(&mut self) -> Lexeme {
+    //     match self.iter.peek() {
+    //         Some('\\') => match self.iter.peek() {
+    //             None => panic!(),
+    //             Some('\\') | Some('n') | Some('t') => self.simple_lexeme(CharacterLiteral, 3),
+    //             _ => panic!(),
+    //         },
+    //         Some(c) if !c.is_whitespace() => {
+    //             self.iter.next();
+    //             self.simple_lexeme(CharacterLiteral, 2)
+    //         }
+    //         _ => unreachable!(),
+    //     }
+    // }
+    //
+    // fn integer_or_float(&mut self) -> Lexeme {
+    //     let mut len = 1;
+    //     loop {
+    //         match self.iter.peek() {
+    //             // Integers and floats can contain `_`, but can't end on it.
+    //             // Floats also can't have an underscore directly before the period.
+    //             Some('_') => {
+    //                 len += 1;
+    //                 self.iter.next();
+    //                 match self.iter.peek() {
+    //                     Some(c) if c.is_ascii_digit() => continue,
+    //                     _ => panic!(),
+    //                 }
+    //             }
+    //             Some('.') => {
+    //                 len += 1;
+    //                 break;
+    //             }
+    //             Some(&c) if c.is_ascii_digit() => {
+    //                 len += 1;
+    //                 self.iter.next();
+    //             }
+    //             Some(c) if c.is_whitespace() => return self.simple_lexeme(IntegerLiteral, len),
+    //             None => return self.simple_lexeme(IntegerLiteral, len),
+    //             _ => panic!(),
+    //         }
+    //     }
+    //
+    //     // This is a float.
+    //     loop {
+    //         match self.iter.peek() {
+    //             // Floats can contain `_` in the decimal part, but can't end on it.
+    //             Some('_') => {
+    //                 len += 1;
+    //                 self.iter.next();
+    //                 match self.iter.peek() {
+    //                     Some(c) if c.is_ascii_digit() => continue,
+    //                     _ => panic!(),
+    //                 }
+    //             }
+    //             Some(&c) if c.is_ascii_digit() => {
+    //                 len += 1;
+    //                 self.iter.next();
+    //             }
+    //             Some(c) if c.is_whitespace() => return self.simple_lexeme(FloatLiteral, len),
+    //             _ => panic!(),
+    //         }
+    //     }
+    // }
+    //
+    // /// Lexes a string surrounded by single quotes.
+    // /// Allows only the escape characters `\'` and `\\`
+    // /// Pre: `'` has been consumed.
+    // fn single_quote_string(&mut self) -> Lexeme {
+    //     let mut len = 1;
+    //     loop {
+    //         len += 1;
+    //         match self.iter.next() {
+    //             None => panic!("Unterminated single-quote string literal"),
+    //             // Consume `\'` without returning.
+    //             Some('\\') => {
+    //                 len += 1;
+    //                 match self.iter.next() {
+    //                     None => panic!("Unterminated single-quote string literal"),
+    //                     Some(_) => (),
+    //                 }
+    //             }
+    //             Some('\'') => return self.simple_lexeme(SingleQuoteStringLiteral, len + 1),
+    //             Some(_) => (),
+    //         };
+    //     }
+    // }
+    //
+    // /// Lexes an instance variable of the form `@<IDENTIFIER>`
+    // /// Pre: `@` has been consumed.
+    // /// TODO: This identifier-recognition code is duplicated like 4 times.
+    // ///     But I'm afraid it might eventually be different between identifier types?
+    // ///     Ruby _would_ do something obnoxious like that.
+    // fn instance_variable(&mut self) -> Lexeme {
+    //     let mut len = 1;
+    //
+    //     loop {
+    //         match self.iter.peek() {
+    //             Some(&c) if is_identifier_char(c) => {
+    //                 len += 1;
+    //                 self.iter.next();
+    //             }
+    //             _ => return self.simple_lexeme(InstanceVariable, len),
+    //         }
+    //     }
+    // }
+    //
+    // /// Lexes a class variable of the form `@@<IDENTIFIER>`
+    // /// Pre: `@@` has been consumed.
+    // fn class_variable(&mut self) -> Lexeme {
+    //     let mut len = 1;
+    //
+    //     loop {
+    //         match self.iter.peek() {
+    //             Some(&c) if is_identifier_char(c) => {
+    //                 len += 1;
+    //                 self.iter.next();
+    //             }
+    //             _ => return self.simple_lexeme(ClassVariable, len),
+    //         }
+    //     }
+    // }
+    //
+    // /// Lexes a constant of the form `[A-Z]<IDENTIFIER>`
+    // /// Pre: Initial uppercase character has been consumed.
+    // fn constant(&mut self) -> Lexeme {
+    //     let mut len = 1;
+    //
+    //     loop {
+    //         match self.iter.peek() {
+    //             Some(&c) if is_identifier_char(c) => {
+    //                 len += 1;
+    //                 self.iter.next();
+    //             }
+    //             _ => return self.simple_lexeme(Constant, len),
+    //         }
+    //     }
+    // }
+    //
+    // /// Lexes an identifier or a keyword starting with one of:
+    // /// - A lowercase letter
+    // /// - `_`
+    // /// Pre: `first_character` has been consumed.
+    // fn identifier_or_keyword(&mut self, first_character: char) -> Lexeme {
+    //     // Strategy taken from Robert Nystrom -- Crafting Interpreters chapter 16
+    //     // We use nested cases until we reach non-ambiguity between keywords.
+    //     // Then we check against that keyword in particular.
+    //
+    //     // len includes 1 for `first_character`
+    //     let mut len = match first_character {
+    //         'a' => match self.iter.peek() {
+    //             Some('l') => match self.check_rest_of_keyword("lias", Alias, 5) {
+    //                 Ok(kw) => return kw,
+    //                 Err(consumed) => consumed + 1, // 'l' wasn't consumed by us.
+    //             },
+    //             Some('n') => match self.check_rest_of_keyword("nd", Begin, 3) {
+    //                 Ok(kw) => return kw,
+    //                 Err(consumed) => consumed + 1,
+    //             },
+    //             _ => 1,
+    //         },
+    //         'b' => match self.iter.peek() {
+    //             Some('e') => match self.check_rest_of_keyword("egin", Begin, 5) {
+    //                 Ok(kw) => return kw,
+    //                 Err(consumed) => consumed + 1,
+    //             },
+    //             Some('r') => match self.check_rest_of_keyword("reak", Break, 5) {
+    //                 Ok(kw) => return kw,
+    //                 Err(consumed) => consumed + 1,
+    //             },
+    //             _ => 1,
+    //         },
+    //         'c' => match self.iter.peek() {
+    //             Some('a') => match self.check_rest_of_keyword("ase", Case, 4) {
+    //                 Ok(kw) => return kw,
+    //                 Err(consumed) => consumed + 1,
+    //             },
+    //             Some('l') => match self.check_rest_of_keyword("lass", Class, 5) {
+    //                 Ok(kw) => return kw,
+    //                 Err(consumed) => consumed + 1,
+    //             },
+    //             _ => 1,
+    //         },
+    //         'd' => match self.iter.peek() {
+    //             Some('e') => match self.check_rest_of_keyword("ef", Def, 3) {
+    //                 Ok(kw) => return kw,
+    //                 Err(consumed) => consumed + 1,
+    //             },
+    //             Some('o') => {
+    //                 self.iter.next();
+    //                 match self.iter.peek() {
+    //                     Some(&c) if is_identifier_char(c) => 2,
+    //                     _ => {
+    //                         self.iter.next();
+    //                         return self.simple_lexeme(Do, 2);
+    //                     }
+    //                 }
+    //             }
+    //             _ => 1,
+    //         },
+    //         'e' => match self.iter.peek() {
+    //             Some('l') => {
+    //                 self.iter.next();
+    //                 match self.iter.peek() {
+    //                     Some('s') => {
+    //                         self.iter.next();
+    //                         match self.iter.peek() {
+    //                             Some('e') => {
+    //                                 self.iter.next();
+    //                                 match self.iter.peek() {
+    //                                     Some('i') => {
+    //                                         match self.check_rest_of_keyword("if", Elsif, 6) {
+    //                                             Ok(kw) => return kw,
+    //                                             Err(consumed) => consumed + 4,
+    //                                         }
+    //                                     }
+    //                                     Some(&c) if is_identifier_char(c) => 4,
+    //                                     _ => {
+    //                                         self.iter.next();
+    //                                         return self.simple_lexeme(Else, 4);
+    //                                     }
+    //                                 }
+    //                             }
+    //                             _ => 3,
+    //                         }
+    //                     }
+    //                     _ => 2,
+    //                 }
+    //             }
+    //             Some('n') => match self.iter.peek() {
+    //                 Some('d') => {
+    //                     self.iter.next();
+    //                     match self.iter.peek() {
+    //                         Some(&c) if is_identifier_char(c) => 3,
+    //                         _ => {
+    //                             self.iter.next();
+    //                             return self.simple_lexeme(End, 3);
+    //                         }
+    //                     }
+    //                 }
+    //                 Some('s') => match self.check_rest_of_keyword("sure", Ensure, 6) {
+    //                     Ok(kw) => return kw,
+    //                     Err(consumed) => consumed + 1,
+    //                 },
+    //                 _ => 1,
+    //             },
+    //             _ => 1,
+    //         },
+    //         'f' => match self.check_rest_of_keyword("alse", False, 5) {
+    //             Ok(kw) => return kw,
+    //             Err(consumed) => consumed + 1,
+    //         },
+    //         'i' => match self.check_rest_of_keyword("in", In, 2) {
+    //             Ok(kw) => return kw,
+    //             Err(consumed) => consumed + 1,
+    //         },
+    //         'n' => match self.iter.peek() {
+    //             Some('i') => match self.check_rest_of_keyword("il", Nil, 3) {
+    //                 Ok(kw) => return kw,
+    //                 Err(consumed) => consumed + 1, // 'l' wasn't consumed by us.
+    //             },
+    //             Some('o') => match self.check_rest_of_keyword("ot", Not, 3) {
+    //                 Ok(kw) => return kw,
+    //                 Err(consumed) => consumed + 1,
+    //             },
+    //             _ => 1,
+    //         },
+    //         'o' => match self.check_rest_of_keyword("or", Or, 2) {
+    //             Ok(kw) => return kw,
+    //             Err(consumed) => consumed + 1,
+    //         },
+    //         'r' => match self.iter.peek() {
+    //             Some('e') => {
+    //                 self.iter.next();
+    //                 match self.iter.peek() {
+    //                     Some('d') => match self.check_rest_of_keyword("do", Redo, 4) {
+    //                         Ok(kw) => return kw,
+    //                         Err(consumed) => consumed + 2,
+    //                     },
+    //                     Some('s') => match self.check_rest_of_keyword("scue", Rescue, 6) {
+    //                         Ok(kw) => return kw,
+    //                         Err(consumed) => consumed + 2,
+    //                     },
+    //                     Some('t') => {
+    //                         self.iter.next();
+    //                         match self.iter.peek() {
+    //                             Some('r') => match self.check_rest_of_keyword("ry", Retry, 5) {
+    //                                 Ok(kw) => return kw,
+    //                                 Err(consumed) => consumed + 3,
+    //                             },
+    //                             Some('u') => match self.check_rest_of_keyword("urn", Return, 6) {
+    //                                 Ok(kw) => return kw,
+    //                                 Err(consumed) => consumed + 3,
+    //                             },
+    //                             _ => 3,
+    //                         }
+    //                     }
+    //                     _ => 2,
+    //                 }
+    //             }
+    //             _ => 1,
+    //         },
+    //         's' => match self.iter.peek() {
+    //             Some('e') => match self.check_rest_of_keyword("elf", SelfKeyword, 4) {
+    //                 Ok(kw) => return kw,
+    //                 Err(consumed) => consumed + 1, // 'l' wasn't consumed by us.
+    //             },
+    //             Some('u') => match self.check_rest_of_keyword("uper", Super, 5) {
+    //                 Ok(kw) => return kw,
+    //                 Err(consumed) => consumed + 1,
+    //             },
+    //             _ => 1,
+    //         },
+    //         't' => match self.iter.peek() {
+    //             Some('h') => match self.check_rest_of_keyword("hen", Then, 4) {
+    //                 Ok(kw) => return kw,
+    //                 Err(consumed) => consumed + 1, // 'l' wasn't consumed by us.
+    //             },
+    //             Some('r') => match self.check_rest_of_keyword("rue", True, 4) {
+    //                 Ok(kw) => return kw,
+    //                 Err(consumed) => consumed + 1,
+    //             },
+    //             _ => 1,
+    //         },
+    //         'u' => match self.iter.peek() {
+    //             Some('n') => {
+    //                 self.iter.next();
+    //                 match self.iter.peek() {
+    //                     Some('d') => match self.check_rest_of_keyword("def", Undef, 5) {
+    //                         Ok(kw) => return kw,
+    //                         Err(consumed) => consumed + 2,
+    //                     },
+    //                     Some('l') => match self.check_rest_of_keyword("less", Unless, 6) {
+    //                         Ok(kw) => return kw,
+    //                         Err(consumed) => consumed + 2,
+    //                     },
+    //                     Some('t') => match self.check_rest_of_keyword("til", Until, 5) {
+    //                         Ok(kw) => return kw,
+    //                         Err(consumed) => consumed + 2,
+    //                     },
+    //                     _ => 2,
+    //                 }
+    //             }
+    //             _ => 1,
+    //         },
+    //         'w' => match self.iter.peek() {
+    //             Some('h') => {
+    //                 self.iter.next();
+    //                 match self.iter.peek() {
+    //                     Some('e') => match self.check_rest_of_keyword("en", When, 4) {
+    //                         Ok(kw) => return kw,
+    //                         Err(consumed) => consumed + 2,
+    //                     },
+    //                     Some('i') => match self.check_rest_of_keyword("ile", While, 5) {
+    //                         Ok(kw) => return kw,
+    //                         Err(consumed) => consumed + 2,
+    //                     },
+    //                     _ => 2,
+    //                 }
+    //             }
+    //             _ => 1,
+    //         },
+    //         'y' => match self.check_rest_of_keyword("ield", Yield, 5) {
+    //             Ok(kw) => return kw,
+    //             Err(consumed) => consumed + 1,
+    //         },
+    //         '_' => match self.iter.peek() {
+    //             Some('_') => {
+    //                 self.iter.next();
+    //                 match self.iter.peek() {
+    //                     Some('E') => {
+    //                         match self.check_rest_of_keyword("ENCODING__", UnderscoreEncoding, 12) {
+    //                             Ok(kw) => return kw,
+    //                             Err(consumed) => consumed + 2,
+    //                         }
+    //                     }
+    //                     Some('F') => {
+    //                         match self.check_rest_of_keyword("FILE__", UnderscoreFile, 8) {
+    //                             Ok(kw) => return kw,
+    //                             Err(consumed) => consumed + 2,
+    //                         }
+    //                     }
+    //                     Some('L') => {
+    //                         match self.check_rest_of_keyword("LINE__", UnderscoreLine, 8) {
+    //                             Ok(kw) => return kw,
+    //                             Err(consumed) => consumed + 2,
+    //                         }
+    //                     }
+    //                     _ => 2,
+    //                 }
+    //             }
+    //             _ => 1,
+    //         },
+    //         _ => 1,
+    //     };
+    //
+    //     // This is not a keyword, so consume until we reach a non-identifier character.
+    //     loop {
+    //         match self.iter.peek() {
+    //             Some(&c) if is_identifier_char(c) => {
+    //                 len += 1;
+    //                 self.iter.next();
+    //             }
+    //             _ => return self.simple_lexeme(Identifier, len),
+    //         }
+    //     }
+    // }
+    //
+    // /// Checks if the rest of this keyword/const/identifier is the given keyword.
+    // fn check_rest_of_keyword(
+    //     &mut self,
+    //     expected: &str,
+    //     kind: LexemeKind,
+    //     len: u64,
+    // ) -> Result<Lexeme, u64> {
+    //     let mut consumed = 0;
+    //     for expected_char in expected.chars() {
+    //         match self.iter.peek() {
+    //             Some(&actual_char) if expected_char == actual_char => {
+    //                 self.iter.next();
+    //                 consumed += 1;
+    //             }
+    //             _ => return Err(consumed),
+    //         }
+    //     }
+    //
+    //     // We've reached the end of the keyword text.
+    //     // Check whether there's any additional characters in this keyword/const/identifier.
+    //     match self.iter.peek() {
+    //         Some(&c) if is_identifier_char(c) => Err(consumed),
+    //         _ => Ok(self.simple_lexeme(kind, len)),
+    //     }
+    // }
+    //
+    // /// Pre: '\n' has been consumed.
+    // fn newline(&mut self) -> Lexeme {
+    //     let start_line = self.line;
+    //     let start_col = self.col;
+    //     self.line += 1;
+    //     self.col = 0;
+    //     Lexeme::new(Newline, start_line, start_col, self.line, 0)
+    // }
+    //
+    // /// Updates coordinates and returns a simple (no linebreaks) lexeme.
+    // /// Pre:
+    // ///     Coords at start of lexeme.
+    // ///     All lexeme characters have been consumed.
+    // fn simple_lexeme(&mut self, kind: LexemeKind, len: u64) -> Lexeme {
+    //     // NB: Compound punctuation can't be separated by whitespace.
+    //     //  `& =` -> `AMPERSAND, EQUALS`
+    //     //  `&=` -> `AMPERSAND_EQUALS`
+    //     let start_col = self.col;
+    //     self.col += len;
+    //     Lexeme::new(kind, self.line, start_col, self.line, self.col)
+    // }
+    //
+    // /// Skip until the start (column 0) of the next line.
+    // /// Updates `self.row` and `self.col`
+    // fn skip_to_next_line(&mut self) {
+    //     while self.iter.next().is_some_and(|c| c != '\n') {}
+    //     self.line += 1;
+    //     self.col = 0;
+    // }
+    //
+    // /// Skip non-newline whitespace, incrementing `self.col`.
+    // fn skip_whitespace(&mut self) {
+    //     while self
+    //         .iter
+    //         .peek()
+    //         .is_some_and(|&c| c.is_whitespace() && c != '\n')
+    //     {
+    //         self.col += 1;
+    //         self.iter.next();
+    //     }
+    // }
 }
 
 /// TODO -- This is probably bad.
 ///     Iterator semantics are that we return `None` when iteration is finished
 ///     But that's what the Eof lexeme signifies. Mushy.
 ///     BUT, we want `Peekable<Lexer>`. Probably should just implement `peek()` manually.
-impl <'text> Iterator for Lexer<'text> {
+impl<'text> Iterator for Lexer<'text> {
     type Item = Lexeme;
 
     fn next(&mut self) -> Option<Self::Item> {
-        self.lex()
+        // self.lex()
+        todo!()
     }
 }
 
@@ -820,61 +817,141 @@ fn is_identifier_char(c: char) -> bool {
     c.is_alphanumeric() || c == '?'
 }
 
+/// Peekable iterator over `(CharIdx, char)`
+struct LexerIter<'a> {
+    last_idx: Option<CharIdx>,
+    iter: Chars<'a>,
+    /// Remember a peeked value, even if it was None.
+    peeked: Option<Option<(CharIdx, char)>>,
+}
+
+impl<'a> From<Chars<'a>> for LexerIter<'a> {
+    fn from(value: Chars<'a>) -> Self {
+        Self {
+            last_idx: None,
+            iter: value,
+            peeked: None,
+        }
+    }
+}
+
+impl<'a> LexerIter<'a> {
+    /// Get the highest idx produced by this iterator (from `next()` or `peek()`),
+    ///     or `CharIdx(0)` if no such index has been returned.
+    pub fn highest_idx(&self) -> CharIdx {
+        self.last_idx.unwrap_or(CharIdx(0))
+    }
+
+    pub fn peek(&mut self) -> Option<(CharIdx, char)> {
+        match self.peeked {
+            Some(v) => v,
+            None => {
+                let v = self.next();
+                self.peeked = Some(v);
+                v
+            }
+        }
+    }
+}
+
+impl<'a> Iterator for LexerIter<'a> {
+    type Item = (CharIdx, char);
+
+    fn next(&mut self) -> Option<Self::Item> {
+        match self.peeked.take() {
+            Some(v) => v,
+            None => match self.iter.next() {
+                None => None,
+                Some(char) => {
+                    let idx = match self.last_idx {
+                        None => CharIdx(0),
+                        Some(idx) => idx + CharIdx(1),
+                    };
+                    self.last_idx = Some(idx);
+                    Some((idx, char))
+                }
+            },
+        }
+    }
+}
+
 #[cfg(test)]
 mod tests {
     use super::*;
     use LexemeKind::*;
 
-    /// This only works so long as the lexer can be driven independently of the parser.
-    fn lex_to_eof(text: &str) -> Vec<Lexeme> {
-        Lexer::new(text).into_iter().collect()
-    }
-
     #[test]
-    pub fn empty() {
-        let text = "";
-        let expected: Vec<Lexeme> = vec![Lexeme::new(Eof, 1, 0, 1, 0)];
-        let actual = lex_to_eof(text);
-        assert_eq!(expected, actual);
-
-        let text = "     ";
-        let expected: Vec<Lexeme> = vec![Lexeme::new(Eof, 1, 5, 1, 5)];
-        let actual = lex_to_eof(text);
-        assert_eq!(expected, actual);
+    fn test_lexer_iter() {
+        let text = "abc";
+        let mut iter = LexerIter::from(text.chars());
+        assert_eq!(Some((CharIdx(0), 'a')), iter.peek());
+        assert_eq!(CharIdx(0), iter.highest_idx());
+        assert_eq!(Some((CharIdx(0), 'a')), iter.peek());
+        assert_eq!(CharIdx(0), iter.highest_idx());
+        assert_eq!(Some((CharIdx(0), 'a')), iter.next());
+        assert_eq!(CharIdx(0), iter.highest_idx());
+        assert_eq!(Some((CharIdx(1), 'b')), iter.next());
+        assert_eq!(CharIdx(1), iter.highest_idx());
+        assert_eq!(Some((CharIdx(2), 'c')), iter.peek());
+        assert_eq!(CharIdx(2), iter.highest_idx());
+        assert_eq!(Some((CharIdx(2), 'c')), iter.next());
+        assert_eq!(CharIdx(2), iter.highest_idx());
+        assert_eq!(None, iter.peek());
+        assert_eq!(CharIdx(2), iter.highest_idx());
+        assert_eq!(None, iter.next());
+        assert_eq!(CharIdx(2), iter.highest_idx());
     }
 
-    #[test]
-    pub fn keywords() {
-        {
-            let text = "nil";
-            let expected: Vec<Lexeme> =
-                vec![Lexeme::new(Nil, 1, 0, 1, 3), Lexeme::new(Eof, 1, 3, 1, 3)];
-            let test_tokens = lex_to_eof(text);
-            assert_eq!(expected, test_tokens);
-
-            let text = "true";
-            let expected: Vec<Lexeme> =
-                vec![Lexeme::new(True, 1, 0, 1, 4), Lexeme::new(Eof, 1, 4, 1, 4)];
-            let test_tokens = lex_to_eof(text);
-            assert_eq!(expected, test_tokens);
-
-            let text = "false";
-            let expected: Vec<Lexeme> =
-                vec![Lexeme::new(False, 1, 0, 1, 5), Lexeme::new(Eof, 1, 5, 1, 5)];
-            let test_tokens = lex_to_eof(text);
-            assert_eq!(expected, test_tokens);
-
-            let text = "nil\ntrue\tfalse\n";
-            let expected: Vec<Lexeme> = vec![
-                Lexeme::new(Nil, 1, 0, 1, 3),
-                Lexeme::new(Newline, 1, 3, 2, 0),
-                Lexeme::new(True, 2, 0, 2, 4),
-                Lexeme::new(False, 2, 5, 2, 10),
-                Lexeme::new(Newline, 2, 10, 3, 0),
-                Lexeme::new(Eof, 3, 0, 3, 0),
-            ];
-            let test_tokens = lex_to_eof(text);
-            assert_eq!(expected, test_tokens);
-        }
-    }
+    // /// This only works so long as the lexer can be driven independently of the parser.
+    // fn lex_to_eof(text: &str) -> Vec<Lexeme> {
+    //     Lexer::new(text).into_iter().collect()
+    // }
+    //
+    // #[test]
+    // pub fn empty() {
+    //     let text = "";
+    //     let expected: Vec<Lexeme> = vec![Lexeme::new(Eof, 1, 0, 1, 0)];
+    //     let actual = lex_to_eof(text);
+    //     assert_eq!(expected, actual);
+    //
+    //     let text = "     ";
+    //     let expected: Vec<Lexeme> = vec![Lexeme::new(Eof, 1, 5, 1, 5)];
+    //     let actual = lex_to_eof(text);
+    //     assert_eq!(expected, actual);
+    // }
+    //
+    // #[test]
+    // pub fn keywords() {
+    //     {
+    //         let text = "nil";
+    //         let expected: Vec<Lexeme> =
+    //             vec![Lexeme::new(Nil, 1, 0, 1, 3), Lexeme::new(Eof, 1, 3, 1, 3)];
+    //         let test_tokens = lex_to_eof(text);
+    //         assert_eq!(expected, test_tokens);
+    //
+    //         let text = "true";
+    //         let expected: Vec<Lexeme> =
+    //             vec![Lexeme::new(True, 1, 0, 1, 4), Lexeme::new(Eof, 1, 4, 1, 4)];
+    //         let test_tokens = lex_to_eof(text);
+    //         assert_eq!(expected, test_tokens);
+    //
+    //         let text = "false";
+    //         let expected: Vec<Lexeme> =
+    //             vec![Lexeme::new(False, 1, 0, 1, 5), Lexeme::new(Eof, 1, 5, 1, 5)];
+    //         let test_tokens = lex_to_eof(text);
+    //         assert_eq!(expected, test_tokens);
+    //
+    //         let text = "nil\ntrue\tfalse\n";
+    //         let expected: Vec<Lexeme> = vec![
+    //             Lexeme::new(Nil, 1, 0, 1, 3),
+    //             Lexeme::new(Newline, 1, 3, 2, 0),
+    //             Lexeme::new(True, 2, 0, 2, 4),
+    //             Lexeme::new(False, 2, 5, 2, 10),
+    //             Lexeme::new(Newline, 2, 10, 3, 0),
+    //             Lexeme::new(Eof, 3, 0, 3, 0),
+    //         ];
+    //         let test_tokens = lex_to_eof(text);
+    //         assert_eq!(expected, test_tokens);
+    //     }
+    // }
 }
