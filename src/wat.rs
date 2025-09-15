@@ -1,4 +1,5 @@
-use crate::wasm::{Expr, Function, FunctionIndex, Instruction, Module};
+use crate::wasm::types::{GlobalType, Mutability, NumberType, Type, ValueType};
+use crate::wasm::{Expr, Function, FunctionIdx, Global, GlobalIdx, Instruction, Module};
 use std::fmt::Write;
 use std::iter;
 
@@ -7,6 +8,7 @@ pub struct WatPrinter {
     indent: usize,
 }
 
+// TODO -- Each print_ function should assume that it's in the correct start location when called.
 impl WatPrinter {
     pub fn new() -> Self {
         WatPrinter {
@@ -20,6 +22,7 @@ impl WatPrinter {
         write!(self.output, "(module").unwrap();
         self.indent += 2;
         self.print_exports(module);
+        self.print_globals(&module.globals);
         self.print_functions(module);
         self.print_start_function(module);
         writeln!(self.output, ")").unwrap();
@@ -35,13 +38,39 @@ impl WatPrinter {
         }
     }
 
-    fn print_export(&mut self, export: &FunctionIndex) {
+    fn print_export(&mut self, export: &FunctionIdx) {
         writeln!(self.output).unwrap();
         self.indent();
         match export {
-            FunctionIndex::Index(_) => panic!(),
-            FunctionIndex::Name(name) => {
+            FunctionIdx::Index(_) => panic!(),
+            FunctionIdx::Id(name) => {
                 write!(self.output, "(export \"_start\" (func ${}))", name).unwrap()
+            }
+        }
+    }
+
+    fn print_globals(&mut self, globals: &Vec<Global>) {
+        for global in globals {
+            self.print_global(global);
+        }
+    }
+
+    /// Pre: "cursor" is on the line before this global
+    ///     Indent is correct for this global
+    fn print_global(&mut self, global: &Global) {
+        match &global.id {
+            None => {
+                todo!("Indexed refs")
+            }
+            Some(id) => {
+                writeln!(self.output).unwrap();
+                self.indent();
+                write!(self.output, "(global {} ", id).unwrap();
+                self.print_global_type(&global.global_type);
+                self.indent += 2;
+                self.print_expr(&global.expr);
+                write!(self.output, ")").unwrap();
+                self.indent -= 2;
             }
         }
     }
@@ -56,17 +85,17 @@ impl WatPrinter {
         writeln!(self.output).unwrap();
         self.indent();
         write!(self.output, "(func").unwrap();
-        if let Some(name) = &function.name {
+        if let Some(name) = &function.id {
             write!(self.output, " ${}", name).unwrap();
         }
-        write!(self.output, " (result (ref i31))").unwrap();
+        write!(self.output, " (result i32)").unwrap();
         self.indent += 2;
-        self.print_function_body(&function.body);
+        self.print_expr(&function.body);
         write!(self.output, ")").unwrap();
         self.indent -= 2;
     }
 
-    fn print_function_body(&mut self, body: &Expr) {
+    fn print_expr(&mut self, body: &Expr) {
         for instr in body.0.iter() {
             self.print_instr(instr);
         }
@@ -77,7 +106,16 @@ impl WatPrinter {
         self.indent();
         match instr {
             Instruction::ConstI32(n) => write!(self.output, "i32.const {}", n).unwrap(),
+            Instruction::ConstI64(n) => write!(self.output, "i64.const {}", n).unwrap(),
             Instruction::RefI31 => write!(self.output, "ref.i31").unwrap(),
+            Instruction::GlobalGet(idx) => match idx {
+                &GlobalIdx::Idx(_idx) => {
+                    todo!("Indexed refs")
+                }
+                GlobalIdx::Id(id) => {
+                    write!(self.output, "(global.get {})", id).unwrap()
+                }
+            },
         }
     }
 
@@ -87,15 +125,43 @@ impl WatPrinter {
             self.indent();
             write!(self.output, "(start").unwrap();
             match start_idx {
-                FunctionIndex::Index(idx) => {
+                FunctionIdx::Index(idx) => {
                     write!(self.output, " {}", idx).unwrap();
                 }
-                FunctionIndex::Name(name) => {
+                FunctionIdx::Id(name) => {
                     write!(self.output, " ${}", name).unwrap();
                 }
             }
-            write!(self.output, ")").unwrap();
+            write!(self.output, ")").unwrap()
         }
+    }
+
+    /// See: Wasm reference 6.4.14
+    fn print_global_type(&mut self, global_type: &GlobalType) {
+        match global_type.mutability {
+            Mutability::Const => self.print_value_type(&global_type.value_type),
+            Mutability::Var => {
+                write!(self.output, "(mut ").unwrap();
+                self.print_value_type(&global_type.value_type);
+                write!(self.output, " )").unwrap()
+            }
+        }
+    }
+
+    fn print_value_type(&mut self, value_type: &ValueType) {
+        match value_type {
+            ValueType::NumberType(number_type) => self.print_number_type(number_type),
+        }
+    }
+
+    fn print_number_type(&mut self, number_type: &NumberType) {
+        let str = match number_type {
+            NumberType::I32 => "i32",
+            NumberType::I64 => "i64",
+            NumberType::F32 => "f32",
+            NumberType::F64 => "f64",
+        };
+        write!(self.output, "{}", str).unwrap()
     }
 
     fn indent(&mut self) {
@@ -104,6 +170,6 @@ impl WatPrinter {
             "{}",
             iter::repeat(' ').take(self.indent).collect::<String>()
         )
-        .unwrap();
+        .unwrap()
     }
 }

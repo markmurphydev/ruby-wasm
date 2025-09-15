@@ -1,6 +1,6 @@
 use clap::Parser as ParserTrait;
 use clap::Subcommand;
-use ruby_wasm::compiler::Compiler;
+use ruby_wasm::compiler::{Compiler, FIXNUM_MARKER};
 use ruby_wasm::lexeme::LexemeKind;
 use ruby_wasm::lexer::Lexer;
 use ruby_wasm::parser::Parser;
@@ -54,6 +54,10 @@ enum Command {
         /// Text of program to compile
         text: String,
     },
+
+    /// Scratch area to test Rust language.
+    /// TODO: Delete
+    Scratch,
 }
 
 fn main() {
@@ -79,14 +83,16 @@ fn main() {
         Command::Compile { text } => {
             let parser = Parser::new(Lexer::new(&text));
             let program = parser.parse();
-            let wasm = Compiler.compile(program);
+            let mut compiler = Compiler::new();
+            let wasm = compiler.compile(program);
             println!("{:?}", wasm);
         }
 
         Command::Wat { text } => {
             let parser = Parser::new(Lexer::new(&text));
             let program = parser.parse();
-            let wasm = Compiler.compile(program);
+            let compiler = Compiler::new();
+            let wasm = compiler.compile(program);
             let wat = WatPrinter::new().print_module(&wasm);
             println!("{}", wat);
         }
@@ -94,7 +100,8 @@ fn main() {
         Command::Wasm { text } => {
             let parser = Parser::new(Lexer::new(&text));
             let program = parser.parse();
-            let module = Compiler.compile(program);
+            let compiler = Compiler::new();
+            let module = compiler.compile(program);
             let bytes = binary::module_to_binary(&module);
             binary::print_bytes(&bytes);
         }
@@ -102,10 +109,17 @@ fn main() {
         Command::Html { text } => {
             let parser = Parser::new(Lexer::new(&text));
             let program = parser.parse();
-            let module = Compiler.compile(program);
+            let compiler = Compiler::new();
+            let module = compiler.compile(program);
             let bytes = binary::module_to_binary(&module);
             let html = html::make_html_wrapper(&bytes);
             println!("{}", html);
+        }
+
+        Command::Scratch => {
+            // 22
+            let a = 1073741846i32 & !FIXNUM_MARKER;
+            println!("{}", a);
         }
     }
 }

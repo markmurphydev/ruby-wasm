@@ -1,18 +1,50 @@
 //! Compiles a Ruby AST to a Wasm module
-//! Extremely ad-hoc. I have no theory yet of how the mapping should happen.
-//! But it's a walking skeleton!
+//!
+//! NB: Rust signed <-> unsigned casts (using `as`) reinterpret with 2's complement.
+//! ```
+//! assert_eq!(-1, u64::MAX as i64);
+//! ```
 
 // R for Ruby
 use crate::node as R;
 // W for Wasm
 use crate::wasm as W;
+use W::types as WT;
+use W::values as WV;
+use crate::wasm::GlobalIdx;
 
 const RUBY_TOP_LEVEL_FUNCTION_NAME: &str = "__ruby_top_level_function";
 
-pub struct Compiler;
+// TODO: Make u31 wrapper type
+/// We give fixnums half an i31, marking MSB 1
+/// (0b1xxx...): i31
+const FIXNUM_BIT_WIDTH: u32 = 30;
+
+/// Fixnums are identified with a 1 in the MSB of the i31
+pub const FIXNUM_MARKER: i32 = 1 << 30;
+
+/// Least allowed fixnum (2's complement) _without_ fixnum marker
+/// (0b10_0000...): i30
+/// Have to sign-extend...
+/// (0b1110_0000...)
+const MIN_FIXNUM: i32 = -2i32.pow(29);
+
+/// Largest allowed fixnum (2's complement) _without_ fixnum marker
+/// (0b01_1111...): i30
+const MAX_FIXNUM: i32 = 2i32.pow(29) - 1;
+
+pub struct Compiler {
+    globals: Vec<W::Global>
+}
 
 impl Compiler {
-    pub fn compile(&mut self, program: R::Program) -> W::Module {
+    pub fn new() -> Self {
+        Self {
+            globals: vec![]
+        }
+    }
+
+    pub fn compile(mut self, program: R::Program) -> W::Module {
         // Current strategy:
         // We're kinda doing recursive descent into the Wasm module structure.
         // - There is one wasm_module per ruby_program
@@ -22,15 +54,16 @@ impl Compiler {
         self.module(program)
     }
 
-    fn module(&mut self, program: R::Program) -> W::Module {
+    fn module(mut self, program: R::Program) -> W::Module {
         let functions = vec![self.function(program.statements)];
 
         // Export our top-level function
-        let exports = vec![W::FunctionIndex::Name(RUBY_TOP_LEVEL_FUNCTION_NAME.to_string())];
+        let exports = vec![W::FunctionIdx::Id(RUBY_TOP_LEVEL_FUNCTION_NAME.to_string())];
 
         W::Module {
             functions,
             exports,
+            globals: self.globals,
             start: None,
         }
     }
@@ -38,7 +71,7 @@ impl Compiler {
     fn function(&mut self, statements: R::Statements) -> W::Function {
         let body = self.expr(statements);
         W::Function {
-            name: Some(RUBY_TOP_LEVEL_FUNCTION_NAME.to_string()),
+            id: Some(RUBY_TOP_LEVEL_FUNCTION_NAME.to_string()),
             body,
         }
     }
@@ -56,15 +89,87 @@ impl Compiler {
 
     fn compile_ruby_expr(&mut self, ruby_expr: R::Expr) -> Vec<W::Instruction> {
 
-        fn const_i31(n: W::Integer) -> Vec<W::Instruction> {
-            vec![W::Instruction::ConstI32(n), W::Instruction::RefI31]
-        }
-
         match ruby_expr {
-            R::Expr::Integer(_) => todo!(),
-            R::Expr::True => const_i31(W::Integer::TRUE),
-            R::Expr::False => const_i31(W::Integer::FALSE),
-            R::Expr::Nil => const_i31(W::Integer::NIL),
+            R::Expr::Integer(n) => self.integer(n),
+            R::Expr::True => const_i31(WV::I32::TRUE),
+            R::Expr::False => const_i31(WV::I32::FALSE),
+            R::Expr::Nil => const_i31(WV::I32::NIL),
         }
     }
+
+    /// Convert the given integer into a Wasm fixnum or const global representation
+    fn integer(&mut self, n: i64) -> Vec<W::Instruction> {
+        // Strategy:
+        // Determine whether we're in range of a fixnum
+        // If not, add a const global int and get it
+
+        /// TODO: This should be `Fixnum::try_from(n)`
+        fn in_fixnum_range(n: i64) -> bool {
+            i64::from(MIN_FIXNUM) <= n && n <= i64::from(MAX_FIXNUM)
+        }
+        fn in_i32_range(n: i64) -> bool {
+            i32::try_from(n).is_ok()
+        }
+        /// Putting this here for when bignum is implemented.
+        fn in_i64_range(n: i64) -> bool {
+            i64::try_from(n).is_ok()
+        }
+
+        // If if-let guards were stable I'd use those.
+        match n {
+            n if in_fixnum_range(n) => {
+                let fixnum = FIXNUM_MARKER | i32::try_from(n).unwrap();
+                let fixnum = WV::I32(fixnum as u32);
+                vec![W::Instruction::ConstI32(fixnum), W::Instruction::RefI31]
+            }
+            n if in_i32_range(n) => {
+                let n = i32::try_from(n).unwrap();
+                // TODO -- Need to intern this.
+                //  If you have 2 of the same-valued global it probably breaks at validation time.
+                //  Also, does this introduce illegal identifier characters?
+                let global_id = format!("$global-i32-{}", n);
+                let expr_instrs = vec![W::Instruction::ConstI32(WV::I32(n as u32))];
+
+                let global = W::Global {
+                    id: Some(global_id.clone()),
+                    global_type: WT::GlobalType {
+                        mutability: WT::Mutability::Const,
+                        value_type: WT::ValueType::NumberType(WT::NumberType::I32),
+                    },
+                    expr: W::Expr(expr_instrs)
+                };
+                self.globals.push(global);
+                vec![W::Instruction::GlobalGet(GlobalIdx::Id(global_id))]
+            }
+            n if in_i64_range(n) => {
+                let n = i64::try_from(n).unwrap();
+                // TODO -- Need to intern this.
+                //  If you have 2 of the same-valued global it probably breaks at validation time.
+                //  Also, does this introduce illegal identifier characters?
+                let global_id = format!("$global-i64-{}", n);
+                let expr_instrs = vec![W::Instruction::ConstI64(WV::I64(n as u64))];
+
+                let global = W::Global {
+                    id: Some(global_id.clone()),
+                    global_type: WT::GlobalType {
+                        mutability: WT::Mutability::Const,
+                        value_type: WT::ValueType::NumberType(WT::NumberType::I64),
+                    },
+                    expr: W::Expr(expr_instrs)
+                };
+                self.globals.push(global);
+                vec![W::Instruction::GlobalGet(GlobalIdx::Id(global_id))]
+            }
+            _ => {
+                todo!("BigInts not yet implemented.
+                      [n={:x}] larger than W::I64",
+                      22)
+            }
+        }
+    }
+}
+
+
+fn const_i31(n: WV::I32) -> Vec<W::Instruction> {
+    vec![W::Instruction::ConstI32(n), W::Instruction::RefI31]
 }

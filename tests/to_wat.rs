@@ -1,8 +1,8 @@
 use std::fs;
 use std::path::PathBuf;
 use ruby_wasm::wat::WatPrinter;
-use ruby_wasm::wasm::{Expr, Function, FunctionIndex, Instruction, Module};
-use ruby_wasm::wasm::values::Integer;
+use ruby_wasm::wasm::{Expr, Function, FunctionIdx, Instruction, Module};
+use ruby_wasm::wasm::values::I32;
 
 fn compare(test_name: &str, module: Module) {
     let mut expected_out_file = PathBuf::from(env!("CARGO_MANIFEST_DIR"));
@@ -30,10 +30,10 @@ pub fn empty_module() {
 pub fn return_zero() {
     let return_zero = Module {
         functions: vec![Function {
-            name: Some("main".to_string()),
-            body: Expr(vec![Instruction::ConstI32(Integer(0))]),
+            id: Some("main".to_string()),
+            body: Expr(vec![Instruction::ConstI32(I32(0))]),
         }],
-        start: Some(FunctionIndex::Name("main".to_string())),
+        start: Some(FunctionIdx::Id("main".to_string())),
     };
 
     compare("return_zero", return_zero);
