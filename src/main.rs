@@ -63,7 +63,7 @@ fn main() {
         Command::Lex { text } => {
             let mut lexer = Lexer::new(&text);
             loop {
-                let lexeme = lexer.lex();
+                let lexeme = lexer.next();
                 println!("{:?}", lexeme);
                 if let LexemeKind::Eof = lexeme.kind {
                     return;

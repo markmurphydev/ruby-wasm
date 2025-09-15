@@ -14,6 +14,8 @@ pub struct Lexer<'text> {
     iter: LexerIter<'text>,
     /// Have we lexed Eof?
     lexed_eof: bool,
+    /// Remember a peeked value, even if it was None.
+    peeked: Option<Lexeme>,
 }
 
 impl<'text> Lexer<'text> {
@@ -22,11 +24,32 @@ impl<'text> Lexer<'text> {
             text,
             iter: LexerIter::from(text.chars()),
             lexed_eof: false,
+            peeked: None,
+        }
+    }
+
+    pub fn next(&mut self) -> Lexeme {
+        match self.peeked.take() {
+            Some(v) => v,
+            None => {
+                self.lex()
+            }
+        }
+    }
+
+    pub fn peek(&mut self) -> Lexeme {
+        match &self.peeked {
+            Some(lexeme) => lexeme.clone(),
+            None => {
+                let lexeme = self.lex();
+                self.peeked = Some(lexeme.clone());
+                lexeme
+            }
         }
     }
 
     /// Consume and return a single lexeme
-    pub fn lex(&mut self) -> Lexeme {
+    fn lex(&mut self) -> Lexeme {
         // Strategy: For punctuation, simple matching.
 
         if self.lexed_eof {
@@ -819,7 +842,7 @@ mod tests {
         let mut lexemes = vec![];
         let mut lexer = Lexer::new(text);
         loop {
-            let lexeme = lexer.lex();
+            let lexeme = lexer.next();
             let eof= lexeme.kind == Eof;
             lexemes.push(lexeme);
             if eof {
