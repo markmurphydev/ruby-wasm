@@ -36,9 +36,13 @@ impl AddAssign<CharDifference> for CharIdx {
 #[derive(Debug, Eq, PartialEq, Copy, Clone)]
 pub struct CharDifference(pub usize);
 
+pub fn text_in_range(text: &str, start_idx: CharIdx, len: CharDifference) -> String {
+    text.chars().skip(start_idx.0).take(len.0).collect()
+}
+
 /// A lexeme lexed from a text file.
 /// The identity of the file will remain implicit until it causes me problems.
-#[derive(Debug, Eq, PartialEq, Copy, Clone)]
+#[derive(Debug, Eq, PartialEq, Clone)]
 pub struct Lexeme {
     pub kind: LexemeKind,
     pub start: CharIdx,
@@ -79,7 +83,7 @@ pub struct LineColRange {
 /// Largely copied from Prism's token list
 /// https://github.com/ruby/prism (MIT license)
 /// These are all "dumb" enum values -- they don't store their values (for eg. integers)
-#[derive(Debug, Eq, PartialEq, Copy, Clone)]
+#[derive(Debug, Eq, PartialEq, Clone)]
 pub enum LexemeKind {
     /// The final token in a file.
     Eof,
@@ -91,7 +95,9 @@ pub enum LexemeKind {
     CharacterLiteral,
     /// Integer of the form `\d[\d_]+\d`
     /// TODO: Recognize 0x, 0b, ...
-    IntegerLiteral,
+    IntegerLiteral {
+        text: String
+    },
     /// Float of the form `\d[\d_]+\d(\.\d[\d_]+\d)?`
     /// TODO: Recognize float exponents
     FloatLiteral,

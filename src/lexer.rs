@@ -1,16 +1,15 @@
 use crate::lexeme::{CharDifference, CharIdx, Col, Lexeme, LexemeKind, Line};
-use itertools::{Itertools, PeekNth};
-use std::iter::{Enumerate, Peekable};
-use std::ops::{AddAssign, Index};
 use std::str::Chars;
 
 use LexemeKind::*;
+use crate::lexeme;
 
 /// Lexes Ruby program input.
 /// Attempts to produce identical output to the Prism lexer.
 /// NOTE: If we find ourselves adding state to this struct, consider whether
 /// it would be better added as parser-driven input to the lex method
 pub struct Lexer<'text> {
+    text: &'text str,
     /// Peekable iterator of `(char_idx, char)`
     iter: LexerIter<'text>,
     /// Have we lexed Eof?
@@ -20,6 +19,7 @@ pub struct Lexer<'text> {
 impl<'text> Lexer<'text> {
     pub fn new(text: &'text str) -> Self {
         Self {
+            text,
             iter: LexerIter::from(text.chars()),
             lexed_eof: false,
         }
@@ -348,8 +348,8 @@ impl<'text> Lexer<'text> {
                     len += 1;
                     self.iter.next();
                 }
-                Some((_, c)) if c.is_whitespace() => return Lexeme::new(IntegerLiteral, start_idx, CharDifference(len)),
-                None => return Lexeme::new(IntegerLiteral, start_idx, CharDifference(len)),
+                Some((_, c)) if c.is_whitespace() => return self.integer_literal(start_idx, CharDifference(len)),
+                None => return self.integer_literal(start_idx, CharDifference(len)),
                 _ => panic!(),
             }
         }
@@ -684,10 +684,15 @@ impl<'text> Lexer<'text> {
         while self
             .iter
             .peek()
-            .is_some_and(|(idx, c)| c.is_whitespace() && c != '\n')
+            .is_some_and(|(_, c)| c.is_whitespace() && c != '\n')
         {
             self.iter.next();
         }
+    }
+
+    fn integer_literal(&self, start_idx: CharIdx, len: CharDifference) -> Lexeme {
+        let lexeme_text = lexeme::text_in_range(self.text, start_idx, len);
+        Lexeme::new(IntegerLiteral { text: lexeme_text }, start_idx, len)
     }
 }
 
@@ -805,8 +810,9 @@ mod tests {
         let mut lexer = Lexer::new(text);
         loop {
             let lexeme = lexer.lex();
+            let eof= lexeme.kind == Eof;
             lexemes.push(lexeme);
-            if lexeme.kind == Eof {
+            if eof {
                 return lexemes;
             }
         }

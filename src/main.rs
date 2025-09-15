@@ -1,17 +1,17 @@
 use clap::Parser as ParserTrait;
-use clap::{Subcommand};
-use ruby_wasm::{binary, html};
+use clap::Subcommand;
 use ruby_wasm::compiler::Compiler;
 use ruby_wasm::lexeme::LexemeKind;
 use ruby_wasm::lexer::Lexer;
 use ruby_wasm::parser::Parser;
 use ruby_wasm::wat::WatPrinter;
+use ruby_wasm::{binary, html};
 
 #[derive(clap::Parser)]
 #[command(version, about, long_about = None)]
 struct Cli {
     #[command(subcommand)]
-    command: Command
+    command: Command,
 }
 
 #[derive(Subcommand)]
@@ -52,8 +52,8 @@ enum Command {
     /// and its output will be printed to the browser console.
     Html {
         /// Text of program to compile
-        text: String
-    }
+        text: String,
+    },
 }
 
 fn main() {
@@ -64,24 +64,19 @@ fn main() {
             let mut lexer = Lexer::new(&text);
             loop {
                 let lexeme = lexer.lex();
-                match lexeme {
-                    None => return,
-                    Some(lexeme) => {
-                        println!("{:?}", lexeme);
-                        if let LexemeKind::Eof = lexeme.kind {
-                            return;
-                        }
-                    }
+                println!("{:?}", lexeme);
+                if let LexemeKind::Eof = lexeme.kind {
+                    return;
                 }
             }
-        },
+        }
 
         Command::Parse { text } => {
             let parser = Parser::new(Lexer::new(&text));
             println!("{:?}", parser.parse());
         }
 
-        Command::Compile { text} => {
+        Command::Compile { text } => {
             let parser = Parser::new(Lexer::new(&text));
             let program = parser.parse();
             let wasm = Compiler.compile(program);
