@@ -40,7 +40,7 @@ impl<'text> Lexer<'text> {
             // Prism EOF is 0-width.
             None => {
                 self.lexed_eof = true;
-                Lexeme::new(Eof, self.iter.highest_idx(), CharDifference(0))
+                Lexeme::new(Eof, self.iter.eof_idx(), CharDifference(0))
             },
             Some((start_idx, c)) => match c {
                 '\n' => Lexeme::new(Newline, start_idx, CharDifference(1)),
@@ -621,11 +621,11 @@ impl<'text> Lexer<'text> {
                     self.iter.next();
                 }
                 Some((idx, _)) => {
-                    return Lexeme::new(Identifier, start_idx, len_inclusive(start_idx, idx))
+                    return Lexeme::new(Identifier, start_idx, len_exclusive(start_idx, idx))
                 }
                 None => {
-                    let idx = self.iter.highest_idx();
-                    return Lexeme::new(Identifier, start_idx, len_inclusive(start_idx, idx))
+                    let idx = self.iter.eof_idx();
+                    return Lexeme::new(Identifier, start_idx, len_exclusive(start_idx, idx))
                 },
             }
         }
@@ -655,8 +655,8 @@ impl<'text> Lexer<'text> {
                 Some(Lexeme::new(kind, start_idx, len_exclusive(start_idx, idx)))
             }
             None => {
-                let idx = self.iter.highest_idx();
-                Some(Lexeme::new(kind, start_idx, len_inclusive(start_idx, idx)))
+                let idx = self.iter.eof_idx();
+                Some(Lexeme::new(kind, start_idx, len_exclusive(start_idx, idx)))
             },
         }
     }
@@ -721,16 +721,25 @@ fn is_identifier_char(c: char) -> bool {
 
 /// Peekable iterator over `(CharIdx, char)`
 struct LexerIter<'a> {
-    last_idx: Option<CharIdx>,
+    idx_state: IdxState,
     iter: Chars<'a>,
     /// Remember a peeked value, even if it was None.
     peeked: Option<Option<(CharIdx, char)>>,
 }
 
+/// Tracks whether a char has been consumed.
+/// If a char has been consumed, tracks the index of the most-recently-consumed char.
+enum IdxState {
+    NoCharsConsumed,
+    CharConsumed {
+        last_char_idx: CharIdx
+    }
+}
+
 impl<'a> From<Chars<'a>> for LexerIter<'a> {
     fn from(value: Chars<'a>) -> Self {
         Self {
-            last_idx: None,
+            idx_state: IdxState::NoCharsConsumed,
             iter: value,
             peeked: None,
         }
@@ -738,10 +747,18 @@ impl<'a> From<Chars<'a>> for LexerIter<'a> {
 }
 
 impl<'a> LexerIter<'a> {
-    /// Get the highest idx produced by this iterator (from `next()` or `peek()`),
-    ///     or `CharIdx(0)` if no such index has been returned.
-    pub fn highest_idx(&self) -> CharIdx {
-        self.last_idx.unwrap_or(CharIdx(0))
+    /// Get the index of the EOF lexeme.
+    /// Pre: `self.peek() == None`
+    pub fn eof_idx(&mut self) -> CharIdx {
+        // Strategy:
+        // Either:
+        // - We've consumed nothing -- EOF idx is 0
+        // - Our final char has idx `k` -- EOF idx is `k + 1`
+        assert_eq!(None, self.peek());
+        match self.idx_state {
+            IdxState::NoCharsConsumed => CharIdx(0),
+            IdxState::CharConsumed { last_char_idx } => last_char_idx + CharDifference(1)
+        }
     }
 
     pub fn peek(&mut self) -> Option<(CharIdx, char)> {
@@ -765,11 +782,11 @@ impl<'a> Iterator for LexerIter<'a> {
             None => match self.iter.next() {
                 None => None,
                 Some(char) => {
-                    let idx = match self.last_idx {
-                        None => CharIdx(0),
-                        Some(idx) => idx + CharDifference(1),
+                    let idx = match self.idx_state {
+                        IdxState::NoCharsConsumed => CharIdx(0),
+                        IdxState::CharConsumed { last_char_idx} => last_char_idx + CharDifference(1),
                     };
-                    self.last_idx = Some(idx);
+                    self.idx_state = IdxState::CharConsumed { last_char_idx: idx };
                     Some((idx, char))
                 }
             },
@@ -787,21 +804,14 @@ mod tests {
         let text = "abc";
         let mut iter = LexerIter::from(text.chars());
         assert_eq!(Some((CharIdx(0), 'a')), iter.peek());
-        assert_eq!(CharIdx(0), iter.highest_idx());
         assert_eq!(Some((CharIdx(0), 'a')), iter.peek());
-        assert_eq!(CharIdx(0), iter.highest_idx());
         assert_eq!(Some((CharIdx(0), 'a')), iter.next());
-        assert_eq!(CharIdx(0), iter.highest_idx());
         assert_eq!(Some((CharIdx(1), 'b')), iter.next());
-        assert_eq!(CharIdx(1), iter.highest_idx());
         assert_eq!(Some((CharIdx(2), 'c')), iter.peek());
-        assert_eq!(CharIdx(2), iter.highest_idx());
         assert_eq!(Some((CharIdx(2), 'c')), iter.next());
-        assert_eq!(CharIdx(2), iter.highest_idx());
-        assert_eq!(None, iter.peek());
-        assert_eq!(CharIdx(2), iter.highest_idx());
+        assert_eq!(CharIdx(3), iter.eof_idx());
         assert_eq!(None, iter.next());
-        assert_eq!(CharIdx(2), iter.highest_idx());
+        assert_eq!(CharIdx(3), iter.eof_idx());
     }
 
     /// This only works so long as the lexer can be driven independently of the parser.
@@ -826,7 +836,7 @@ mod tests {
         assert_eq!(expected, actual);
 
         let text = "     ";
-        let expected: Vec<Lexeme> = vec![Lexeme::new(Eof, CharIdx(4), CharDifference(0))];
+        let expected: Vec<Lexeme> = vec![Lexeme::new(Eof, CharIdx(5), CharDifference(0))];
         let actual = lex_to_eof(text);
         assert_eq!(expected, actual);
     }
@@ -836,19 +846,19 @@ mod tests {
         {
             let text = "nil";
             let expected: Vec<Lexeme> =
-                vec![Lexeme::new(Nil, CharIdx(0), CharDifference(3)), Lexeme::new(Eof, CharIdx(2), CharDifference(0))];
+                vec![Lexeme::new(Nil, CharIdx(0), CharDifference(3)), Lexeme::new(Eof, CharIdx(3), CharDifference(0))];
             let test_tokens = lex_to_eof(text);
             assert_eq!(expected, test_tokens);
 
             let text = "true";
             let expected: Vec<Lexeme> =
-                vec![Lexeme::new(True, CharIdx(0), CharDifference(4)), Lexeme::new(Eof, CharIdx(3), CharDifference(0))];
+                vec![Lexeme::new(True, CharIdx(0), CharDifference(4)), Lexeme::new(Eof, CharIdx(4), CharDifference(0))];
             let test_tokens = lex_to_eof(text);
             assert_eq!(expected, test_tokens);
 
             let text = "false";
             let expected: Vec<Lexeme> =
-                vec![Lexeme::new(False, CharIdx(0), CharDifference(5)), Lexeme::new(Eof, CharIdx(4), CharDifference(0))];
+                vec![Lexeme::new(False, CharIdx(0), CharDifference(5)), Lexeme::new(Eof, CharIdx(5), CharDifference(0))];
             let test_tokens = lex_to_eof(text);
             assert_eq!(expected, test_tokens);
 
@@ -859,7 +869,7 @@ mod tests {
                 Lexeme::new(True, CharIdx(4), CharDifference(4)),
                 Lexeme::new(False, CharIdx(9), CharDifference(5)),
                 Lexeme::new(Newline, CharIdx(14), CharDifference(1)),
-                Lexeme::new(Eof, CharIdx(14), CharDifference(0)),
+                Lexeme::new(Eof, CharIdx(15), CharDifference(0)),
             ];
             let test_tokens = lex_to_eof(text);
             assert_eq!(expected, test_tokens);
