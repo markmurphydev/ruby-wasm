@@ -5,17 +5,23 @@
 pub mod types;
 pub mod values;
 
-use crate::wasm::types::GlobalType;
+use crate::wasm::types::{GlobalType, ValueType};
 use crate::wasm::values::{I32, I64, U32};
 // ==== Wasm Module Items ====
 
 #[derive(Debug, Clone)]
 pub enum Instruction {
+    // Number instructions
     ConstI32(I32),
     ConstI64(I64),
     /// Convert an `i32` to a `(ref i31)`
     RefI31,
+
+    // Global instructions
     GlobalGet(GlobalIdx),
+
+    // Control instructions
+    If(If)
 }
 
 #[derive(Debug, Clone)]
@@ -48,6 +54,23 @@ pub struct Global {
     pub id: Option<String>,
     pub global_type: GlobalType,
     pub expr: Expr,
+}
+
+#[derive(Debug, Clone)]
+/// (if label block_type? predicate_instrs* (then then_instrs*) (else else_instrs*)?)
+pub struct If {
+    /// Idk. Is it for named breaks?
+    pub label: Option<String>,
+
+    /// The return type of the if, else blocks
+    /// TODO: This should be a union of something and valtype
+    /// TODO: This might always be Unitype, or might sometimes be Unitype, sometimes Void
+    pub block_type: Option<ValueType>,
+
+    pub predicate_instrs: Vec<Instruction>,
+
+    pub then_instrs: Vec<Instruction>,
+    pub else_instrs: Vec<Instruction>,
 }
 
 #[derive(Debug, Clone)]

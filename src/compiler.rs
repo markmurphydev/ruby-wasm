@@ -100,7 +100,7 @@ impl Compiler {
             i64::BITS - n.abs().leading_zeros() + 1
         }
 
-        // If if-let guards were stable I'd use those.
+        // If if-let guards were stable I'd use those with try_into.
         match n {
             n if bit_width(n) <= FIXNUM_BIT_WIDTH => {
                 let fixnum = FIXNUM_MARKER | i32::try_from(n).unwrap();
