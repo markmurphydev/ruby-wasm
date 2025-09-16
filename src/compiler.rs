@@ -15,23 +15,12 @@ use crate::wasm::GlobalIdx;
 
 const RUBY_TOP_LEVEL_FUNCTION_NAME: &str = "__ruby_top_level_function";
 
-// TODO: Make u31 wrapper type
 /// We give fixnums half an i31, marking MSB 1
-/// (0b1xxx...): i31
+/// (0b1xx_xxxx...): i31
 const FIXNUM_BIT_WIDTH: u32 = 30;
 
 /// Fixnums are identified with a 1 in the MSB of the i31
 pub const FIXNUM_MARKER: i32 = 1 << 30;
-
-/// Least allowed fixnum (2's complement) _without_ fixnum marker
-/// (0b10_0000...): i30
-/// Have to sign-extend...
-/// (0b1110_0000...)
-const MIN_FIXNUM: i32 = -2i32.pow(29);
-
-/// Largest allowed fixnum (2's complement) _without_ fixnum marker
-/// (0b01_1111...): i30
-const MAX_FIXNUM: i32 = 2i32.pow(29) - 1;
 
 pub struct Compiler {
     globals: Vec<W::Global>
@@ -44,7 +33,7 @@ impl Compiler {
         }
     }
 
-    pub fn compile(mut self, program: R::Program) -> W::Module {
+    pub fn compile(self, program: R::Program) -> W::Module {
         // Current strategy:
         // We're kinda doing recursive descent into the Wasm module structure.
         // - There is one wasm_module per ruby_program
@@ -103,26 +92,21 @@ impl Compiler {
         // Determine whether we're in range of a fixnum
         // If not, add a const global int and get it
 
-        /// TODO: This should be `Fixnum::try_from(n)`
-        fn in_fixnum_range(n: i64) -> bool {
-            i64::from(MIN_FIXNUM) <= n && n <= i64::from(MAX_FIXNUM)
-        }
-        fn in_i32_range(n: i64) -> bool {
-            i32::try_from(n).is_ok()
-        }
-        /// Putting this here for when bignum is implemented.
-        fn in_i64_range(n: i64) -> bool {
-            i64::try_from(n).is_ok()
+        /// Minimum size required for 2's complement representation of the given number
+        /// Strategy from:
+        /// https://internals.rust-lang.org/t/add-methods-that-return-the-number-of-bits-necessary-to-represent-an-integer-in-binary-to-the-standard-library/21870/7
+        fn bit_width(n: i64) -> u32 {
+            i64::BITS - n.abs().leading_zeros() + 1
         }
 
         // If if-let guards were stable I'd use those.
         match n {
-            n if in_fixnum_range(n) => {
+            n if bit_width(n) <= FIXNUM_BIT_WIDTH => {
                 let fixnum = FIXNUM_MARKER | i32::try_from(n).unwrap();
                 let fixnum = WV::I32(fixnum as u32);
                 vec![W::Instruction::ConstI32(fixnum), W::Instruction::RefI31]
             }
-            n if in_i32_range(n) => {
+            n if bit_width(n) <= i32::BITS => {
                 let n = i32::try_from(n).unwrap();
                 // TODO -- Need to intern this.
                 //  If you have 2 of the same-valued global it probably breaks at validation time.
@@ -141,7 +125,8 @@ impl Compiler {
                 self.globals.push(global);
                 vec![W::Instruction::GlobalGet(GlobalIdx::Id(global_id))]
             }
-            n if in_i64_range(n) => {
+            // Guard is here for when bignums are implemented.
+            n if bit_width(n) <= i64::BITS => {
                 let n = i64::try_from(n).unwrap();
                 // TODO -- Need to intern this.
                 //  If you have 2 of the same-valued global it probably breaks at validation time.
@@ -161,7 +146,7 @@ impl Compiler {
                 vec![W::Instruction::GlobalGet(GlobalIdx::Id(global_id))]
             }
             _ => {
-                todo!("BigInts not yet implemented.
+                todo!("Bignums not yet implemented.
                       [n={:x}] larger than W::I64",
                       22)
             }
