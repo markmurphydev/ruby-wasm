@@ -83,6 +83,7 @@ impl Compiler {
             R::Expr::True => const_i31(WV::I32::TRUE),
             R::Expr::False => const_i31(WV::I32::FALSE),
             R::Expr::Nil => const_i31(WV::I32::NIL),
+            R::Expr::If(_) | R::Expr::Else(_) => todo!(),
         }
     }
 
