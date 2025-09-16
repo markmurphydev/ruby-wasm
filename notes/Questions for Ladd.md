@@ -1,0 +1,9 @@
+- Opinions on codegen:
+	- Keep maintaining big lexer definition, use refactoring and editor macros as much as possible
+	- Multiple small macro-rules macros
+		- Less-readable code
+		- Slightly-more-readable individual macro definitions
+	- Big declarative procedural-macro
+		- Like the one in `main.rs`, from the command-line-parsing library
+		- More-readable (but more-magic) code
+		- Unreadable proc macros

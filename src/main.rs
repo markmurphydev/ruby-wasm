@@ -83,7 +83,7 @@ fn main() {
         Command::Compile { text } => {
             let parser = Parser::new(Lexer::new(&text));
             let program = parser.parse();
-            let mut compiler = Compiler::new();
+            let compiler = Compiler::new();
             let wasm = compiler.compile(program);
             println!("{:?}", wasm);
         }

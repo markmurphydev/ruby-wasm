@@ -253,6 +253,7 @@ pub enum LexemeKind {
     Ensure,
     False,
     In,
+    If,
     Nil,
     Not,
     Or,

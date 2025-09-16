@@ -66,6 +66,7 @@ impl<'text> Lexer<'text> {
                 Lexeme::new(Eof, self.iter.eof_idx(), CharDifference(0))
             },
             Some((start_idx, c)) => match c {
+                // TODO -- Newlines are only meaningful in some locations
                 '\n' => Lexeme::new(Newline, start_idx, CharDifference(1)),
 
                 '#' => {
@@ -536,24 +537,22 @@ impl<'text> Lexer<'text> {
                         _ => None,
                     }
                 }
-                Some((_, 'n')) => match self.iter.peek() {
-                    Some((_, 'd')) => {
-                        self.iter.next();
-                        match self.iter.peek() {
-                            Some((_, c)) if is_identifier_char(c) => None,
-                            _ => {
-                                self.iter.next();
-                                return Lexeme::new(End, start_idx, CharDifference(3));
-                            }
-                        }
+                Some((_, 'n')) => {
+                    self.iter.next();
+                    match self.iter.peek() {
+                        Some((_, 'd')) => self.check_rest_of_keyword("d", End, start_idx),
+                        Some((_, 's')) =>  self.check_rest_of_keyword("sure", Ensure, start_idx),
+                        _ => None,
                     }
-                    Some((_, 's')) =>  self.check_rest_of_keyword("sure", Ensure, start_idx),
-                    _ => None,
                 },
                 _ => None,
             },
             'f' =>  self.check_rest_of_keyword("alse", False, start_idx) ,
-            'i' =>  self.check_rest_of_keyword("in", In, start_idx) ,
+            'i' => match self.iter.peek() {
+                Some((_, 'f')) => self.check_rest_of_keyword("f", If, start_idx),
+                Some((_, 'n')) => self.check_rest_of_keyword("n", In, start_idx),
+                _ => None,
+            },
             'n' => match self.iter.peek() {
                 Some((_, 'i')) =>  self.check_rest_of_keyword("il", Nil, start_idx) ,
                 Some((_, 'o')) =>  self.check_rest_of_keyword("ot", Not, start_idx) ,
