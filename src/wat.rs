@@ -125,8 +125,8 @@ impl WatPrinter {
             self.indent();
             write!(self.output, "(start").unwrap();
             match start_idx {
-                FunctionIdx::Index(idx) => {
-                    write!(self.output, " {}", idx).unwrap();
+                &FunctionIdx::Index(_idx) => {
+                    todo!("Indexed refs")
                 }
                 FunctionIdx::Id(name) => {
                     write!(self.output, " ${}", name).unwrap();

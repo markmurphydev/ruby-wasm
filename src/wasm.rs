@@ -22,7 +22,7 @@ pub enum Instruction {
 pub enum FunctionIdx {
     // TODO -- Spec defines indices to be wasm-u32
     // https://webassembly.github.io/spec/core/syntax/modules.html#syntax-start
-    Index(usize),
+    Index(U32),
     Id(String),
 }
 
