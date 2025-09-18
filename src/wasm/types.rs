@@ -47,8 +47,8 @@ pub enum Mutability {
 
 #[derive (Debug, Clone)]
 pub struct ReferenceType {
-    null: bool,
-    heap_type: HeapType,
+    pub null: bool,
+    pub heap_type: HeapType,
 }
 
 #[derive (Debug, Clone)]

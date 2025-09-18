@@ -17,7 +17,7 @@ impl I32 {
     // TODO -- This is not the final resting place of these.
     pub const FALSE: I32 = I32(0b0001);
     pub const TRUE: I32 = I32(0b0011);
-    pub const NIL: I32 = I32(0b0111);
+    pub const NIL: I32 = I32(0b0101);
 }
 
 impl Display for I32 {

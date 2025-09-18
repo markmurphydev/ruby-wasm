@@ -5,14 +5,14 @@
 //! assert_eq!(-1, u64::MAX as i64);
 //! ```
 
+use itertools::WhileSome;
 // R for Ruby
-use crate::node as R;
+use crate::{node as R, runtime};
 // W for Wasm
 use crate::wasm as W;
 use W::types as WT;
 use W::values as WV;
-use crate::node::Expr;
-use crate::wasm::GlobalIdx;
+use crate::wasm::values::I32;
 
 const RUBY_TOP_LEVEL_FUNCTION_NAME: &str = "__ruby_top_level_function";
 
@@ -69,32 +69,32 @@ impl Compiler {
     /// Compile a Wasm expr.
     /// Corresponds to a Ruby `Statements` node.
     fn expr(&mut self, statements: R::Statements) -> W::Expr {
-        W::Expr(self.ruby_statements_to_wasm_instructions(statements))
+        W::Expr(self.ruby_statements(statements))
     }
 
-    fn ruby_statements_to_wasm_instructions(&mut self, statements: R::Statements) -> Vec<W::Instruction> {
+    fn ruby_statements(&mut self, statements: R::Statements) -> Vec<W::Instruction> {
         let mut expr_instrs: Vec<W::Instruction> = vec![];
         for ruby_expr in statements.body {
-            let mut instrs = self.ruby_expr_to_wasm_instructions(ruby_expr);
+            let mut instrs = self.ruby_expr(ruby_expr);
             expr_instrs.append(&mut instrs);
         }
         expr_instrs
     }
 
-    fn ruby_expr_to_wasm_instructions(&mut self, ruby_expr: R::Expr) -> Vec<W::Instruction> {
+    fn ruby_expr(&mut self, ruby_expr: R::Expr) -> Vec<W::Instruction> {
         match ruby_expr {
-            R::Expr::Integer(n) => self.integer(n),
+            R::Expr::Integer(n) => self.ruby_integer(n),
             R::Expr::True => const_i31(WV::I32::TRUE),
             R::Expr::False => const_i31(WV::I32::FALSE),
             R::Expr::Nil => const_i31(WV::I32::NIL),
-            R::Expr::If(if_expr) => vec![W::Instruction::If(self.if_expr(*if_expr))],
-            R::Expr::Until(_) => todo!(),
-            _ => {}
+            R::Expr::If(if_expr) => vec![W::Instruction::If(self.ruby_if_expr(*if_expr))],
+            R::Expr::While(while_expr) => vec![W::Instruction::Loop(self.ruby_while_expr(*while_expr))],
+            R::Expr::Until(until_expr) => vec![W::Instruction::Loop(self.ruby_until_expr(*until_expr))],
         }
     }
 
     /// Convert the given integer into a Wasm fixnum or const global representation
-    fn integer(&mut self, n: i64) -> Vec<W::Instruction> {
+    fn ruby_integer(&mut self, n: i64) -> Vec<W::Instruction> {
         // Strategy:
         // Determine whether we're in range of a fixnum
         // If not, add a const global int and get it
@@ -130,7 +130,7 @@ impl Compiler {
                     expr: W::Expr(expr_instrs)
                 };
                 self.globals.push(global);
-                vec![W::Instruction::GlobalGet(GlobalIdx::Id(global_id))]
+                vec![W::Instruction::GlobalGet(W::GlobalIdx::Id(global_id))]
             }
             // Guard is here for when bignums are implemented.
             n if bit_width(n) <= i64::BITS => {
@@ -150,7 +150,7 @@ impl Compiler {
                     expr: W::Expr(expr_instrs)
                 };
                 self.globals.push(global);
-                vec![W::Instruction::GlobalGet(GlobalIdx::Id(global_id))]
+                vec![W::Instruction::GlobalGet(W::GlobalIdx::Id(global_id))]
             }
             _ => {
                 todo!("Bignums not yet implemented.
@@ -160,21 +160,89 @@ impl Compiler {
         }
     }
 
-    fn if_expr(&mut self, if_expr: R::If) -> W::If {
+    fn ruby_if_expr(&mut self, if_expr: R::If) -> W::If {
         // Mercifully, we can just recurse for the subsequent
         let else_instrs: Vec<W::Instruction> = match if_expr.subsequent {
-            R::Subsequent::None => vec![],
-            R::Subsequent::Elsif(if_expr) => vec![W::Instruction::If(self.if_expr(*if_expr))],
-            R::Subsequent::Else(else_expr) => self.ruby_statements_to_wasm_instructions(else_expr.statements)
+            R::Subsequent::None => vec![W::Instruction::ConstI32(I32::NIL), W::Instruction::RefI31],
+            R::Subsequent::Elsif(if_expr) => vec![W::Instruction::If(self.ruby_if_expr(*if_expr))],
+            R::Subsequent::Else(else_expr) => self.ruby_statements(else_expr.statements)
         };
 
         W::If {
             label: None,
             block_type: WT::UNITYPE,
-            predicate_instrs: self.ruby_expr_to_wasm_instructions(if_expr.predicate),
-            then_instrs: self.ruby_statements_to_wasm_instructions(if_expr.statements),
+            predicate_instrs: self.ruby_expr(if_expr.predicate),
+            then_instrs: self.ruby_statements(if_expr.statements),
             else_instrs,
         }
+    }
+
+    fn ruby_while_expr(&mut self, while_expr: R::While) -> W::Loop {
+        // while ->
+        // (loop
+        //   (if UNITYPE predicate
+        //      (then statements)))
+
+        let predicate_instrs = self.predicate(while_expr.predicate);
+
+        let else_instrs = vec![W::Instruction::ConstI32(I32::NIL), W::Instruction::RefI31];
+
+        let loop_inner_if = W::If {
+            label: None,
+            block_type: WT::UNITYPE,
+            predicate_instrs,
+            then_instrs: self.ruby_statements(while_expr.statements),
+            else_instrs,
+        };
+        let loop_instrs =  vec![W::Instruction::If(loop_inner_if)];
+
+        W::Loop {
+            label: None,
+            block_type: WT::UNITYPE,
+            instructions: loop_instrs,
+        }
+    }
+
+    fn ruby_until_expr(&mut self, until_expr: R::Until) -> W::Loop {
+        // TODO -- It might be nicer to have an IR where `until` is lowered to `while`
+        // while ->
+        // (loop
+        //   (if UNITYPE (not predicate)
+        //      (then statements)))
+
+        let inverted_predicate = {
+            let mut instrs = self.predicate(until_expr.predicate);
+            instrs.push(W::Instruction::I32Eqz);
+            instrs
+        };
+
+        let else_instrs = vec![W::Instruction::ConstI32(I32::NIL), W::Instruction::RefI31];
+
+        let loop_inner_if = W::If {
+            label: None,
+            block_type: WT::UNITYPE,
+            predicate_instrs: inverted_predicate,
+            then_instrs: self.ruby_statements(until_expr.statements),
+            else_instrs,
+        };
+        let loop_instrs =  vec![W::Instruction::If(loop_inner_if)];
+
+        W::Loop {
+            label: None,
+            block_type: WT::UNITYPE,
+            instructions: loop_instrs,
+        }
+    }
+
+    /// Turns a Ruby Expr into a Wasm predicate.
+    /// A ruby Expr evaluates to a ruby-value (True, False, Nil, ...)
+    /// To use as a Wasm predicate, we need to test whether the result is truthy or not.
+    /// TODO -- right now we pretend that "truthy" is "not-false"
+    fn predicate(&mut self, expr: R::Expr) -> Vec<W::Instruction> {
+        let mut instrs = self.ruby_expr(expr);
+        instrs.append(&mut runtime::is_false());
+        instrs.push(W::Instruction::I32Eqz);
+        instrs
     }
 }
 

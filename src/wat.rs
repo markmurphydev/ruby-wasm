@@ -1,7 +1,10 @@
-use crate::wasm::types::{GlobalType, Mutability, NumberType, Type, ValueType};
-use crate::wasm::{Expr, Function, FunctionIdx, Global, GlobalIdx, Instruction, Module};
+use crate::wasm::types::{
+    GlobalType, HeapType, Mutability, NumberType, ReferenceType, Type, UNITYPE, ValueType,
+};
+use crate::wasm::{Expr, Function, FunctionIdx, Global, GlobalIdx, If, Instruction, Loop, Module};
 use std::fmt::Write;
 use std::iter;
+use std::ptr::write;
 
 pub struct WatPrinter {
     output: String,
@@ -27,7 +30,7 @@ impl WatPrinter {
         self.print_start_function(module);
         writeln!(self.output, ")").unwrap();
         self.indent -= 2;
-        assert_eq!(self.indent, 0);
+        debug_assert_eq!(self.indent, 0);
 
         self.output
     }
@@ -86,38 +89,114 @@ impl WatPrinter {
         self.indent();
         write!(self.output, "(func").unwrap();
         if let Some(name) = &function.id {
-            write!(self.output, " ${}", name).unwrap();
+            write!(self.output, " ${} ", name).unwrap();
         }
-        write!(self.output, " (result i32)").unwrap();
+        write!(self.output, " (result ").unwrap();
+        self.print_type(&UNITYPE);
+        writeln!(self.output, ")").unwrap();
         self.indent += 2;
+        self.indent();
         self.print_expr(&function.body);
         write!(self.output, ")").unwrap();
         self.indent -= 2;
     }
 
     fn print_expr(&mut self, body: &Expr) {
-        for instr in body.0.iter() {
-            self.print_instr(instr);
-        }
+        self.print_instructions(&body.0)
     }
 
-    fn print_instr(&mut self, instr: &Instruction) {
-        writeln!(self.output).unwrap();
-        self.indent();
+    fn print_instructions(&mut self, instructions: &[Instruction]) {
+        let mut instr_iter = instructions.iter();
+        let instr = instr_iter.next().unwrap();
+        self.print_instruction(instr);
+
+        self.indent += 2;
+        for instr in instr_iter {
+            writeln!(self.output).unwrap();
+            self.indent();
+            self.print_instruction(instr);
+        }
+        self.indent -= 2;
+    }
+
+    fn print_instruction(&mut self, instr: &Instruction) {
         match instr {
             Instruction::ConstI32(n) => write!(self.output, "i32.const {}", n).unwrap(),
             Instruction::ConstI64(n) => write!(self.output, "i64.const {}", n).unwrap(),
             Instruction::RefI31 => write!(self.output, "ref.i31").unwrap(),
+            Instruction::I31GetU => write!(self.output, "i31.get_u").unwrap(),
+            Instruction::I32Or => write!(self.output, "i32.or").unwrap(),
+            Instruction::I32Eqz => write!(self.output, "i32.eqz").unwrap(),
+            Instruction::I32Eq => write!(self.output, "i32.eq").unwrap(),
             Instruction::GlobalGet(idx) => match idx {
                 &GlobalIdx::Idx(_idx) => {
                     todo!("Indexed refs")
                 }
-                GlobalIdx::Id(id) => {
-                    write!(self.output, "(global.get {})", id).unwrap()
-                }
+                GlobalIdx::Id(id) => write!(self.output, "(global.get {})", id).unwrap(),
             },
-            &Instruction::If(_) => todo!(),
+            Instruction::If(if_instr) => self.print_if(if_instr),
+            Instruction::I32Xor => write!(self.output, "i32.xor").unwrap(),
+            Instruction::Loop(loop_instr) => self.print_loop(loop_instr),
         }
+    }
+
+    fn print_if(&mut self, if_instr: &If) {
+        let If {
+            label,
+            block_type,
+            predicate_instrs,
+            then_instrs,
+            else_instrs,
+        } = if_instr;
+
+        let label_str = match label {
+            None => "".to_string(),
+            Some(label) => format!("{} ", label),
+        };
+        write!(self.output, "(if {}(result ", label_str).unwrap();
+        self.print_type(block_type);
+        write!(self.output, ")").unwrap();
+        self.indent += 2;
+        writeln!(self.output).unwrap();
+        self.indent();
+        write!(self.output, "(").unwrap();
+        self.print_instructions(predicate_instrs);
+        writeln!(self.output, ")").unwrap();
+        self.indent();
+        write!(self.output, "(then ").unwrap();
+        self.print_instructions(then_instrs);
+        write!(self.output, ")").unwrap();
+
+        self.indent();
+        write!(self.output, "\n(else ").unwrap();
+        self.print_instructions(else_instrs);
+        write!(self.output, ")").unwrap();
+
+        self.indent -= 2;
+        write!(self.output, ")").unwrap();
+    }
+
+    fn print_loop(&mut self, loop_instr: &Loop) {
+        let Loop {
+            label,
+            block_type,
+            instructions,
+        } = loop_instr;
+
+        let label_str = match label {
+            None => "".to_string(),
+            Some(label) => format!("{} ", label),
+        };
+
+        write!(self.output, "(loop {}(result ", label_str).unwrap();
+        self.print_type(block_type);
+        write!(self.output, ")").unwrap();
+        self.indent += 2;
+        writeln!(self.output).unwrap();
+        self.indent();
+        self.print_instructions(instructions);
+        write!(self.output, ")").unwrap();
+        self.indent -= 2;
     }
 
     fn print_start_function(&mut self, module: &Module) {
@@ -134,6 +213,13 @@ impl WatPrinter {
                 }
             }
             write!(self.output, ")").unwrap()
+        }
+    }
+
+    fn print_type(&mut self, wasm_type: &Type) {
+        match wasm_type {
+            Type::Value(value_type) => self.print_value_type(value_type),
+            Type::ReferenceType(ref_type) => self.print_reference_type(ref_type),
         }
     }
 
@@ -163,6 +249,22 @@ impl WatPrinter {
             NumberType::F64 => "f64",
         };
         write!(self.output, "{}", str).unwrap()
+    }
+
+    fn print_reference_type(&mut self, reference_type: &ReferenceType) {
+        let ReferenceType { null, heap_type } = reference_type;
+
+        let null = if *null { "null " } else { "" };
+        write!(self.output, "(ref {}", null).unwrap();
+        self.print_heap_type(heap_type);
+        write!(self.output, ")").unwrap();
+    }
+
+    fn print_heap_type(&mut self, heap_type: &HeapType) {
+        let str = match heap_type {
+            HeapType::Eq => "eq",
+        };
+        write!(self.output, "{}", str).unwrap();
     }
 
     fn indent(&mut self) {

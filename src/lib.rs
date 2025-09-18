@@ -7,3 +7,4 @@ pub mod wat;
 pub mod compiler;
 pub mod binary;
 pub mod html;
+pub mod runtime;
