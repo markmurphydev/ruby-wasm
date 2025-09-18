@@ -11,6 +11,7 @@ use crate::node as R;
 use crate::wasm as W;
 use W::types as WT;
 use W::values as WV;
+use crate::node::Expr;
 use crate::wasm::GlobalIdx;
 
 const RUBY_TOP_LEVEL_FUNCTION_NAME: &str = "__ruby_top_level_function";
@@ -65,26 +66,30 @@ impl Compiler {
         }
     }
 
+    /// Compile a Wasm expr.
+    /// Corresponds to a Ruby `Statements` node.
     fn expr(&mut self, statements: R::Statements) -> W::Expr {
-        let mut expr_instrs: Vec<W::Instruction> = vec![];
-
-        for ruby_expr in statements.body {
-            let mut instrs = self.compile_ruby_expr(ruby_expr);
-            expr_instrs.append(&mut instrs);
-        }
-
-        W::Expr(expr_instrs)
+        W::Expr(self.ruby_statements_to_wasm_instructions(statements))
     }
 
-    fn compile_ruby_expr(&mut self, ruby_expr: R::Expr) -> Vec<W::Instruction> {
+    fn ruby_statements_to_wasm_instructions(&mut self, statements: R::Statements) -> Vec<W::Instruction> {
+        let mut expr_instrs: Vec<W::Instruction> = vec![];
+        for ruby_expr in statements.body {
+            let mut instrs = self.ruby_expr_to_wasm_instructions(ruby_expr);
+            expr_instrs.append(&mut instrs);
+        }
+        expr_instrs
+    }
 
+    fn ruby_expr_to_wasm_instructions(&mut self, ruby_expr: R::Expr) -> Vec<W::Instruction> {
         match ruby_expr {
             R::Expr::Integer(n) => self.integer(n),
             R::Expr::True => const_i31(WV::I32::TRUE),
             R::Expr::False => const_i31(WV::I32::FALSE),
             R::Expr::Nil => const_i31(WV::I32::NIL),
-            R::Expr::If(_) | R::Expr::Else(_) => todo!(),
-            R::Expr::While(_) | R::Expr::Until(_) => todo!(),
+            R::Expr::If(if_expr) => vec![W::Instruction::If(self.if_expr(*if_expr))],
+            R::Expr::Until(_) => todo!(),
+            _ => {}
         }
     }
 
@@ -152,6 +157,23 @@ impl Compiler {
                       [n={:x}] larger than W::I64",
                       22)
             }
+        }
+    }
+
+    fn if_expr(&mut self, if_expr: R::If) -> W::If {
+        // Mercifully, we can just recurse for the subsequent
+        let else_instrs: Vec<W::Instruction> = match if_expr.subsequent {
+            R::Subsequent::None => vec![],
+            R::Subsequent::Elsif(if_expr) => vec![W::Instruction::If(self.if_expr(*if_expr))],
+            R::Subsequent::Else(else_expr) => self.ruby_statements_to_wasm_instructions(else_expr.statements)
+        };
+
+        W::If {
+            label: None,
+            block_type: WT::UNITYPE,
+            predicate_instrs: self.ruby_expr_to_wasm_instructions(if_expr.predicate),
+            then_instrs: self.ruby_statements_to_wasm_instructions(if_expr.statements),
+            else_instrs,
         }
     }
 }

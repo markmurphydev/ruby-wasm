@@ -7,14 +7,14 @@ These grammar snippets are mine. Could be wrong.
 ```
 if <EXPR> (then)?
 	<STATEMENTS>
-(end|<ELIF>|<ELSE>)
+(end|<ELSIF>|<ELSE>)
 ```
 
-`<ELIF> ::=`
+`<ELSIF> ::=`
 ```
-elif <EXPR> (then)?
+elsif <EXPR> (then)?
 	<STATEMENTS>
-(end|<ELIF>|<ELSE>)
+(end|<ELSIF>|<ELSE>)
 ```
 
 `<ELSE> ::=`
@@ -31,13 +31,13 @@ end
 ```
 unless <EXPR> (then)?
 	<STATEMENTS>
-(end|<ELIF>|<ELSE>)
+(end|<ELSIF>|<ELSE>)
 ```
 ≡
 ```
 if (not <EXPR>) (then)?
 	<STATEMENTS>
-(end|<ELIF>|<ELSE>)
+(end|<ELSIF>|<ELSE>)
 ```
 
 # [ ] Modifier `if` and `unless`

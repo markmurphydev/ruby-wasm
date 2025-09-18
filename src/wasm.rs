@@ -5,7 +5,7 @@
 pub mod types;
 pub mod values;
 
-use crate::wasm::types::{GlobalType, ValueType};
+use crate::wasm::types::{GlobalType, Type, ValueType};
 use crate::wasm::values::{I32, I64, U32};
 // ==== Wasm Module Items ====
 
@@ -38,7 +38,7 @@ pub struct Function {
     pub body: Expr,
 }
 
-/// Sequence of instructions terminated by an `end` marker
+/// Sequence of instructions
 /// https://webassembly.github.io/spec/core/syntax/instructions.html#syntax-expr
 #[derive(Debug, Clone)]
 pub struct Expr(pub Vec<Instruction>);
@@ -65,7 +65,7 @@ pub struct If {
     /// The return type of the if, else blocks
     /// TODO: This should be a union of something and valtype
     /// TODO: This might always be Unitype, or might sometimes be Unitype, sometimes Void
-    pub block_type: Option<ValueType>,
+    pub block_type: Type,
 
     pub predicate_instrs: Vec<Instruction>,
 

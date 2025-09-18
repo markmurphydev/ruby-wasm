@@ -1,8 +1,17 @@
-// pub type Unitype = ReferenceType;
+//! TODO -- I want `Type` to be `copy`, but I don't know if function types will fuck that up
+//!     Probably interning fixes everything?
+
+/// Wasm-supertype of all Ruby values
+/// ≡ `(ref eq)`
+pub const UNITYPE: Type = Type::ReferenceType(ReferenceType {
+    null: false,
+    heap_type: HeapType::Eq,
+});
 
 #[derive(Debug, Clone)]
 pub enum Type {
-    Value(ValueType)
+    Value(ValueType),
+    ReferenceType(ReferenceType),
 }
 
 #[derive(Debug, Clone)]
@@ -34,4 +43,15 @@ pub struct GlobalType {
 pub enum Mutability {
     Const,
     Var
+}
+
+#[derive (Debug, Clone)]
+pub struct ReferenceType {
+    null: bool,
+    heap_type: HeapType,
+}
+
+#[derive (Debug, Clone)]
+pub enum HeapType {
+    Eq,
 }

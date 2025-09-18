@@ -109,7 +109,7 @@ impl<'text> Parser<'text> {
             LK::Elsif => {
                 expects_end_lexeme = false;
                 let if_expr = self.if_expr();
-                N::Subsequent::If(Box::new(if_expr))
+                N::Subsequent::Elsif(Box::new(if_expr))
             }
             _ => N::Subsequent::None
         };

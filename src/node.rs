@@ -19,7 +19,6 @@ pub enum Expr {
     If(Box<If>),
     While(Box<While>),
     Until(Box<Until>),
-    Else(Box<Else>),
 }
 
 #[derive(Debug, Clone, PartialEq, Eq)]
@@ -42,10 +41,9 @@ pub struct Until {
 }
 
 #[derive(Debug, Clone, PartialEq, Eq)]
-/// "elsif" -> `If { subsequent: Else }`
 pub enum Subsequent {
     None,
-    If(Box<If>),
+    Elsif(Box<If>),
     Else(Else)
 }
 
