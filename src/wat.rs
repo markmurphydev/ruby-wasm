@@ -116,6 +116,7 @@ impl WatPrinter {
                     write!(self.output, "(global.get {})", id).unwrap()
                 }
             },
+            &Instruction::If(_) => todo!(),
         }
     }
 

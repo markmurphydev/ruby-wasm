@@ -84,6 +84,7 @@ impl Compiler {
             R::Expr::False => const_i31(WV::I32::FALSE),
             R::Expr::Nil => const_i31(WV::I32::NIL),
             R::Expr::If(_) | R::Expr::Else(_) => todo!(),
+            R::Expr::While(_) | R::Expr::Until(_) => todo!(),
         }
     }
 

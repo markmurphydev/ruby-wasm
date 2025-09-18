@@ -6,7 +6,7 @@ use std::iter::Peekable;
 use std::str::FromStr;
 use std::vec;
 
-use crate::lexeme::{LexemeKind as LK, LexemeKind};
+use crate::lexeme::{Lexeme, LexemeKind as LK, LexemeKind};
 
 /// Strategy:
 /// - Lex on-demand
@@ -53,11 +53,19 @@ impl<'text> Parser<'text> {
     /// EXPR = keyword | integer_literal
     /// ```
     fn expr(&mut self) -> Option<N::Expr> {
+        /// Expect the given keyword's lexem kind, then return its node
         macro_rules! expect_simple_kw(
-            ($lexeme_kind:path, $node:path) => ({
+            ($lexeme_kind:path, $node_expr_variant:path) => ({
                 self.expect(&[$lexeme_kind]);
-                Some($node)
+                Some($node_expr_variant)
             })
+        );
+
+        /// Wrap the given `expr` with `$node_expr_variant(box expr)`
+        macro_rules! box_expr_variant(
+            ($expr:expr, $node_expr_variant:path) => ((
+                Some($node_expr_variant(Box::new($expr)))
+            ))
         );
 
         let lexeme = self.lexer.peek();
@@ -70,7 +78,10 @@ impl<'text> Parser<'text> {
             LK::Nil => expect_simple_kw!(LK::Nil, N::Expr::Nil),
 
             // Control flow
-            LK::If => Some(N::Expr::If(Box::new(self.if_expr()))),
+            // LK::If => Some(N::Expr::If(Box::new(self.if_expr()))),
+            LK::If => box_expr_variant!(self.if_expr(), N::Expr::If),
+            LK::While => box_expr_variant!(self.while_expr(), N::Expr::While),
+            LK::Until => box_expr_variant!(self.until_expr(), N::Expr::Until),
             _ => None,
         }
     }
@@ -116,6 +127,36 @@ impl<'text> Parser<'text> {
         }
     }
 
+    /// Once we see "while", should be irrefutable.
+    /// Pre: `self.lexer.next().kind == LexemeKind::While`
+    fn while_expr(&mut self) -> N::While {
+        self.debug_expect(&[LK::While]);
+        let predicate = self.expr().unwrap();
+        self.consume_if_found(LK::Do);
+        let statements = self.statements();
+        self.expect(&[LK::End]);
+
+        N::While {
+            predicate,
+            statements,
+        }
+    }
+
+    /// Once we see "until", should be irrefutable.
+    /// Pre: `self.lexer.next().kind == LexemeKind::Until`
+    fn until_expr(&mut self) -> N::Until {
+        self.debug_expect(&[LK::Until]);
+        let predicate = self.expr().unwrap();
+        self.consume_if_found(LK::Do);
+        let statements = self.statements();
+        self.expect(&[LK::End]);
+
+        N::Until {
+            predicate,
+            statements,
+        }
+    }
+
     /// Pre: `self.lexer.next().kind == LexemeKind::IntegerLiteral`
     fn integer_literal(&mut self) -> Option<N::Expr> {
         let lexeme = self.lexer.next();
@@ -125,14 +166,28 @@ impl<'text> Parser<'text> {
         }
     }
 
-    fn debug_expect(&mut self, expected: &[LexemeKind]) {
-        let kind = self.lexer.next().kind;
-        debug_assert!(expected.contains(&kind));
+    /// Peek the next token. If it's of kind `expected`, consume it.
+    fn consume_if_found(&mut self, expected: LK) -> Option<Lexeme> {
+        match self.lexer.peek() {
+            Lexeme { kind, .. } if kind == expected => {
+                Some(self.lexer.next())
+            },
+            _ => None
+        }
     }
 
-    fn expect(&mut self, expected: &[LexemeKind]) {
-        let kind = self.lexer.next().kind;
-        assert!(expected.contains(&kind));
+    /// expected: Set of acceptable lexeme kinds
+    fn debug_expect(&mut self, expected: &[LexemeKind]) -> Lexeme {
+        let lexeme = self.lexer.next();
+        debug_assert!(expected.contains(&lexeme.kind));
+        lexeme
+    }
+
+    /// expected: Set of acceptable lexeme kinds
+    fn expect(&mut self, expected: &[LexemeKind]) -> Lexeme {
+        let lexeme = self.lexer.next();
+        assert!(expected.contains(&lexeme.kind));
+        lexeme
     }
 }
 
