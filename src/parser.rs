@@ -94,10 +94,8 @@ impl<'text> Parser<'text> {
         let mut expects_end_lexeme = true;
 
         self.debug_expect(&[LK::If]);
-
         let predicate = self.expr().unwrap();
-        self.expect(&[LK::Then]);
-
+        self.consume_if_found(LK::Then);
         let then_statements = self.statements();
 
         let subsequent: N::Subsequent = match self.lexer.peek().kind {
