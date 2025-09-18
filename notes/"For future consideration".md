@@ -1,6 +1,7 @@
 Things I really want to do but I'm not going to waste time on.
 
 - Start using Emacs again, re-write every text editing facility I use in elisp
+	- Ok I did a little of this on my own time. But it's UNRELATED to the project!
 - Re-write my compiler in Racket (The Hoot source code is so pretty! The macros are so easy!)
 	- Writing `.wat` is just pretty printing!
 		- This would be true if Wasm had decided to use Rust `#[derive(Debug)]` as its .wat format, too...
