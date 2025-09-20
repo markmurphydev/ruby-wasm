@@ -3,7 +3,7 @@ Points: 8
 I'm fairly certain a complete Ruby lexer needs to be incremental, and driven by the parser with a `lexer_mode` argument.
 For now, let's ignore that. We can do incremental `lexeme()` method, but shouldn't need multiple modes.
 I think this will be fine to lex the first couple of week's features.
-- If that turns out not to be the case, I'll move [[Document the hard parts of the lexer]] forward.
+- If that turns out not to be the case, I'll move [[Research the hard parts of the lexer]] forward.
 I'm going to directly copy the list of tokens from the Prism parser unless told not to.
 
 Sources:

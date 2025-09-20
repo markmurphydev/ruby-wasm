@@ -6,6 +6,8 @@ Things I really want to do but I'm not going to waste time on.
 	- Writing `.wat` is just pretty printing!
 		- This would be true if Wasm had decided to use Rust `#[derive(Debug)]` as its .wat format, too...
 			- But they wouldn't.
+# Optimization
+
 
 # Rust feature requests
 - Nested use aliases
@@ -31,3 +33,4 @@ match &Foo::Baz(1, "2".to_string()) {
 }
 ```
 - Right now you could deref the Baz match, but it would be a move cause `String` isn't copy.
+
