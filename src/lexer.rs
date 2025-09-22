@@ -835,25 +835,9 @@ impl<'a> Iterator for LexerIter<'a> {
 #[cfg(test)]
 mod tests {
     use super::*;
-    use LexemeKind::*;
     use expect_test::expect;
-    use std::process::Command;
     use serde_lexpr::print;
-
-    #[test]
-    fn test_lexer_iter() {
-        let text = "abc";
-        let mut iter = LexerIter::from(text.chars());
-        assert_eq!(Some((CharIdx(0), 'a')), iter.peek());
-        assert_eq!(Some((CharIdx(0), 'a')), iter.peek());
-        assert_eq!(Some((CharIdx(0), 'a')), iter.next());
-        assert_eq!(Some((CharIdx(1), 'b')), iter.next());
-        assert_eq!(Some((CharIdx(2), 'c')), iter.peek());
-        assert_eq!(Some((CharIdx(2), 'c')), iter.next());
-        assert_eq!(CharIdx(3), iter.eof_idx());
-        assert_eq!(None, iter.next());
-        assert_eq!(CharIdx(3), iter.eof_idx());
-    }
+    use std::process::Command;
 
     /// Lex the given text until EOF,
     /// and return pretty-printed sexpr-list of lexemes.
@@ -878,7 +862,7 @@ mod tests {
     /// Pretty print given sexpr
     /// TODO -- Remove the emacs dependency...
     fn format_sexpr(sexpr: &str) -> String {
-        let pp_command = format!("(pp (car (read-from-string \"{}\"))))", sexpr);
+        let pp_command = format!("(pp (car (read-from-string \"{}\"))))", sexpr.replace(r#"""#, r#"\""#));
         let output = Command::new("emacs")
             .args(["--batch", "--eval", &pp_command])
             .output()
@@ -887,7 +871,22 @@ mod tests {
     }
 
     #[test]
-    pub fn eof_after_whitespace() {
+    fn test_lexer_iter() {
+        let text = "abc";
+        let mut iter = LexerIter::from(text.chars());
+        assert_eq!(Some((CharIdx(0), 'a')), iter.peek());
+        assert_eq!(Some((CharIdx(0), 'a')), iter.peek());
+        assert_eq!(Some((CharIdx(0), 'a')), iter.next());
+        assert_eq!(Some((CharIdx(1), 'b')), iter.next());
+        assert_eq!(Some((CharIdx(2), 'c')), iter.peek());
+        assert_eq!(Some((CharIdx(2), 'c')), iter.next());
+        assert_eq!(CharIdx(3), iter.eof_idx());
+        assert_eq!(None, iter.next());
+        assert_eq!(CharIdx(3), iter.eof_idx());
+    }
+
+    #[test]
+    fn eof_after_whitespace() {
         // EOF should occur at `(0, 0)` for an empty string.
         let text = "";
         let expected = expect![[r#"
@@ -906,7 +905,7 @@ mod tests {
     }
 
     #[test]
-    pub fn keywords() {
+    fn keywords() {
         let text = "nil";
         let expected = expect![[r#"
             (((kind . Nil) (start . 0) (len . 3))
@@ -942,5 +941,34 @@ mod tests {
         "#]];
         let actual = lex_to_sexpr(text);
         expected.assert_eq(&actual);
+    }
+
+    /// Tests adapted from the `ruby/spec` project
+    /// https://github.com/ruby/spec
+    mod from_ruby_spec {
+        use crate::lexer::tests::lex_to_sexpr;
+        use expect_test::expect;
+
+        #[test]
+        fn number_literal_can_be_decimal_digits() {
+            let text = "435";
+            let expected = expect![[r#"
+                (((kind IntegerLiteral (text . "435")) (start . 0) (len . 3))
+                 ((kind . Eof) (start . 3) (len . 0)))
+            "#]];
+            let actual = lex_to_sexpr(text);
+            expected.assert_eq(&actual);
+        }
+
+        #[test]
+        fn number_literal_can_have_underscore_between_digits() {
+            let text = "4_3_5_7";
+            let expected = expect![[r#"
+                (((kind IntegerLiteral (text . "4_3_5_7")) (start . 0) (len . 7))
+                 ((kind . Eof) (start . 7) (len . 0)))
+            "#]];
+            let actual = lex_to_sexpr(text);
+            expected.assert_eq(&actual);
+        }
     }
 }
