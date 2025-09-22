@@ -1,4 +1,0 @@
-(module
-  (func $main
-    i64.const 0)
-  (start $main))

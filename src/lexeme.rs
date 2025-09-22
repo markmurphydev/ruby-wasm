@@ -1,14 +1,15 @@
 use std::ops::{Add, AddAssign, Sub};
+use serde::Serialize;
 
 /// Starts with line 1.
-#[derive(Debug, Eq, PartialEq, Copy, Clone)]
+#[derive(Debug, Eq, PartialEq, Copy, Clone, Serialize)]
 pub struct Line(pub u32);
 
 /// Starts with col 0.
-#[derive(Debug, Eq, PartialEq, Copy, Clone)]
+#[derive(Debug, Eq, PartialEq, Copy, Clone, Serialize)]
 pub struct Col(pub u32);
 
-#[derive(Debug, Eq, PartialEq, Copy, Clone)]
+#[derive(Debug, Eq, PartialEq, Copy, Clone, Serialize)]
 pub struct CharIdx(pub usize);
 
 impl Add<CharDifference> for CharIdx {
@@ -33,7 +34,7 @@ impl AddAssign<CharDifference> for CharIdx {
     }
 }
 
-#[derive(Debug, Eq, PartialEq, Copy, Clone)]
+#[derive(Debug, Eq, PartialEq, Copy, Clone, Serialize)]
 pub struct CharDifference(pub usize);
 
 pub fn text_in_range(text: &str, start_idx: CharIdx, len: CharDifference) -> String {
@@ -42,7 +43,7 @@ pub fn text_in_range(text: &str, start_idx: CharIdx, len: CharDifference) -> Str
 
 /// A lexeme lexed from a text file.
 /// The identity of the file will remain implicit until it causes me problems.
-#[derive(Debug, Eq, PartialEq, Clone)]
+#[derive(Debug, Eq, PartialEq, Clone, Serialize)]
 pub struct Lexeme {
     pub kind: LexemeKind,
     pub start: CharIdx,
@@ -78,7 +79,7 @@ pub struct LineColRange {
 /// Largely copied from Prism's token list
 /// https://github.com/ruby/prism (MIT license)
 /// These are all "dumb" enum values -- they don't store their values (for eg. integers)
-#[derive(Debug, Eq, PartialEq, Clone)]
+#[derive(Debug, Eq, PartialEq, Clone, Serialize)]
 pub enum LexemeKind {
     /// The final token in a file.
     Eof,

@@ -5,7 +5,6 @@
 //! assert_eq!(-1, u64::MAX as i64);
 //! ```
 
-use itertools::WhileSome;
 // R for Ruby
 use crate::{node as R, runtime};
 // W for Wasm
