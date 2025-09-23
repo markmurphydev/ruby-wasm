@@ -7,7 +7,7 @@ use id_arena::{Arena, Id};
 use crate::FunctionBuilder;
 use crate::wasm::{InstrSeq, InstrSeqId, LocalId};
 use crate::wasm::module::Module;
-use crate::wasm::types::ValType;
+use crate::wasm::types::{TypeId, ValType};
 
 /// A function identifier.
 pub type FunctionId = Id<Function>;
@@ -35,7 +35,7 @@ pub struct Function {
 }
 
 impl Function {
-    fn new_uninitialized(id: FunctionId, ty: Function) -> Function {
+    fn new_uninitialized(id: FunctionId, ty: TypeId) -> Function {
         Function {
             id,
             kind: FunctionKind::Uninitialized(ty),
@@ -287,26 +287,10 @@ impl ModuleFunctions {
         })
     }
 
-    /// Removes a function from this module.
-    ///
-    /// It is up to you to ensure that any potential references to the deleted
-    /// function are also removed, eg `call` expressions, exports, table
-    /// elements, etc.
-    pub fn delete(&mut self, id: FunctionId) {
-        self.arena.delete(id);
-    }
 
     /// Get a shared reference to this module's functions.
     pub fn iter(&self) -> impl Iterator<Item = &Function> {
         self.arena.iter().map(|(_, f)| f)
-    }
-
-    /// Get a shared reference to this module's functions.
-    ///
-    /// Requires the `parallel` feature of this crate to be enabled.
-    #[cfg(feature = "parallel")]
-    pub fn par_iter(&self) -> impl ParallelIterator<Item = &Function> {
-        self.arena.par_iter().map(|(_, f)| f)
     }
 
     /// Get an iterator of this module's local functions
@@ -317,28 +301,9 @@ impl ModuleFunctions {
         })
     }
 
-    /// Get a parallel iterator of this module's local functions
-    ///
-    /// Requires the `parallel` feature of this crate to be enabled.
-    #[cfg(feature = "parallel")]
-    pub fn par_iter_local(&self) -> impl ParallelIterator<Item = (FunctionId, &LocalFunction)> {
-        self.par_iter().filter_map(|f| match &f.kind {
-            FunctionKind::Local(local) => Some((f.id(), local)),
-            _ => None,
-        })
-    }
-
     /// Get a mutable reference to this module's functions.
     pub fn iter_mut(&mut self) -> impl Iterator<Item = &mut Function> {
         self.arena.iter_mut().map(|(_, f)| f)
-    }
-
-    /// Get a mutable reference to this module's functions.
-    ///
-    /// Requires the `parallel` feature of this crate to be enabled.
-    #[cfg(feature = "parallel")]
-    pub fn par_iter_mut(&mut self) -> impl ParallelIterator<Item = &mut Function> {
-        self.arena.par_iter_mut().map(|(_, f)| f)
     }
 
     /// Get an iterator of this module's local functions
@@ -350,42 +315,5 @@ impl ModuleFunctions {
                 _ => None,
             }
         })
-    }
-
-    /// Get a parallel iterator of this module's local functions
-    ///
-    /// Requires the `parallel` feature of this crate to be enabled.
-    #[cfg(feature = "parallel")]
-    pub fn par_iter_local_mut(
-        &mut self,
-    ) -> impl ParallelIterator<Item = (FunctionId, &mut LocalFunction)> {
-        self.par_iter_mut().filter_map(|f| {
-            let id = f.id();
-            match &mut f.kind {
-                FunctionKind::Local(local) => Some((id, local)),
-                _ => None,
-            }
-        })
-    }
-
-    pub(crate) fn emit_func_section(&self, cx: &mut EmitContext) {
-        log::debug!("emit function section");
-        let functions = used_local_functions(cx);
-        if functions.is_empty() {
-            return;
-        }
-        let mut func_section = wasm_encoder::FunctionSection::new();
-        for (id, function, _size) in functions {
-            let index = cx.indices.get_type_index(function.ty());
-            func_section.function(index);
-
-            // Assign an index to all local defined functions before we start
-            // translating them. While translating they may refer to future
-            // functions, so we'll need to have an index for it by that point.
-            // We're guaranteed the function section is emitted before the code
-            // section so we should be covered here.
-            cx.indices.push_func(id);
-        }
-        cx.wasm_module.section(&func_section);
     }
 }

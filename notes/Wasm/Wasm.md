@@ -18,7 +18,7 @@ https://zenn.dev/skanehira/books/writing-wasm-runtime-in-rust/viewer/02_about_wa
 https://developer.chrome.com/blog/wasmgc
 https://v8.dev/blog/wasm-gc-porting
 https://github.com/WebAssembly/gc/blob/main/proposals/gc/MVP.md
-https://tanishiking.github.io/posts/wasm-gc/
+https://web.archive.org/web/20241125202325/https://tanishiking.github.io/posts/wasm-gc/
 Binaryen's GC lowering tips
 https://github.com/WebAssembly/binaryen/wiki/GC-Implementation---Lowering-Tips
 

@@ -2,9 +2,9 @@
 //! https://github.com/wasm-bindgen/walrus
 //! MIT licensed
 
-use id_arena::Arena;
 use crate::arena_set::ArenaSet;
-use crate::wasm::types::{NamedSubType, NamedType, SubType, SubTypeId};
+use crate::wasm::function::{FunctionId, ModuleFunctions};
+use crate::wasm::types::{NamedType, TypeId};
 
 /// A wasm module.
 #[derive(Debug, Default)]
@@ -14,8 +14,8 @@ pub struct Module {
     // pub tables: ModuleTables,
     pub types: ModuleTypes,
     pub funcs: ModuleFunctions,
-    pub globals: ModuleGlobals,
-    pub locals: ModuleLocals,
+    // pub globals: ModuleGlobals,
+    // pub locals: ModuleLocals,
     // pub exports: ModuleExports,
     // pub memories: ModuleMemories,
     // /// Registration of passive data segments, if any
@@ -46,7 +46,7 @@ impl Module {
 /// TODO: Currently assuming all typedefs in _separate_ rectypes
 #[derive(Debug, Default)]
 pub struct ModuleTypes {
-    arena: ArenaSet<NamedSubType>,
+    arena: ArenaSet<NamedType>,
 }
 
 impl ModuleTypes {
@@ -55,12 +55,12 @@ impl ModuleTypes {
     }
 
     /// Get a type associated with an ID
-    pub fn get(&self, id: SubTypeId) -> &NamedSubType {
+    pub fn get(&self, id: TypeId) -> &NamedType {
         &self.arena[id]
     }
 
     /// Get a type associated with an ID
-    pub fn get_mut(&mut self, id: SubTypeId) -> &mut NamedSubType {
+    pub fn get_mut(&mut self, id: TypeId) -> &mut NamedType {
         &mut self.arena[id]
     }
 
@@ -86,7 +86,7 @@ impl ModuleTypes {
     // }
 
     /// Add a new type to this module, and return its `Id`
-    pub fn add(&mut self, ty: NamedSubType) -> SubTypeId {
+    pub fn add(&mut self, ty: NamedType) -> TypeId {
         self.arena.insert(ty)
     }
 

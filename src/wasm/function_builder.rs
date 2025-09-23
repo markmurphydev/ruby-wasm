@@ -2,7 +2,7 @@
 //! https://github.com/wasm-bindgen/walrus
 //! MIT licensed
 
-use crate::wasm::types::{BlockType, CompType, FuncParams, FuncResults, FuncType, FuncTypeId, NamedSubType, SubType, SubTypeId, ValType};
+use crate::wasm::types::{BlockType, CompType, FuncParams, FuncResults, FuncType, NamedType, SubType, Type, TypeId, ValType};
 use crate::wasm::{Block, IfElse, Instr, InstrSeq, InstrSeqId, LocalId, Loop, Value};
 use id_arena::Arena;
 use crate::wasm::function::{Function, FunctionId, LocalFunction, ModuleFunctions};
@@ -12,7 +12,7 @@ use crate::wasm::module::ModuleTypes;
 #[derive(Debug)]
 pub struct FunctionBuilder {
     pub(crate) arena: Arena<InstrSeq>,
-    pub(crate) ty: SubTypeId,
+    pub(crate) ty: TypeId,
     pub(crate) entry: Option<InstrSeqId>,
     pub(crate) name: Option<String>,
 }
@@ -28,20 +28,21 @@ impl FunctionBuilder {
         let func_type = FuncType {
             params, results
         };
-        let ty = NamedSubType {
-            ty: SubType::final_no_super(CompType::FuncType(func_type)),
-            name: None,
+        let sub_type = SubType::final_no_super(CompType::FuncType(func_type));
+        let ty = NamedType {
+            ty: Type::SubType(sub_type),
+            name,
         } ;
-        let subtype_id = types.add(ty);
-        let mut builder = FunctionBuilder::without_entry(subtype_id);
-        let entry = builder.dangling_instr_seq(subtype_id.into()).id;
+        let type_id = types.add(ty);
+        let mut builder = FunctionBuilder::without_entry(type_id);
+        let entry = builder.dangling_instr_seq(BlockType::Id(type_id)).id;
         builder.entry = Some(entry);
         builder
     }
 
     /// Create a builder that doesn't have a function body / entry
     /// sequence. Callers are responsible for initializing its entry.
-    pub(crate) fn without_entry(ty: SubTypeId) -> FunctionBuilder {
+    pub(crate) fn without_entry(ty: TypeId) -> FunctionBuilder {
         let arena = Arena::<InstrSeq>::default();
         FunctionBuilder {
             arena,
@@ -259,7 +260,7 @@ impl InstrSeqBuilder<'_> {
     /// ```
     pub fn block(
         &mut self,
-        ty: impl Into<BlockType>,
+        ty: BlockType,
         make_block: impl FnOnce(&mut InstrSeqBuilder),
     ) -> &mut Self {
         let mut builder = self.builder.dangling_instr_seq(ty);
@@ -292,7 +293,7 @@ impl InstrSeqBuilder<'_> {
     /// ```
     pub fn loop_(
         &mut self,
-        ty: impl Into<BlockType>,
+        ty: BlockType,
         make_loop: impl FnOnce(&mut InstrSeqBuilder),
     ) -> &mut Self {
         let mut builder = self.builder.dangling_instr_seq(ty);
@@ -334,12 +335,10 @@ impl InstrSeqBuilder<'_> {
     /// ```
     pub fn if_else(
         &mut self,
-        ty: impl Into<BlockType>,
+        ty: BlockType,
         consequent: impl FnOnce(&mut InstrSeqBuilder),
         alternative: impl FnOnce(&mut InstrSeqBuilder),
     ) -> &mut Self {
-        let ty = ty.into();
-
         let consequent = {
             let mut builder = self.builder.dangling_instr_seq(ty);
             consequent(&mut builder);

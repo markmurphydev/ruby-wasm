@@ -13,21 +13,19 @@ pub const UNITYPE: Type = Type::ReferenceType(ReferenceType {
 
 /// Identifier for types.
 /// Replaces `<TYPEIDX>` from Wasm WAT spec.
-type TypeId<T> = Id<NamedType<T>>;
-pub type SubTypeId = TypeId<SubType>;
-pub type FuncTypeId = TypeId<FuncType>;
+pub type TypeId = Id<NamedType>;
 
 #[derive(Clone, Debug, PartialEq, Eq, Hash)]
-pub struct NamedType<T> {
-    pub ty: T,
+pub struct NamedType {
+    pub ty: Type,
     pub name: Option<String>,
 }
-pub type NamedSubType = NamedType<SubType>;
 
-#[derive(Clone, Copy, Debug, PartialEq, Eq, Hash)]
+#[derive(Clone, Debug, PartialEq, Eq, Hash)]
 pub enum Type {
     Val(ValType),
     ReferenceType(ReferenceType),
+    SubType(SubType),
 }
 
 #[derive(Clone, Copy, Debug, PartialEq, Eq, Hash)]
@@ -73,10 +71,10 @@ pub enum HeapType {
 }
 
 /// The type of an instruction sequence
-#[derive(Clone, Copy, Debug, PartialEq, Eq, Hash)]
+#[derive(Copy, Clone, Debug, PartialEq, Eq, Hash)]
 pub enum BlockType {
     Val(ValType),
-    Id(FuncTypeId),
+    Id(TypeId), // Should be SubType<Function>
 }
 
 /// A composite type with an optional list of supertypes it matches.
@@ -89,7 +87,7 @@ pub enum BlockType {
 #[derive(Clone, Debug, PartialEq, Eq, Hash)]
 pub struct SubType {
     pub is_final: bool,
-    pub supertypes: Option<Box<[SubTypeId]>>,
+    pub supertypes: Option<Box<[TypeId]>>, // Should be SubType
     pub comp_type: CompType,
 }
 
