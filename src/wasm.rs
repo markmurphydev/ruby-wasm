@@ -11,6 +11,7 @@ pub mod function_builder;
 pub mod module;
 pub mod types;
 pub mod values;
+pub mod wat;
 
 use crate::wasm::types::{BlockType, ValType};
 use id_arena::Id;

@@ -276,3 +276,52 @@
 //         .unwrap()
 //     }
 // }
+
+use std::hash::{DefaultHasher, Hash};
+use pretty::{Doc, RcDoc};
+use crate::wasm::function::{Function, FunctionId, ModuleFunctions};
+use crate::wasm::module::Module;
+
+impl Module {
+    pub fn to_pretty(&self) -> String {
+        let mut w = Vec::new();
+        module_to_doc(self).render(2, &mut w).unwrap();
+        String::from_utf8(w).unwrap()
+    }
+}
+
+fn module_to_doc(module: &Module) -> RcDoc<'static> {
+    let Module {
+        types, funcs, start, name: _name
+    } = module;
+    let child_docs: Box<[RcDoc<'static>]> = [
+        // types.to_doc(),
+        Some(funcs.to_doc()),
+        start.map(|func_id| func_id_to_doc(func_id)),
+    ].into_iter().filter_map(|doc| doc).collect();
+
+    RcDoc::text("(")
+        .append(RcDoc::text("module"))
+        .append(RcDoc::intersperse(child_docs, Doc::line()).nest(1))
+        .append(RcDoc::text(")"))
+}
+
+
+impl ModuleFunctions {
+    fn to_doc(&self) -> RcDoc<'static> {
+        let funcs: Box<[RcDoc<'static>]> = self.iter().map(|func| func.to_doc()).collect();
+        todo!()
+    }
+}
+
+impl Function {
+    fn to_doc(&self) -> RcDoc<'static> {
+        let Function { kind, name, .. } = self;
+
+        todo!()
+    }
+}
+
+fn func_id_to_doc(func_id: FunctionId) -> RcDoc<'static> {
+    RcDoc::text(format!("${:?}", func_id.hash(&mut DefaultHasher::new())).to_string())
+}

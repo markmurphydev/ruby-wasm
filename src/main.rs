@@ -91,8 +91,8 @@ fn main() {
             let parser = Parser::new(Lexer::new(&text));
             let program = parser.parse();
             let wasm = compiler::compile(program);
-            // let wat = WatPrinter::new().print_module(&wasm);
-            // println!("{}", wat);
+            let wat = wasm.to_pretty();
+            println!("{}", wat);
         }
 
         Command::Wasm { text } => {

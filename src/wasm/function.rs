@@ -230,9 +230,6 @@ impl LocalFunction {
 pub struct ModuleFunctions {
     /// The arena containing this module's functions.
     arena: Arena<Function>,
-
-    /// Original code section offset.
-    pub(crate) code_section_offset: usize,
 }
 
 impl ModuleFunctions {
