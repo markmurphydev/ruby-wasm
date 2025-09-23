@@ -1,4 +1,3 @@
-use crate::wasm::Instruction;
 use std::fmt::{Display, Formatter};
 
 pub struct Byte(pub u8);

@@ -2,21 +2,17 @@
 //! https://github.com/wasm-bindgen/walrus
 //! MIT licensed
 
-use std::ops::{Deref, DerefMut};
+use crate::wasm::types::{BlockType, CompType, FuncParams, FuncResults, FuncType, NamedSubType, SubType, SubTypeId, ValType};
+use crate::wasm::{Block, IfElse, Instr, InstrSeq, InstrSeqId, LocalId, Loop, Value};
+use id_arena::Arena;
+use crate::wasm::function::{Function, FunctionId, LocalFunction, ModuleFunctions};
+use crate::wasm::module::ModuleTypes;
 
 /// Build instances of `LocalFunction`.
-///
-/// # Example
-///
-/// * For micro-examples, see the docs for various `FunctionBuilder` and
-///   `InstrSeqBuilder` methods.
-///
-/// * For a bit more realistic example, see
-///   [`examples/build-wasm-from-scratch.rs`](https://github.com/rustwasm/walrus/blob/master/examples/build-wasm-from-scratch.rs).
 #[derive(Debug)]
 pub struct FunctionBuilder {
-    pub(crate) arena: TombstoneArena<InstrSeq>,
-    pub(crate) ty: TypeId,
+    pub(crate) arena: Arena<InstrSeq>,
+    pub(crate) ty: SubTypeId,
     pub(crate) entry: Option<InstrSeqId>,
     pub(crate) name: Option<String>,
 }
@@ -25,21 +21,28 @@ impl FunctionBuilder {
     /// Creates a new, empty function builder.
     pub fn new(
         types: &mut ModuleTypes,
-        params: &[ValType],
-        results: &[ValType],
+        name: Option<String>,
+        params: FuncParams,
+        results: FuncResults,
     ) -> FunctionBuilder {
-        let ty = types.add(params, results);
-        let mut builder = FunctionBuilder::without_entry(ty);
-        let entry_ty = types.add_entry_ty(results);
-        let entry = builder.dangling_instr_seq(entry_ty).id;
+        let func_type = FuncType {
+            params, results
+        };
+        let ty = NamedSubType {
+            ty: SubType::final_no_super(CompType::FuncType(func_type)),
+            name: None,
+        } ;
+        let ty_id = types.add(ty);
+        let mut builder = FunctionBuilder::without_entry(ty_id);
+        let entry = builder.dangling_instr_seq(BlockType::Id()).id;
         builder.entry = Some(entry);
         builder
     }
 
     /// Create a builder that doesn't have a function body / entry
     /// sequence. Callers are responsible for initializing its entry.
-    pub(crate) fn without_entry(ty: TypeId) -> FunctionBuilder {
-        let arena = TombstoneArena::<InstrSeq>::default();
+    pub(crate) fn without_entry(ty: SubTypeId) -> FunctionBuilder {
+        let arena = Arena::<InstrSeq>::default();
         FunctionBuilder {
             arena,
             ty,
@@ -69,7 +72,7 @@ impl FunctionBuilder {
     ///
     /// # Example
     ///
-    /// ```
+    /// ```ignore
     /// let mut module = walrus::Module::default();
     /// let mut builder = walrus::FunctionBuilder::new(&mut module.types, &[], &[]);
     ///
@@ -108,7 +111,7 @@ impl FunctionBuilder {
     ///
     /// # Example
     ///
-    /// ```
+    /// ```ignore
     /// use walrus::ir::*;
     ///
     /// let mut module = walrus::Module::default();
@@ -128,8 +131,7 @@ impl FunctionBuilder {
     ///     .func_body()
     ///     .instr(Block { seq: seq_id });
     /// ```
-    pub fn dangling_instr_seq(&mut self, ty: impl Into<InstrSeqType>) -> InstrSeqBuilder {
-        let ty = ty.into();
+    pub fn dangling_instr_seq(&mut self, ty: BlockType) -> InstrSeqBuilder {
         let id = self.arena.alloc_with_id(|id| InstrSeq::new(id, ty));
         InstrSeqBuilder { id, builder: self }
     }
@@ -139,7 +141,7 @@ impl FunctionBuilder {
     ///
     /// # Example
     ///
-    /// ```
+    /// ```ignore
     /// let mut module = walrus::Module::default();
     /// let mut builder = walrus::FunctionBuilder::new(&mut module.types, &[], &[]);
     ///
@@ -172,42 +174,42 @@ pub struct InstrSeqBuilder<'a> {
 
 impl InstrSeqBuilder<'_> {
     /// Returns the id of the instruction sequence that we're building.
-    #[inline]
-    pub fn id(&self) -> InstrSeqId {
-        self.id
-    }
+    // #[inline]
+    // pub fn id(&self) -> InstrSeqId {
+    //     self.id
+    // }
 
-    /// Get this instruction sequence's instructions.
-    pub fn instrs(&self) -> &[(Instr, InstrLocId)] {
-        &self.builder.arena[self.id]
-    }
+    // /// Get this instruction sequence's instructions.
+    // pub fn instrs(&self) -> &[(Instr, InstrLocId)] {
+    //     &self.builder.arena[self.id]
+    // }
 
-    /// Get this instruction sequence's instructions mutably.
-    pub fn instrs_mut(&mut self) -> &mut Vec<(Instr, InstrLocId)> {
-        &mut self.builder.arena[self.id].instrs
-    }
+    // /// Get this instruction sequence's instructions mutably.
+    // pub fn instrs_mut(&mut self) -> &mut Vec<(Instr, InstrLocId)> {
+    //     &mut self.builder.arena[self.id].instrs
+    // }
 
     /// Pushes a new instruction onto this builder's sequence.
     #[inline]
     pub fn instr(&mut self, instr: impl Into<Instr>) -> &mut Self {
         self.builder.arena[self.id]
             .instrs
-            .push((instr.into(), Default::default()));
+            .push(instr.into());
         self
     }
 
-    /// Splice a new instruction into this builder's sequence at the given index.
-    ///
-    /// # Panics
-    ///
-    /// Panics if `position > self.instrs.len()`.
-    #[inline]
-    pub fn instr_at(&mut self, position: usize, instr: impl Into<Instr>) -> &mut Self {
-        self.builder.arena[self.id]
-            .instrs
-            .insert(position, (instr.into(), Default::default()));
-        self
-    }
+    // /// Splice a new instruction into this builder's sequence at the given index.
+    // ///
+    // /// # Panics
+    // ///
+    // /// Panics if `position > self.instrs.len()`.
+    // #[inline]
+    // pub fn instr_at(&mut self, position: usize, instr: impl Into<Instr>) -> &mut Self {
+    //     self.builder.arena[self.id]
+    //         .instrs
+    //         .insert(position, (instr.into(), Default::default()));
+    //     self
+    // }
 
     /// Creates an `i32.const` instruction for the specified value.
     #[inline]
@@ -237,7 +239,7 @@ impl InstrSeqBuilder<'_> {
     ///
     /// # Example:
     ///
-    /// ```
+    /// ```ignored
     /// let mut module = walrus::Module::default();
     /// let mut builder = walrus::FunctionBuilder::new(&mut module.types, &[], &[]);
     ///
@@ -257,59 +259,20 @@ impl InstrSeqBuilder<'_> {
     /// ```
     pub fn block(
         &mut self,
-        ty: impl Into<InstrSeqType>,
+        ty: impl Into<BlockType>,
         make_block: impl FnOnce(&mut InstrSeqBuilder),
     ) -> &mut Self {
-        let mut builder = self.dangling_instr_seq(ty);
+        let mut builder = self.builder.dangling_instr_seq(ty);
         make_block(&mut builder);
         let seq = builder.id;
         self.instr(Block { seq })
-    }
-
-    /// Append a new, nested `block ... end` to this builder's sequence.
-    ///
-    /// # Example:
-    ///
-    /// ```
-    /// let mut module = walrus::Module::default();
-    /// let mut builder = walrus::FunctionBuilder::new(&mut module.types, &[], &[]);
-    ///
-    /// // Make the function's body be a single `unreachable` instruction.
-    /// builder
-    ///     .func_body()
-    ///     .unreachable();
-    ///
-    /// // Splice the following WAT into the function, before the `unreachable`:
-    /// //
-    /// //     block
-    /// //       i32.const 1337
-    /// //       drop
-    /// //     end
-    /// builder
-    ///     .func_body()
-    ///     .block_at(0, None, |block| {
-    ///         block
-    ///             .i32_const(1337)
-    ///             .drop();
-    ///     });
-    /// ```
-    pub fn block_at(
-        &mut self,
-        position: usize,
-        ty: impl Into<InstrSeqType>,
-        make_block: impl FnOnce(&mut InstrSeqBuilder),
-    ) -> &mut Self {
-        let mut builder = self.dangling_instr_seq(ty);
-        make_block(&mut builder);
-        let seq = builder.id;
-        self.instr_at(position, Block { seq })
     }
 
     /// Create a new `loop ... end` instruction sequence.
     ///
     /// # Example
     ///
-    /// ```
+    /// ```ignored
     /// let mut module = walrus::Module::default();
     /// let mut builder = walrus::FunctionBuilder::new(&mut module.types, &[], &[]);
     ///
@@ -329,61 +292,22 @@ impl InstrSeqBuilder<'_> {
     /// ```
     pub fn loop_(
         &mut self,
-        ty: impl Into<InstrSeqType>,
+        ty: impl Into<BlockType>,
         make_loop: impl FnOnce(&mut InstrSeqBuilder),
     ) -> &mut Self {
-        let mut builder = self.dangling_instr_seq(ty);
+        let mut builder = self.builder.dangling_instr_seq(ty);
         make_loop(&mut builder);
         let seq = builder.id;
         self.instr(Loop { seq })
     }
 
-    /// Splice a new `loop ... end` into this instruction sequence at the given
-    /// position.
-    ///
-    /// # Example
-    ///
-    /// ```
-    /// let mut module = walrus::Module::default();
-    /// let mut builder = walrus::FunctionBuilder::new(&mut module.types, &[], &[]);
-    ///
-    /// // Make the function's body be a single `unreachable` instruction.
-    /// builder
-    ///     .func_body()
-    ///     .unreachable();
-    ///
-    /// // Splice the following WAT into the function, before the `unreachable`:
-    /// //
-    /// //     loop
-    /// //       i32.const 1337
-    /// //       drop
-    /// //     end
-    /// builder
-    ///     .func_body()
-    ///     .loop_at(0, None, |loop_| {
-    ///         loop_
-    ///             .i32_const(1337)
-    ///             .drop();
-    ///     });
-    /// ```
-    pub fn loop_at(
-        &mut self,
-        position: usize,
-        ty: impl Into<InstrSeqType>,
-        make_loop: impl FnOnce(&mut InstrSeqBuilder),
-    ) -> &mut Self {
-        let mut builder = self.dangling_instr_seq(ty);
-        make_loop(&mut builder);
-        let seq = builder.id;
-        self.instr_at(position, Loop { seq })
-    }
 
     /// Build a new `if <consequent> else <alternative> end` instruction
     /// sequence.
     ///
     /// # Example
     ///
-    /// ```
+    /// ```ignored
     /// use walrus::ValType;
     ///
     /// let mut module = walrus::Module::default();
@@ -410,20 +334,20 @@ impl InstrSeqBuilder<'_> {
     /// ```
     pub fn if_else(
         &mut self,
-        ty: impl Into<InstrSeqType>,
+        ty: impl Into<BlockType>,
         consequent: impl FnOnce(&mut InstrSeqBuilder),
         alternative: impl FnOnce(&mut InstrSeqBuilder),
     ) -> &mut Self {
         let ty = ty.into();
 
         let consequent = {
-            let mut builder = self.dangling_instr_seq(ty);
+            let mut builder = self.builder.dangling_instr_seq(ty);
             consequent(&mut builder);
             builder.id
         };
 
         let alternative = {
-            let mut builder = self.dangling_instr_seq(ty);
+            let mut builder = self.builder.dangling_instr_seq(ty);
             alternative(&mut builder);
             builder.id
         };
@@ -433,82 +357,19 @@ impl InstrSeqBuilder<'_> {
             alternative,
         })
     }
-
-    /// Splice a new `if <consequent> else <alternative> end` into this
-    /// instruction sequence at the given position.
-    ///
-    /// # Example
-    ///
-    /// ```
-    /// use walrus::ValType;
-    ///
-    /// let mut module = walrus::Module::default();
-    ///
-    /// let ty = module.types.add(&[], &[ValType::I32]);
-    /// let (flip_coin, _) = module.add_import_func("flip", "coin", ty);
-    ///
-    /// let mut builder = walrus::FunctionBuilder::new(&mut module.types, &[], &[]);
-    ///
-    /// builder
-    ///     .func_body()
-    ///     .call(flip_coin)
-    ///     .unreachable();
-    ///
-    /// // Splice an if/else after the `call` and before the `unreachable`.
-    /// builder
-    ///     .func_body()
-    ///     .if_else_at(
-    ///         1,
-    ///         ValType::I32,
-    ///         |then| {
-    ///             then.i32_const(12);
-    ///         },
-    ///         |else_| {
-    ///             else_.i32_const(34);
-    ///         },
-    ///     );
-    /// ```
-    pub fn if_else_at(
-        &mut self,
-        position: usize,
-        ty: impl Into<InstrSeqType>,
-        consequent: impl FnOnce(&mut InstrSeqBuilder),
-        alternative: impl FnOnce(&mut InstrSeqBuilder),
-    ) -> &mut Self {
-        let ty = ty.into();
-
-        let consequent = {
-            let mut builder = self.dangling_instr_seq(ty);
-            consequent(&mut builder);
-            builder.id
-        };
-
-        let alternative = {
-            let mut builder = self.dangling_instr_seq(ty);
-            alternative(&mut builder);
-            builder.id
-        };
-
-        self.instr_at(
-            position,
-            IfElse {
-                consequent,
-                alternative,
-            },
-        )
-    }
 }
 
-impl Deref for InstrSeqBuilder<'_> {
-    type Target = FunctionBuilder;
+// impl Deref for InstrSeqBuilder<'_> {
+//     type Target = FunctionBuilder;
+//
+//     fn deref(&self) -> &FunctionBuilder {
+//         &*self.builder
+//     }
+// }
+//
+// impl DerefMut for InstrSeqBuilder<'_> {
+//     fn deref_mut(&mut self) -> &mut FunctionBuilder {
+//         &mut *self.builder
+//     }
+// }
 
-    fn deref(&self) -> &FunctionBuilder {
-        &*self.builder
-    }
-}
-
-impl DerefMut for InstrSeqBuilder<'_> {
-    fn deref_mut(&mut self) -> &mut FunctionBuilder {
-        &mut *self.builder
-    }
-}

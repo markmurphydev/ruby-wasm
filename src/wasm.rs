@@ -8,11 +8,26 @@
 
 pub mod types;
 pub mod values;
-mod function_builder;
+pub mod function_builder;
+pub mod module;
+pub mod function;
 
+use crate::wasm::types::{BlockType, ValType};
+use id_arena::Id;
 use wasm_macro::wasm_instr;
-use crate::wasm::types::{GlobalType, Type, ValueType};
-use crate::wasm::values::{I32, I64, U32};
+
+/// Constant values that can show up in WebAssembly
+#[derive(Debug, Clone, Copy)]
+pub enum Value {
+    /// A constant 32-bit integer
+    I32(i32),
+    /// A constant 64-bit integer
+    I64(i64),
+    /// A constant 32-bit float
+    F32(f32),
+    /// A constant 64-bit float
+    F64(f64),
+}
 
 /// An enum of all the different kinds of wasm instructions.
 ///
@@ -41,12 +56,12 @@ use crate::wasm::values::{I32, I64, U32};
 #[wasm_instr]
 #[derive(Clone, Debug)]
 pub enum Instr {
-    // /// `block ... end`
-    // #[walrus(skip_builder)]
-    // Block {
-    //     /// The id of this `block` instruction's inner `InstrSeq`.
-    //     seq: InstrSeqId,
-    // },
+    /// `block ... end`
+    #[wasm(skip_builder)]
+    Block {
+        /// The id of this `block` instruction's inner `InstrSeq`.
+        seq: InstrSeqId,
+    },
 
     /// `loop ... end`
     #[wasm(skip_builder)]
@@ -98,13 +113,13 @@ pub enum Instr {
     //     /// The global being set.
     //     global: GlobalId,
     // },
-    //
-    // /// `*.const`
-    // Const {
-    //     /// The constant value.
-    //     value: Value,
-    // },
-    //
+
+    /// `*.const`
+    Const {
+        /// The constant value.
+        value: Value,
+    },
+
     // /// Ternary operations, those requiring three operands
     // TernOp {
     //     /// The operation being performed
@@ -150,16 +165,16 @@ pub enum Instr {
     //     #[walrus(skip_visit)] // should have already been visited
     //     block: InstrSeqId,
     // },
-    //
-    // /// `if <consequent> else <alternative> end`
-    // #[walrus(skip_builder)]
-    // IfElse {
-    //     /// The block to execute when the condition is true.
-    //     consequent: InstrSeqId,
-    //     /// The block to execute when the condition is false.
-    //     alternative: InstrSeqId,
-    // },
-    //
+
+    /// `if <consequent> else <alternative> end`
+    #[wasm(skip_builder)]
+    IfElse {
+        /// The block to execute when the condition is true.
+        consequent: InstrSeqId,
+        /// The block to execute when the condition is false.
+        alternative: InstrSeqId,
+    },
+
     // /// `br_table`
     // BrTable {
     //     /// The table of target blocks.
@@ -405,94 +420,151 @@ pub enum Instr {
     // },
 }
 
-#[derive(Debug, Clone)]
-pub enum Instruction {
-    // Number instructions
-    ConstI32(I32),
-    ConstI64(I64),
-    /// Convert an `i32` to a `(ref i31)`
-    RefI31,
-    /// Convert a `(ref i31)` to `i32`, treating as unsigned
-    I31GetU,
+/// The identifier for a `InstrSeq` within some `LocalFunction`.
+pub type InstrSeqId = Id<InstrSeq>;
 
-    // Global instructions
-    GlobalGet(GlobalIdx),
+/// A sequence of instructions.
+#[derive(Debug)]
+pub struct InstrSeq {
+    id: InstrSeqId,
 
-    I32Xor,
-    I32Or,
-    I32Eqz,
-    I32Eq,
+    /// This block's type: the types of values that are expected on the
+    /// stack when entering this instruction sequence and the types that are
+    /// left on the stack afterward.
+    pub ty: BlockType,
 
-    // Control instructions
-    If(If),
-    Loop(Loop),
+    /// The instructions that make up the body of this block.
+    pub instrs: Vec<Instr>,
 }
 
-#[derive(Debug, Clone)]
-/// (if label block_type? predicate_instrs* (then then_instrs*) (else else_instrs*)?)
-pub struct If {
-    /// Idk. Is it for named breaks?
-    pub label: Option<String>,
-
-    /// The return type of the if, else blocks
-    /// TODO: This should be a union of something and valtype
-    /// TODO: This might always be Unitype, or might sometimes be Unitype, sometimes Void
-    pub block_type: Type,
-
-    pub predicate_instrs: Vec<Instruction>,
-
-    pub then_instrs: Vec<Instruction>,
-    pub else_instrs: Vec<Instruction>,
+impl InstrSeq {
+    pub fn new(id: InstrSeqId, ty: BlockType) -> Self {
+        Self {
+            id,
+            ty,
+            instrs: vec![],
+        }
+    }
 }
 
-#[derive(Debug, Clone)]
-pub struct Loop {
-    pub label: Option<String>,
-    /// The return type of the loop instructions
-    pub block_type: Type,
-    pub instructions: Vec<Instruction>,
+/// The id of a local.
+pub type LocalId = Id<Local>;
+
+/// A local variable or parameter.
+#[derive(Clone, Debug, PartialEq, Eq, Hash)]
+pub struct Local {
+    id: LocalId,
+    ty: ValType,
+    /// A human-readable name for this local, often useful when debugging
+    /// TODO -- All these names should get folded into the ID types
+    pub name: Option<String>,
 }
+
+impl Local {
+    /// Construct a new local from the given id and type.
+    pub fn new(id: LocalId, ty: ValType) -> Local {
+        Local { id, ty, name: None }
+    }
+
+    /// Get this local's id that is unique across the whole module.
+    pub fn id(&self) -> LocalId {
+        self.id
+    }
+
+    /// Get this local's type.
+    pub fn ty(&self) -> ValType {
+        self.ty
+    }
+}
+
+// #[derive(Debug, Clone)]
+// pub enum Instruction {
+//     // Number instructions
+//     ConstI32(I32),
+//     ConstI64(I64),
+//     /// Convert an `i32` to a `(ref i31)`
+//     RefI31,
+//     /// Convert a `(ref i31)` to `i32`, treating as unsigned
+//     I31GetU,
+//
+//     // Global instructions
+//     GlobalGet(GlobalIdx),
+//
+//     I32Xor,
+//     I32Or,
+//     I32Eqz,
+//     I32Eq,
+//
+//     // Control instructions
+//     If(If),
+//     Loop(Loop),
+// }
+
+// #[derive(Debug, Clone)]
+// /// (if label block_type? predicate_instrs* (then then_instrs*) (else else_instrs*)?)
+// pub struct If {
+//     /// Idk. Is it for named breaks?
+//     pub label: Option<String>,
+//
+//     /// The return type of the if, else blocks
+//     /// TODO: This should be a union of something and valtype
+//     /// TODO: This might always be Unitype, or might sometimes be Unitype, sometimes Void
+//     pub block_type: Type,
+//
+//     pub predicate_instrs: Vec<Instruction>,
+//
+//     pub then_instrs: Vec<Instruction>,
+//     pub else_instrs: Vec<Instruction>,
+// }
+//
+// #[derive(Debug, Clone)]
+// pub struct Loop {
+//     pub label: Option<String>,
+//     /// The return type of the loop instructions
+//     pub block_type: Type,
+//     pub instructions: Vec<Instruction>,
+// }
 
 // ==== Wasm Module Items ====
 
-#[derive(Debug, Clone)]
-pub enum FunctionIdx {
-    // TODO -- Spec defines indices to be wasm-u32
-    // https://webassembly.github.io/spec/core/syntax/modules.html#syntax-start
-    Index(U32),
-    Id(String),
-}
+// #[derive(Debug, Clone)]
+// pub enum FunctionIdx {
+//     // TODO -- Spec defines indices to be wasm-u32
+//     // https://webassembly.github.io/spec/core/syntax/modules.html#syntax-start
+//     Index(U32),
+//     Id(String),
+// }
+//
+// #[derive(Debug, Clone)]
+// pub struct Function {
+//     pub id: Option<String>,
+//     pub body: Expr,
+// }
 
-#[derive(Debug, Clone)]
-pub struct Function {
-    pub id: Option<String>,
-    pub body: Expr,
-}
+// /// Sequence of instructions
+// /// https://webassembly.github.io/spec/core/syntax/instructions.html#syntax-expr
+// #[derive(Debug, Clone)]
+// pub struct Expr(pub Vec<Instruction>);
 
-/// Sequence of instructions
-/// https://webassembly.github.io/spec/core/syntax/instructions.html#syntax-expr
-#[derive(Debug, Clone)]
-pub struct Expr(pub Vec<Instruction>);
+// #[derive(Debug, Clone)]
+// pub enum GlobalIdx {
+//     Idx(U32),
+//     Id(String),
+// }
 
-#[derive(Debug, Clone)]
-pub enum GlobalIdx {
-    Idx(U32),
-    Id(String),
-}
-
-#[derive(Debug, Clone)]
-pub struct Global {
-    pub id: Option<String>,
-    pub global_type: GlobalType,
-    pub expr: Expr,
-}
-
-#[derive(Debug, Clone)]
-pub struct Module {
-    pub functions: Vec<Function>,
-    pub exports: Vec<FunctionIdx>,
-    pub globals: Vec<Global>,
-    /// A function `() -> ()` which _initializes_ the wasm module
-    /// NB: _not_ a main function
-    pub start: Option<FunctionIdx>,
-}
+// #[derive(Debug, Clone)]
+// pub struct Global {
+//     pub id: Option<String>,
+//     pub global_type: GlobalType,
+//     pub expr: Expr,
+// }
+//
+// #[derive(Debug, Clone)]
+// pub struct Module {
+//     pub functions: Vec<Function>,
+//     pub exports: Vec<FunctionIdx>,
+//     pub globals: Vec<Global>,
+//     /// A function `() -> ()` which _initializes_ the wasm module
+//     /// NB: _not_ a main function
+//     pub start: Option<FunctionIdx>,
+// }

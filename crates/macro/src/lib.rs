@@ -345,12 +345,6 @@ fn create_builder(variants: &[WasmVariant]) -> impl quote::ToTokens {
             pub fn #method_name(&mut self, #(#args),*) -> &mut Self {
                 self.instr(#name { #(#arg_names),* })
             }
-
-            #[inline]
-            #[doc=#at_doc]
-            pub fn #method_name_at(&mut self, position: usize, #(#args),*) -> &mut Self {
-                self.instr_at(position, #name { #(#arg_names),* })
-            }
         });
     }
     quote! {

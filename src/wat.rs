@@ -1,5 +1,5 @@
 use crate::wasm::types::{
-    GlobalType, HeapType, Mutability, NumberType, ReferenceType, Type, UNITYPE, ValueType,
+    GlobalType, HeapType, Mutability, NumberType, ReferenceType, Type, UNITYPE, ValType,
 };
 use crate::wasm::{Expr, Function, FunctionIdx, Global, GlobalIdx, If, Instruction, Loop, Module};
 use std::fmt::Write;
@@ -218,7 +218,7 @@ impl WatPrinter {
 
     fn print_type(&mut self, wasm_type: &Type) {
         match wasm_type {
-            Type::Value(value_type) => self.print_value_type(value_type),
+            Type::Val(value_type) => self.print_value_type(value_type),
             Type::ReferenceType(ref_type) => self.print_reference_type(ref_type),
         }
     }
@@ -235,9 +235,9 @@ impl WatPrinter {
         }
     }
 
-    fn print_value_type(&mut self, value_type: &ValueType) {
+    fn print_value_type(&mut self, value_type: &ValType) {
         match value_type {
-            ValueType::NumberType(number_type) => self.print_number_type(number_type),
+            ValType::NumberType(number_type) => self.print_number_type(number_type),
         }
     }
 

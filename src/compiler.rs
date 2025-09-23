@@ -124,7 +124,7 @@ impl Compiler {
                     id: Some(global_id.clone()),
                     global_type: WT::GlobalType {
                         mutability: WT::Mutability::Const,
-                        value_type: WT::ValueType::NumberType(WT::NumberType::I32),
+                        value_type: WT::ValType::NumberType(WT::NumberType::I32),
                     },
                     expr: W::Expr(expr_instrs)
                 };
@@ -144,7 +144,7 @@ impl Compiler {
                     id: Some(global_id.clone()),
                     global_type: WT::GlobalType {
                         mutability: WT::Mutability::Const,
-                        value_type: WT::ValueType::NumberType(WT::NumberType::I64),
+                        value_type: WT::ValType::NumberType(WT::NumberType::I64),
                     },
                     expr: W::Expr(expr_instrs)
                 };
