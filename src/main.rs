@@ -1,10 +1,10 @@
 use clap::Parser as ParserTrait;
 use clap::Subcommand;
-use ruby_wasm::compiler::{Compiler, FIXNUM_MARKER};
+use ruby_wasm::compiler;
+use ruby_wasm::compiler::{FIXNUM_MARKER};
 use ruby_wasm::lexeme::LexemeKind;
 use ruby_wasm::lexer::Lexer;
 use ruby_wasm::parser::Parser;
-use ruby_wasm::wat::WatPrinter;
 use ruby_wasm::{binary, html};
 
 #[derive(clap::Parser)]
@@ -83,37 +83,33 @@ fn main() {
         Command::Compile { text } => {
             let parser = Parser::new(Lexer::new(&text));
             let program = parser.parse();
-            let compiler = Compiler::new();
-            let wasm = compiler.compile(program);
+            let wasm = compiler::compile(program);
             println!("{:?}", wasm);
         }
 
         Command::Wat { text } => {
             let parser = Parser::new(Lexer::new(&text));
             let program = parser.parse();
-            let compiler = Compiler::new();
-            let wasm = compiler.compile(program);
-            let wat = WatPrinter::new().print_module(&wasm);
-            println!("{}", wat);
+            let wasm = compiler::compile(program);
+            // let wat = WatPrinter::new().print_module(&wasm);
+            // println!("{}", wat);
         }
 
         Command::Wasm { text } => {
             let parser = Parser::new(Lexer::new(&text));
             let program = parser.parse();
-            let compiler = Compiler::new();
-            let module = compiler.compile(program);
-            let bytes = binary::module_to_binary(&module);
-            binary::print_bytes(&bytes);
+            let module = compiler::compile(program);
+            // let bytes = binary::module_to_binary(&module);
+            // binary::print_bytes(&bytes);
         }
 
         Command::Html { text } => {
             let parser = Parser::new(Lexer::new(&text));
             let program = parser.parse();
-            let compiler = Compiler::new();
-            let module = compiler.compile(program);
-            let bytes = binary::module_to_binary(&module);
-            let html = html::make_html_wrapper(&bytes);
-            println!("{}", html);
+            let module = compiler::compile(program);
+            // let bytes = binary::module_to_binary(&module);
+            // let html = html::make_html_wrapper(&bytes);
+            // println!("{}", html);
         }
 
         Command::Scratch => {

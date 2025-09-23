@@ -6,11 +6,11 @@
 //! https://github.com/wasm-bindgen/walrus
 //! MIT licensed
 
-pub mod types;
-pub mod values;
+pub mod function;
 pub mod function_builder;
 pub mod module;
-pub mod function;
+pub mod types;
+pub mod values;
 
 use crate::wasm::types::{BlockType, ValType};
 use id_arena::Id;
@@ -113,7 +113,6 @@ pub enum Instr {
     //     /// The global being set.
     //     global: GlobalId,
     // },
-
     /// `*.const`
     Const {
         /// The constant value.
@@ -133,14 +132,12 @@ pub enum Instr {
     //     #[walrus(skip_visit)]
     //     op: BinaryOp,
     // },
-    //
-    // /// Unary operations, those requiring one operand
-    // Unop {
-    //     /// The operation being performed
-    //     #[walrus(skip_visit)]
-    //     op: UnaryOp,
-    // },
-    //
+    /// Unary operations, those requiring one operand
+    Unop {
+        /// The operation being performed
+        op: UnaryOp,
+    },
+
     // /// `select`
     // Select {
     //     /// Optionally listed type that the `select` instruction is expected to
@@ -165,7 +162,6 @@ pub enum Instr {
     //     #[walrus(skip_visit)] // should have already been visited
     //     block: InstrSeqId,
     // },
-
     /// `if <consequent> else <alternative> end`
     #[wasm(skip_builder)]
     IfElse {
@@ -174,7 +170,6 @@ pub enum Instr {
         /// The block to execute when the condition is false.
         alternative: InstrSeqId,
     },
-
     // /// `br_table`
     // BrTable {
     //     /// The table of target blocks.
@@ -185,10 +180,10 @@ pub enum Instr {
     //     #[walrus(skip_visit)] // should have already been visited
     //     default: InstrSeqId,
     // },
-    //
-    // /// `drop`
-    // Drop {},
-    //
+
+    /// `drop`
+    Drop {},
+
     // /// `return`
     // Return {},
     //
@@ -418,6 +413,83 @@ pub enum Instr {
     //     /// The table which `func` below is indexing into
     //     table: TableId,
     // },
+}
+
+/// Possible unary operations in wasm
+#[allow(missing_docs)]
+#[derive(Copy, Clone, Debug)]
+pub enum UnaryOp {
+    // I32Eqz,
+    // I32Clz,
+    // I32Ctz,
+    // I32Popcnt,
+    //
+    // I64Eqz,
+    // I64Clz,
+    // I64Ctz,
+    // I64Popcnt,
+    //
+    // F32Abs,
+    // F32Neg,
+    // F32Ceil,
+    // F32Floor,
+    // F32Trunc,
+    // F32Nearest,
+    // F32Sqrt,
+    //
+    // F64Abs,
+    // F64Neg,
+    // F64Ceil,
+    // F64Floor,
+    // F64Trunc,
+    // F64Nearest,
+    // F64Sqrt,
+    //
+    // I32WrapI64,
+    // I32TruncSF32,
+    // I32TruncUF32,
+    // I32TruncSF64,
+    // I32TruncUF64,
+    // I64ExtendSI32,
+    // I64ExtendUI32,
+    // I64TruncSF32,
+    // I64TruncUF32,
+    // I64TruncSF64,
+    // I64TruncUF64,
+    //
+    // F32ConvertSI32,
+    // F32ConvertUI32,
+    // F32ConvertSI64,
+    // F32ConvertUI64,
+    // F32DemoteF64,
+    // F64ConvertSI32,
+    // F64ConvertUI32,
+    // F64ConvertSI64,
+    // F64ConvertUI64,
+    // F64PromoteF32,
+    //
+    // I32ReinterpretF32,
+    // I64ReinterpretF64,
+    // F32ReinterpretI32,
+    // F64ReinterpretI64,
+    //
+    // I32Extend8S,
+    // I32Extend16S,
+    // I64Extend8S,
+    // I64Extend16S,
+    // I64Extend32S,
+
+    // RefTestNonNull,
+    // RefTestNullable,
+    // RefCastNonNull,
+    // RefCastNullable,
+    // BrOnCast,
+    // BrOnCastFail,
+    // AnyConvertExtern,
+    // ExternConvertAny,
+    RefI31,
+    // I31GetS,
+    // I31GetU,
 }
 
 /// The identifier for a `InstrSeq` within some `LocalFunction`.
