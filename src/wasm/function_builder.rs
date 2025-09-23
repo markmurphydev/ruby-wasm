@@ -2,7 +2,7 @@
 //! https://github.com/wasm-bindgen/walrus
 //! MIT licensed
 
-use crate::wasm::types::{BlockType, CompType, FuncParams, FuncResults, FuncType, NamedSubType, SubType, SubTypeId, ValType};
+use crate::wasm::types::{BlockType, CompType, FuncParams, FuncResults, FuncType, FuncTypeId, NamedSubType, SubType, SubTypeId, ValType};
 use crate::wasm::{Block, IfElse, Instr, InstrSeq, InstrSeqId, LocalId, Loop, Value};
 use id_arena::Arena;
 use crate::wasm::function::{Function, FunctionId, LocalFunction, ModuleFunctions};
@@ -32,9 +32,9 @@ impl FunctionBuilder {
             ty: SubType::final_no_super(CompType::FuncType(func_type)),
             name: None,
         } ;
-        let ty_id = types.add(ty);
-        let mut builder = FunctionBuilder::without_entry(ty_id);
-        let entry = builder.dangling_instr_seq(BlockType::Id()).id;
+        let subtype_id = types.add(ty);
+        let mut builder = FunctionBuilder::without_entry(subtype_id);
+        let entry = builder.dangling_instr_seq(subtype_id.into()).id;
         builder.entry = Some(entry);
         builder
     }
