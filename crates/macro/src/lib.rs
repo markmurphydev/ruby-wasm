@@ -1,4 +1,5 @@
 //! attribution: Substantially copied from `walrus-macro` crate from Walrus library.
+//!     I cut out the visitor implementation because we don't use it.
 //! https://github.com/wasm-bindgen/walrus
 //! MIT licensed.
 
@@ -116,7 +117,7 @@ impl Parse for WasmVariantOpts {
 
 fn wasm_attrs(attrs: &mut Vec<syn::Attribute>) -> TokenStream {
     let mut ret = proc_macro2::TokenStream::new();
-    let ident = syn::Path::from(syn::Ident::new("walrus", Span::call_site()));
+    let ident = syn::Path::from(syn::Ident::new("wasm", Span::call_site()));
     for i in (0..attrs.len()).rev() {
         if attrs[i].path() != &ident {
             continue;
@@ -125,7 +126,7 @@ fn wasm_attrs(attrs: &mut Vec<syn::Attribute>) -> TokenStream {
         let group = if let syn::Meta::List(syn::MetaList { tokens, .. }) = attr.meta {
             tokens
         } else {
-            panic!("#[walrus(...)] expected")
+            panic!("#[wasm(...)] expected")
         };
         ret.extend(group);
         ret.extend(quote! { , });

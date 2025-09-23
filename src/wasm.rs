@@ -2,13 +2,15 @@
 //! One style of Wasm's text representation is tree-structured s-expressions,
 //!     so this can be trivially written to the `.wat` format.
 //!
-//! attribution: Substantially copied from Walrus `walrus/src/ir/mod.rs`
+//! attribution: Substantially copied from Walrus crate `walrus/src/ir/mod.rs`
 //! https://github.com/wasm-bindgen/walrus
 //! MIT licensed
 
 pub mod types;
 pub mod values;
+mod function_builder;
 
+use wasm_macro::wasm_instr;
 use crate::wasm::types::{GlobalType, Type, ValueType};
 use crate::wasm::values::{I32, I64, U32};
 
@@ -36,7 +38,7 @@ use crate::wasm::values::{I32, I64, U32};
 ///     ...
 /// }
 /// ```
-// #[walrus_instr]
+#[wasm_instr]
 #[derive(Clone, Debug)]
 pub enum Instr {
     // /// `block ... end`
@@ -45,14 +47,14 @@ pub enum Instr {
     //     /// The id of this `block` instruction's inner `InstrSeq`.
     //     seq: InstrSeqId,
     // },
-    //
-    // /// `loop ... end`
-    // #[walrus(skip_builder)]
-    // Loop {
-    //     /// The id of this `loop` instruction's inner `InstrSeq`.
-    //     seq: InstrSeqId,
-    // },
-    //
+
+    /// `loop ... end`
+    #[wasm(skip_builder)]
+    Loop {
+        /// The id of this `loop` instruction's inner `InstrSeq`.
+        seq: InstrSeqId,
+    },
+
     // /// `call`
     // Call {
     //     /// The function being invoked.
