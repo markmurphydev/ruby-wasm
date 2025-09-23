@@ -1,0 +1,17 @@
+[package]
+name = "wasm-macro"
+edition = "2024"
+version = "0.1.0"
+description = """
+Wasm AST macro copied from Walrus project:
+https://github.com/wasm-bindgen/walrus
+"""
+
+[dependencies]
+heck = "0.5.0"
+proc-macro2 = "1.0.86"
+quote = "1.0.37"
+syn = { version = "2.0.77", features = ['extra-traits'] }
+
+[lib]
+proc-macro = true
