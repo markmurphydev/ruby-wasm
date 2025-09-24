@@ -1,71 +1,65 @@
-//! attribution: Substantially copied from Walrus crate `walrus/src/function_builder.rs`
+//! attribution: Adapted from Walrus crate `walrus/src/function_builder.rs`
 //! https://github.com/wasm-bindgen/walrus
 //! MIT licensed
 
-use crate::wasm::types::{BlockType, CompType, FuncParams, FuncResults, FuncType, NamedType, SubType, Type, TypeId, ValType};
+use crate::wasm::function::{FunctionId, LocalFunction, ModuleFunctions};
+use crate::wasm::intern::{IdentifierInterner, InternedIdentifier};
+use crate::wasm::types::{BlockType, Param, Params, Results};
 use crate::wasm::{Block, IfElse, Instr, InstrSeq, InstrSeqId, LocalId, Loop, Value};
 use id_arena::Arena;
-use crate::wasm::function::{Function, FunctionId, LocalFunction, ModuleFunctions};
-use crate::wasm::module::ModuleTypes;
 
 /// Build instances of `LocalFunction`.
-#[derive(Debug)]
 pub struct FunctionBuilder {
-    pub(crate) arena: Arena<InstrSeq>,
-    pub(crate) ty: TypeId,
-    pub(crate) entry: Option<InstrSeqId>,
-    pub(crate) name: Option<String>,
+    ident_interner: IdentifierInterner,
+    /// The function's instruction sequence is conceptually a tree.
+    ///
+    /// ```wat
+    /// ...
+    /// (if ((instr) (instr))
+    ///   (then
+    ///     (if ((instr) (instr))
+    ///       (then ...
+    ///       (else ...))
+    ///   (else ...))
+    /// (instr)
+    /// ...
+    /// ```
+    ///
+    /// But like other trees, we prefer `(arena, idx's)` to `(heap, Box<T>)`
+    instr_seq_arena: Arena<InstrSeq>,
+    name: String,
+    params: Params,
+    results: Results,
+    /// The entry-point into this function.
+    entry_point: InstrSeqId,
 }
 
 impl FunctionBuilder {
     /// Creates a new, empty function builder.
     pub fn new(
-        types: &mut ModuleTypes,
-        name: Option<String>,
-        params: FuncParams,
-        results: FuncResults,
-    ) -> FunctionBuilder {
-        let func_type = FuncType {
-            params, results
-        };
-        let sub_type = SubType::final_no_super(CompType::FuncType(func_type));
-        let ty = NamedType {
-            ty: Type::SubType(sub_type),
+        ident_interner: IdentifierInterner,
+        name: &str,
+        params: Params,
+        results: Results,
+    ) -> Self {
+        let name = ident_interner.intern(name);
+
+        let mut instr_seq_arena = Arena::new();
+        let entry_point = instr_seq_arena.alloc(InstrSeq::new());
+
+        Self {
+            ident_interner,
+            instr_seq_arena,
             name,
-        } ;
-        let type_id = types.add(ty);
-        let mut builder = FunctionBuilder::without_entry(type_id);
-        let entry = builder.dangling_instr_seq(BlockType::Id(type_id)).id;
-        builder.entry = Some(entry);
-        builder
-    }
-
-    /// Create a builder that doesn't have a function body / entry
-    /// sequence. Callers are responsible for initializing its entry.
-    pub(crate) fn without_entry(ty: TypeId) -> FunctionBuilder {
-        let arena = Arena::<InstrSeq>::default();
-        FunctionBuilder {
-            arena,
-            ty,
-            entry: None,
-            name: None,
+            params,
+            results,
+            entry_point,
         }
-    }
-
-    /// Set function name.
-    pub fn name(&mut self, function_name: String) -> &mut FunctionBuilder {
-        self.name = Some(function_name);
-        self
-    }
-
-    /// Get the id of this function's body's instruction sequence.
-    pub fn func_body_id(&self) -> InstrSeqId {
-        self.entry.unwrap()
     }
 
     /// Get a `InstrSeqBuilder` for building and mutating this function's body.
     pub fn func_body(&mut self) -> InstrSeqBuilder {
-        let entry = self.entry.unwrap();
+        let entry = self.entry_point.unwrap();
         self.instr_seq(entry)
     }
 
@@ -133,7 +127,7 @@ impl FunctionBuilder {
     ///     .instr(Block { seq: seq_id });
     /// ```
     pub fn dangling_instr_seq(&mut self, ty: BlockType) -> InstrSeqBuilder {
-        let id = self.arena.alloc_with_id(|id| InstrSeq::new(id, ty));
+        let id = self.instr_seq_arena.alloc_with_id(|id| InstrSeq::new(id, ty));
         InstrSeqBuilder { id, builder: self }
     }
 
@@ -193,7 +187,7 @@ impl InstrSeqBuilder<'_> {
     /// Pushes a new instruction onto this builder's sequence.
     #[inline]
     pub fn instr(&mut self, instr: impl Into<Instr>) -> &mut Self {
-        self.builder.arena[self.id]
+        self.builder.instr_seq_arena[self.id]
             .instrs
             .push(instr.into());
         self

@@ -12,8 +12,10 @@ pub mod module;
 pub mod types;
 pub mod values;
 pub mod wat;
+mod intern;
 
-use crate::wasm::types::{BlockType, ValType};
+use std::ops::{Deref, DerefMut};
+use crate::wasm::types::{BlockType, Params, Results, ValType};
 use id_arena::Id;
 use wasm_macro::wasm_instr;
 
@@ -497,26 +499,28 @@ pub enum UnaryOp {
 pub type InstrSeqId = Id<InstrSeq>;
 
 /// A sequence of instructions.
-#[derive(Debug)]
-pub struct InstrSeq {
-    id: InstrSeqId,
-
-    /// This block's type: the types of values that are expected on the
-    /// stack when entering this instruction sequence and the types that are
-    /// left on the stack afterward.
-    pub ty: BlockType,
-
-    /// The instructions that make up the body of this block.
-    pub instrs: Vec<Instr>,
-}
+#[derive(Debug, Default)]
+pub struct InstrSeq(pub Vec<Instr>);
 
 impl InstrSeq {
-    pub fn new(id: InstrSeqId, ty: BlockType) -> Self {
-        Self {
-            id,
-            ty,
-            instrs: vec![],
-        }
+    pub fn new() -> Self {
+        Default::default()
+    }
+}
+
+impl Deref for InstrSeq {
+    type Target = Vec<Instr>;
+
+    #[inline]
+    fn deref(&self) -> &Vec<Instr> {
+        &self.0
+    }
+}
+
+impl DerefMut for InstrSeq {
+    #[inline]
+    fn deref_mut(&mut self) -> &mut Vec<Instr> {
+        &mut self.0
     }
 }
 

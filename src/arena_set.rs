@@ -34,20 +34,10 @@ impl<T: Clone + Eq + Hash> ArenaSet<T> {
         id
     }
 
-    /// Get the id that will be used for the next unique item added to this set.
-    pub fn next_id(&self) -> Id<T> {
-        self.arena.next_id()
-    }
-
     /// Remove an item from this set
     pub fn remove(&mut self, id: Id<T>)
     {
         self.already_in_arena.remove(&self.arena[id]);
-    }
-
-    /// Iterate over the items in this arena and their ids.
-    pub fn iter(&self) -> impl Iterator<Item = (Id<T>, &T)> {
-        self.arena.iter()
     }
 }
 

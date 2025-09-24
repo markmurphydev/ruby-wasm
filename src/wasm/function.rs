@@ -1,48 +1,27 @@
 //! Functions within a wasm module.
 
-use std::cmp;
-use std::collections::BTreeMap;
-use std::ops::Range;
-use id_arena::{Arena, Id};
-use crate::FunctionBuilder;
 use crate::wasm::{InstrSeq, InstrSeqId, LocalId};
-use crate::wasm::module::Module;
-use crate::wasm::types::{TypeId, ValType};
+use crate::FunctionBuilder;
+use id_arena::{Arena, Id};
+use std::ops::Range;
+use crate::wasm::intern::InternedIdentifier;
 
 /// A function identifier.
 pub type FunctionId = Id<Function>;
-
-// /// Parameter(s) to a function
-// pub type FuncParams = Box<[ValType]>;
-//
-// /// Result(s) of a given function
-// pub type FuncResults = Vec<ValType>;
 
 /// A wasm function.
 ///
 /// Either defined locally or externally and then imported; see `FunctionKind`.
 #[derive(Debug)]
 pub struct Function {
-    // NB: Not public so that it can't get out of sync with the arena that this
-    // function lives within.
-    id: FunctionId,
+    /// An optional name associated with this function
+    pub name: InternedIdentifier,
 
     /// The kind of function this is.
     pub kind: FunctionKind,
-
-    /// An optional name associated with this function
-    pub name: Option<String>,
 }
 
 impl Function {
-    fn new_uninitialized(id: FunctionId, ty: TypeId) -> Function {
-        Function {
-            id,
-            kind: FunctionKind::Uninitialized(ty),
-            name: None,
-        }
-    }
-
     /// Get this function's identifier.
     pub fn id(&self) -> FunctionId {
         self.id
@@ -56,60 +35,6 @@ impl Function {
     //         FunctionKind::Uninitialized(t) => *t,
     //     }
     // }
-}
-
-/// The local- or external-specific bits of a function.
-#[derive(Debug)]
-pub enum FunctionKind {
-    /// An externally defined, imported wasm function.
-    Import(ImportedFunction),
-
-    /// A locally defined wasm function.
-    Local(LocalFunction),
-
-    /// A locally defined wasm function that we haven't parsed yet (but have
-    /// reserved its id and associated it with its original input wasm module
-    /// index). This should only exist within
-    /// `ModuleFunctions::add_local_functions`.
-    Uninitialized(TypeId),
-}
-
-impl FunctionKind {
-    /// Get the underlying `FunctionKind::Import` or panic if this is not an
-    /// import function
-    pub fn unwrap_import(&self) -> &ImportedFunction {
-        match self {
-            FunctionKind::Import(import) => import,
-            _ => panic!("not an import function"),
-        }
-    }
-
-    /// Get the underlying `FunctionKind::Local` or panic if this is not a local
-    /// function.
-    pub fn unwrap_local(&self) -> &LocalFunction {
-        match self {
-            FunctionKind::Local(l) => l,
-            _ => panic!("not a local function"),
-        }
-    }
-
-    /// Get the underlying `FunctionKind::Import` or panic if this is not an
-    /// import function
-    pub fn unwrap_import_mut(&mut self) -> &mut ImportedFunction {
-        match self {
-            FunctionKind::Import(import) => import,
-            _ => panic!("not an import function"),
-        }
-    }
-
-    /// Get the underlying `FunctionKind::Local` or panic if this is not a local
-    /// function.
-    pub fn unwrap_local_mut(&mut self) -> &mut LocalFunction {
-        match self {
-            FunctionKind::Local(l) => l,
-            _ => panic!("not a local function"),
-        }
-    }
 }
 
 /// An externally defined, imported function.

@@ -8,16 +8,6 @@ use id_arena::Id;
 /// ≡ `(ref eq)`
 pub const UNITYPE: RefType = RefType::new_abstract(AbsHeapType::Eq, false);
 
-/// Identifier for types.
-/// Replaces `<TYPEIDX>` from Wasm WAT spec.
-pub type TypeId = Id<NamedType>;
-
-#[derive(Clone, Debug, PartialEq, Eq, Hash)]
-pub struct NamedType {
-    pub ty: Type,
-    pub name: Option<String>,
-}
-
 #[derive(Clone, Debug, PartialEq, Eq, Hash)]
 pub enum Type {
     Val(ValType),
@@ -34,10 +24,8 @@ pub enum ValType {
 #[derive(Clone, Copy, Debug, PartialEq, Eq, Hash)]
 pub enum NumberType {
     /// Ambiguously-signed 32-bit integer.
-    /// TODO -- Currently we always treat as signed
     I32,
     /// Ambiguously-signed 32-bit integer
-    /// TODO -- Currently we always treat as signed
     I64,
     F32,
     F64,
@@ -243,15 +231,15 @@ pub enum CompType {
 /// Type of a function
 #[derive(Clone, Debug, PartialEq, Eq, Hash)]
 pub struct FuncType {
-    pub params: FuncParams,
-    pub results: FuncResults,
+    pub params: Params,
+    pub results: Results,
 }
 
-pub type FuncParams = Box<[FuncParam]>;
-pub type FuncResults = Box<[ValType]>;
+pub type Params = Box<[Param]>;
+pub type Results = Box<[ValType]>;
 
 #[derive(Clone, Debug, PartialEq, Eq, Hash)]
-pub struct FuncParam {
+pub struct Param {
     pub name: Option<String>,
     pub ty: ValType,
 }
