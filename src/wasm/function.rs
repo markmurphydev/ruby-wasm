@@ -266,12 +266,13 @@ impl <'a, A: ArenaProvider> InstrSeqBuilder<'a, A> {
     /// ```
     pub fn loop_(
         &mut self,
+        label: String,
         make_loop: impl FnOnce(&mut InstrSeqBuilder<A>),
     ) -> &mut Self {
         let mut builder = self.dangling_instr_seq();
         make_loop(&mut builder);
         let seq = builder.id;
-        self.instr(Loop { seq })
+        self.instr(Loop { label, seq })
     }
 
 

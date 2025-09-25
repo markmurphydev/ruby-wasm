@@ -15,7 +15,7 @@ use crate::{ArenaProvider, runtime, wasm as W};
 // R for Ruby
 use crate::{FunctionBuilder, InstrSeqBuilder, node as R};
 
-pub const RUBY_TOP_LEVEL_FUNCTION_NAME: &str = "$__ruby_top_level_function";
+pub const RUBY_TOP_LEVEL_FUNCTION_NAME: &str = "__ruby_top_level_function";
 
 /// We give fixnums half an i31, marking MSB 1
 /// (0b1xx_xxxx...): i31
@@ -401,22 +401,24 @@ fn compile_while_expr<A: ArenaProvider>(
     // while ->
     // (loop
     //   (if UNITYPE predicate
-    //      (then statements)))
+    //      (then statements)
+    //      (else (break)))
     let R::While {
         predicate,
         statements,
     } = while_expr;
 
-    builder.loop_(|builder| {
+    let label = "$while".to_string();
+
+    builder.loop_(label.clone(), |builder| {
         builder.if_else(
             ctx,
             |ctx, builder| {
                 compile_expr_to_wasm_predicate(ctx, builder, predicate);
             },
             |ctx, builder| compile_statements(ctx, builder, statements),
-            |ctx, builder| {
-                // Just return nil
-                const_i31(builder, 0b0101)
+            |_ctx, builder| {
+                builder.br(label);
             },
         );
     });
@@ -436,8 +438,9 @@ fn compile_until_expr<A: ArenaProvider>(
         predicate,
         statements,
     } = until_expr;
+    let label = "$until".to_string();
 
-    builder.loop_(|builder| {
+    builder.loop_(label.clone(), |builder| {
         builder.if_else(
             ctx,
             |ctx, builder| {
@@ -446,9 +449,10 @@ fn compile_until_expr<A: ArenaProvider>(
                 builder.unop(UnaryOp::I32Eqz);
             },
             |ctx, builder| compile_statements(ctx, builder, statements),
-            |ctx, builder| {
+            |_ctx, builder| {
                 // Just return nil
-                const_i31(builder, 0b0101)
+                // const_i31(builder, 0b0101)
+                builder.br(label);
             },
         );
     });

@@ -1,10 +1,10 @@
+use crate::FunctionBuilder;
 use crate::wasm::function::{Function, InstrSeq, InstrSeqId};
 use crate::wasm::module::{Module, ModuleFunctions};
 use crate::wasm::types::{
-    AbsHeapType, BlockType, HeapType, NumberType, ParamType, RefType, ResultType, ValType, UNITYPE,
+    AbsHeapType, BlockType, HeapType, NumberType, ParamType, RefType, ResultType, UNITYPE, ValType,
 };
 use crate::wasm::{BinaryOp, Binop, Block, Const, IfElse, Instr, Loop, UnaryOp, Unop, Value};
-use crate::FunctionBuilder;
 use id_arena::Arena;
 use pretty::{Doc, RcDoc};
 
@@ -57,11 +57,12 @@ fn function_to_doc(func: &Function) -> RcDoc<'static> {
     } = &func.builder;
 
     let name = func.name().to_owned();
+    let name_doc = RcDoc::text("$").append(RcDoc::text(name.clone()));
     let export_doc = if func.exported() {
-        RcDoc::space()
+        RcDoc::line()
             .append(RcDoc::text("(export"))
             .append(RcDoc::space())
-            .append(RcDoc::text(name.clone()))
+            .append(RcDoc::text(format!("\"{}\"", name)))
             .append(")")
     } else {
         RcDoc::nil()
@@ -74,8 +75,8 @@ fn function_to_doc(func: &Function) -> RcDoc<'static> {
     let instr_seq_doc = instr_seq_to_doc(instr_seq_arena, *entry_point);
 
     RcDoc::text("(func")
-        .append(RcDoc::space())
-        .append(RcDoc::text(name))
+        .append(RcDoc::line())
+        .append(name_doc)
         .append(export_doc)
         .append(RcDoc::line())
         .append(
@@ -111,11 +112,11 @@ fn instr_to_doc(instr_seq_arena: &Arena<InstrSeq>, instr: &Instr) -> RcDoc<'stat
         IfElse(i) => if_else_to_doc(instr_seq_arena, i),
         Drop(_) => RcDoc::text("(drop)"),
         GlobalGet(g) => RcDoc::text("(global.get")
-            .append(RcDoc::line())
             .append(g.global.clone())
-            .append(")")
-            .nest(1)
-            .group()
+            .append(")"),
+        Br(b) => RcDoc::text("(br ")
+            .append(b.label.clone())
+            .append(")"),
     }
 }
 
@@ -129,12 +130,14 @@ fn block_to_doc(instr_seq_arena: &Arena<InstrSeq>, block: &Block) -> RcDoc<'stat
 }
 
 fn loop_to_doc(instr_seq_arena: &Arena<InstrSeq>, l: &Loop) -> RcDoc<'static> {
-    let &Loop { seq } = l;
+    let Loop { label, seq } = l;
     RcDoc::text("(loop")
+        .append(RcDoc::space())
+        .append(RcDoc::text(label.clone()))
         .append(RcDoc::space())
         .append(block_type_to_doc(&UNITYPE.into_block_type_result()))
         .append(RcDoc::line())
-        .append(instr_seq_to_doc(instr_seq_arena, seq))
+        .append(instr_seq_to_doc(instr_seq_arena, *seq))
         .append(")")
         .nest(2)
 }
@@ -179,7 +182,7 @@ fn unop_to_doc(unop: &Unop) -> RcDoc<'static> {
 fn binop_to_doc(binop: &Binop) -> RcDoc<'static> {
     let Binop { op } = binop;
     let op = match op {
-        BinaryOp::I32Eq => "i32.eq"
+        BinaryOp::I32Eq => "i32.eq",
     };
 
     RcDoc::text("(")
@@ -204,9 +207,17 @@ fn if_else_to_doc(instr_seq_arena: &Arena<InstrSeq>, if_else: &IfElse) -> RcDoc<
         .append(RcDoc::line())
         .append(predicate)
         .append(RcDoc::line())
-        .append(RcDoc::text("(then").append(RcDoc::line().append(consequent).append(")")).nest(2))
+        .append(
+            RcDoc::text("(then")
+                .append(RcDoc::line().append(consequent).append(")"))
+                .nest(2),
+        )
         .append(RcDoc::line())
-        .append(RcDoc::text("(else").append(RcDoc::line().append(alternative).append(")")).nest(2))
+        .append(
+            RcDoc::text("(else")
+                .append(RcDoc::line().append(alternative).append(")"))
+                .nest(2),
+        )
         .nest(2)
         .append(")")
 }

@@ -69,6 +69,7 @@ pub enum Instr {
     /// `loop ... end`
     #[wasm(skip_builder)]
     Loop {
+        label: String,
         /// The id of this `loop` instruction's inner `InstrSeq`.
         seq: InstrSeqId,
     },
@@ -152,14 +153,13 @@ pub enum Instr {
     //
     // /// `unreachable`
     // Unreachable {},
-    //
-    // /// `br`
-    // Br {
-    //     /// The target block to branch to.
-    //     #[walrus(skip_visit)] // should have already been visited
-    //     block: InstrSeqId,
-    // },
-    //
+
+    /// `br`
+    Br {
+        /// The target block to branch to.
+        label: String,
+    },
+
     // /// `br_if`
     // BrIf {
     //     /// The target block to branch to when the condition is met.
