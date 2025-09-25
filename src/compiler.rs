@@ -5,14 +5,15 @@
 //! assert_eq!(-1, u64::MAX as i64);
 //! ```
 
+use pretty::BuildDoc;
 // W for Wasm
 use crate::node::Subsequent;
-use crate::wasm as W;
+use crate::{runtime, wasm as W};
+use crate::wasm::UnaryOp;
 use crate::wasm::module::Module;
 use crate::wasm::types::UNITYPE;
-use crate::wasm::UnaryOp;
 // R for Ruby
-use crate::{node as R, FunctionBuilder, InstrSeqBuilder};
+use crate::{FunctionBuilder, InstrSeqBuilder, node as R};
 
 const RUBY_TOP_LEVEL_FUNCTION_NAME: &str = "__ruby_top_level_function";
 
@@ -250,72 +251,199 @@ pub const FIXNUM_MARKER: i32 = 1 << 30;
 // //     vec![W::Instruction::ConstI32(n), W::Instruction::RefI31]
 // // }
 
-pub fn compile(program: R::Program) -> Module {
+pub fn compile(program: &R::Program) -> Module {
     let mut module = Module::new();
 
     // Build the top-level function
     let mut top_level_builder = FunctionBuilder::new(
-        &mut module.types,
-        None,
+        RUBY_TOP_LEVEL_FUNCTION_NAME,
         Box::new([]),
-        Box::new([UNITYPE.into_val_type()]),
+        Box::new([UNITYPE.into_result_type()]),
     );
     compile_program(&mut top_level_builder, program);
-    top_level_builder.finish(vec![], &mut module.funcs);
+    top_level_builder.finish(&mut module.funcs);
 
     module
 }
 
-fn compile_program(top_level_builder: &mut FunctionBuilder, program: R::Program) {
-    top_level_builder.name(RUBY_TOP_LEVEL_FUNCTION_NAME.to_string());
-    compile_statements(&mut top_level_builder.func_body(), program.statements);
+fn compile_program(top_level_builder: &mut FunctionBuilder, program: &R::Program) {
+    compile_statements(&mut top_level_builder.func_body(), &program.statements);
 }
 
-fn compile_statements(builder: &mut InstrSeqBuilder, statements: R::Statements) {
-    let mut body = statements.body;
+fn compile_statements(builder: &mut InstrSeqBuilder, statements: &R::Statements) {
+    let R::Statements { body } = statements;
 
     // In Ruby, every expression returns a value or nil.
     // Suppress all values except the last.
     let last_statement_idx = body.len() - 1;
-    for expr in (&mut body[0..last_statement_idx]).into_iter() {
+    for expr in (&body[0..last_statement_idx]).into_iter() {
         compile_expr(builder, expr);
         builder.drop();
     }
 
-    compile_expr(builder, &mut body[last_statement_idx])
+    compile_expr(builder, &body[last_statement_idx])
 }
 
 fn compile_expr(builder: &mut InstrSeqBuilder, expr: &R::Expr) {
     match expr {
-        // R::Expr::Integer(n) => self.compile_integer(n),
+        R::Expr::Integer(n) => self.compile_integer(n),
         R::Expr::False => const_i31(builder, 0b001),
         R::Expr::True => const_i31(builder, 0b0011),
         R::Expr::Nil => const_i31(builder, 0b0101),
         R::Expr::If(if_expr) => compile_if_expr(builder, &*if_expr),
-        // R::Expr::If(if_expr) => vec![Instruction::If(self.ruby_if_expr(*if_expr))],
-        // R::Expr::While(while_expr) => {
-        //     vec![Instruction::Loop(self.ruby_while_expr(*while_expr))]
-        // }
+        R::Expr::While(while_expr) => compile_while_expr(builder, &*while_expr),
+        R::Expr::Until(until_expr) => compile_until_expr(builder, &*until_expr),
         // R::Expr::Until(until_expr) => {
         //     vec![Instruction::Loop(self.ruby_until_expr(*until_expr))]
         // }
-        _ => todo!(),
+    }
+}
+
+/// Convert the given integer into a Wasm fixnum or const global representation
+fn compile_integer(builder: &mut InstrSeqBuilder, n: i64) {
+    // Strategy:
+    // Determine whether we're in range of a fixnum
+    // If not, add a const global int and get it
+    // TODO -- do this _somewhere else_
+
+    /// Minimum size required for 2's complement representation of the given number
+    /// Strategy from:
+    /// https://internals.rust-lang.org/t/add-methods-that-return-the-number-of-bits-necessary-to-represent-an-integer-in-binary-to-the-standard-library/21870/7
+    fn bit_width(n: i64) -> u32 {
+        i64::BITS - n.abs().leading_zeros() + 1
+    }
+
+    // If if-let guards were stable I'd use those with try_into.
+    match n {
+        n if bit_width(n) <= FIXNUM_BIT_WIDTH => {
+            let fixnum = FIXNUM_MARKER | i32::try_from(n).unwrap();
+            const_i31(builder, fixnum);
+        }
+        n if bit_width(n) <= i32::BITS => {
+            let n = i32::try_from(n).unwrap();
+            // TODO -- Need to intern this.
+            //  If you have 2 of the same-valued global it probably breaks at validation time.
+            //  Also, does this introduce illegal identifier characters?
+            let global_id = format!("$global-i32-{}", n);
+            let expr_instrs = vec![W::Instruction::ConstI32(WV::I32(n as u32))];
+
+            let global = W::Global {
+                id: Some(global_id.clone()),
+                global_type: WT::GlobalType {
+                    mutability: WT::Mutability::Const,
+                    value_type: WT::ValType::NumberType(WT::NumberType::I32),
+                },
+                expr: W::Expr(expr_instrs)
+            };
+            self.globals.push(global);
+            vec![W::Instruction::GlobalGet(W::GlobalIdx::Id(global_id))]
+        }
+        // Guard is here for when bignums are implemented.
+        n if bit_width(n) <= i64::BITS => {
+            let n = i64::try_from(n).unwrap();
+            // TODO -- Need to intern this.
+            //  If you have 2 of the same-valued global it probably breaks at validation time.
+            //  Also, does this introduce illegal identifier characters?
+            let global_id = format!("$global-i64-{}", n);
+            let expr_instrs = vec![W::Instruction::ConstI64(WV::I64(n as u64))];
+
+            let global = W::Global {
+                id: Some(global_id.clone()),
+                global_type: WT::GlobalType {
+                    mutability: WT::Mutability::Const,
+                    value_type: WT::ValType::NumberType(WT::NumberType::I64),
+                },
+                expr: W::Expr(expr_instrs)
+            };
+            self.globals.push(global);
+            vec![W::Instruction::GlobalGet(W::GlobalIdx::Id(global_id))]
+        }
+        _ => {
+            todo!("Bignums not yet implemented.
+                  [n={:x}] larger than W::I64",
+                  22)
+        }
     }
 }
 
 fn compile_if_expr(builder: &mut InstrSeqBuilder, if_expr: &R::If) {
-    let ty = UNITYPE.into_block_type_result();
+    let R::If { predicate, statements, subsequent } = if_expr;
     builder.if_else(
-        ty,
-        |then_builder| {
-            compile_expr(then_builder, &if_expr.predicate);
+        |pred_builder| {
+            compile_expr_to_wasm_predicate(pred_builder, predicate)
         },
-        |else_builder| match if_expr.clone().subsequent {
+        |then_builder| {
+            compile_statements(then_builder, statements);
+        },
+        |else_builder| match subsequent {
             Subsequent::None => const_i31(else_builder, 0b0101),
             Subsequent::Elsif(if_expr) => compile_if_expr(else_builder, &if_expr),
-            Subsequent::Else(else_expr) => compile_statements(else_builder, else_expr.statements),
+            Subsequent::Else(else_expr) => compile_statements(else_builder, &else_expr.statements),
         },
     );
+}
+
+fn compile_while_expr(builder: &mut InstrSeqBuilder, while_expr: &R::While) {
+    // while ->
+    // (loop
+    //   (if UNITYPE predicate
+    //      (then statements)))
+    let R::While { predicate, statements } = while_expr;
+
+    builder.loop_(|builder| {
+        builder.if_else(
+            |builder| {
+                compile_expr_to_wasm_predicate(builder, predicate);
+            },
+            |builder| {
+                compile_statements(builder, statements)
+            },
+            |builder| {
+                // Just return nil
+                const_i31(builder, 0b0101)
+            }
+        );
+    });
+}
+
+
+fn compile_until_expr(builder: &mut InstrSeqBuilder, until_expr: &R::Until) {
+    // TODO -- It might be nicer to have an IR where `until` is lowered to `while`
+    // while ->
+    // (loop
+    //   (if UNITYPE (not predicate)
+    //      (then statements)))
+    let R::Until { predicate, statements } = until_expr;
+
+    builder.loop_(|builder| {
+        builder.if_else(
+            |builder| {
+                compile_expr_to_wasm_predicate(builder, predicate);
+                // `binary_not ≡ eqz` when result is interpreted as boolean
+                builder.unop(UnaryOp::I32Eqz);
+            },
+            |builder| {
+                compile_statements(builder, statements)
+            },
+            |builder| {
+                // Just return nil
+                const_i31(builder, 0b0101)
+            }
+        );
+    });
+}
+
+/// Turns a Ruby Expr into a Wasm predicate.
+/// A ruby Expr evaluates to a ruby-value (True, False, Nil, ...)
+/// To use as a Wasm predicate, we need to test whether the result is truthy or not.
+/// TODO -- right now we pretend that "truthy" is "not-false"
+fn compile_expr_to_wasm_predicate(builder: &mut InstrSeqBuilder, expr: &R::Expr) {
+    compile_expr(builder, expr);
+    runtime::is_false(builder);
+    builder.unop(UnaryOp::I32Eqz);
+    // instrs.append(&mut runtime::is_false());
+    // instrs.push(W::Instruction::I32Eqz);
+    // instrs
 }
 
 fn const_i31(builder: &mut InstrSeqBuilder, val: i32) {

@@ -277,11 +277,13 @@
 //     }
 // }
 
+use crate::FunctionBuilder;
 use crate::wasm::function::{Function, InstrSeq, InstrSeqId};
 use crate::wasm::module::{Module, ModuleFunctions};
-use crate::wasm::types::{AbsHeapType, BlockType, HeapType, NumberType, ParamType, RefType, ResultType, ValType, UNITYPE};
-use crate::wasm::{Block, Const, IfElse, Instr, Loop, UnaryOp, Unop, Value};
-use crate::FunctionBuilder;
+use crate::wasm::types::{
+    AbsHeapType, BlockType, HeapType, NumberType, ParamType, RefType, ResultType, UNITYPE, ValType,
+};
+use crate::wasm::{BinaryOp, Binop, Block, Const, IfElse, Instr, Loop, UnaryOp, Unop, Value};
 use id_arena::Arena;
 use pretty::{Doc, RcDoc};
 use std::hash::Hash;
@@ -289,7 +291,7 @@ use std::hash::Hash;
 impl Module {
     pub fn to_pretty(&self) -> String {
         let mut w = Vec::new();
-        module_to_doc(self).render(2, &mut w).unwrap();
+        module_to_doc(self).render(80, &mut w).unwrap();
         String::from_utf8(w).unwrap()
     }
 }
@@ -306,22 +308,24 @@ fn module_to_doc(module: &Module) -> RcDoc<'static> {
         &Some(start) => Some(funcs.get(start)),
     };
 
-    let child_docs: Box<[RcDoc<'static>]> = [
+    let child_docs = [
         Some(module_functions_to_doc(funcs)),
         start.map(|f| function_to_doc(f)),
     ]
     .into_iter()
-    .filter_map(|doc| doc)
-    .collect();
+    .filter_map(|doc| doc);
 
-    RcDoc::text("(")
-        .append(RcDoc::text("module"))
-        .append(RcDoc::intersperse(child_docs, Doc::line()).nest(1))
-        .append(RcDoc::text(")"))
+    RcDoc::text("(module")
+        .append(RcDoc::line())
+        .append(RcDoc::intersperse(child_docs, Doc::line()).append(RcDoc::text(")")))
+        .nest(2)
 }
 
 fn module_functions_to_doc(module_functions: &ModuleFunctions) -> RcDoc<'static> {
-    let funcs: Box<[RcDoc<'static>]> = module_functions.iter().map(|f| function_to_doc(f)).collect();
+    let funcs: Box<[RcDoc<'static>]> = module_functions
+        .iter()
+        .map(|f| function_to_doc(f))
+        .collect();
     RcDoc::intersperse(funcs, Doc::line())
 }
 
@@ -332,24 +336,32 @@ fn function_to_doc(f: &Function) -> RcDoc<'static> {
         ..
     } = &f.builder;
 
-    let params: Vec<RcDoc<'static>> = f.params().iter().map(|p| param_to_doc(p)).collect();
-    let results: Vec<RcDoc<'static>> = f.results().iter().map(|r| result_type_to_doc(r)).collect();
-    let params_results: Box<[RcDoc<'static>]> =
-        params.into_iter().chain(results.into_iter()).collect();
+    let params = f.params().iter().map(|p| param_to_doc(p));
+    let results = f.results().iter().map(|r| result_type_to_doc(r));
+    let params_results = params.into_iter().chain(results.into_iter());
 
     let instr_seq_doc = instr_seq_to_doc(instr_seq_arena, *entry_point);
 
-    RcDoc::text("(").append(
-        RcDoc::intersperse(params_results, Doc::line())
-            .nest(1)
-            .group(),
-    ).append(instr_seq_doc).nest(1)
-        .append(")")
+    RcDoc::text("(func")
+        .append(RcDoc::line())
+        .append(
+            RcDoc::intersperse(params_results, Doc::line())
+                .nest(2)
+                .group(),
+        )
+        .group()
+        .append(RcDoc::line())
+        .append(instr_seq_doc.append(RcDoc::text(")")))
+        .nest(2)
 }
 
 fn instr_seq_to_doc(arena: &Arena<InstrSeq>, seq_id: InstrSeqId) -> RcDoc<'static> {
     let seq = arena.get(seq_id).unwrap();
-    let instrs: Box<[RcDoc<'static>]> = seq.0.iter().map(|instr| instr_to_doc(arena, instr)).collect();
+    let instrs: Box<[RcDoc<'static>]> = seq
+        .0
+        .iter()
+        .map(|instr| instr_to_doc(arena, instr))
+        .collect();
 
     RcDoc::intersperse(instrs, RcDoc::line())
 }
@@ -360,7 +372,9 @@ fn instr_to_doc(instr_seq_arena: &Arena<InstrSeq>, instr: &Instr) -> RcDoc<'stat
         Instr::Loop(l) => loop_to_doc(instr_seq_arena, l),
         Instr::Const(c) => const_to_doc(c),
         Instr::Unop(u) => unop_to_doc(u),
+        Instr::Binop(b) => binop_to_doc(b),
         Instr::IfElse(i) => if_else_to_doc(instr_seq_arena, i),
+        Instr::Drop(_) => RcDoc::text("(drop)"),
     }
 }
 
@@ -369,7 +383,7 @@ fn block_to_doc(instr_seq_arena: &Arena<InstrSeq>, block: &Block) -> RcDoc<'stat
     RcDoc::text("(block")
         .append(block_type_to_doc(&UNITYPE.into_block_type_result()))
         .append(RcDoc::line())
-        .append(instr_seq_to_doc(instr_seq_arena, seq)).nest(1)
+        .append(instr_seq_to_doc(instr_seq_arena, seq))
         .append(")")
 }
 
@@ -378,7 +392,7 @@ fn loop_to_doc(instr_seq_arena: &Arena<InstrSeq>, l: &Loop) -> RcDoc<'static> {
     RcDoc::text("(loop")
         .append(block_type_to_doc(&UNITYPE.into_block_type_result()))
         .append(RcDoc::line())
-        .append(instr_seq_to_doc(instr_seq_arena, seq)).nest(1)
+        .append(instr_seq_to_doc(instr_seq_arena, seq))
         .append(")")
 }
 
@@ -387,32 +401,54 @@ fn const_to_doc(c: &Const) -> RcDoc<'static> {
     let ty = match value {
         Value::I32(_) => RcDoc::text("i32.const".to_owned()),
         Value::I64(_) => RcDoc::text("i64.const".to_owned()),
-        Value::F32(_) =>RcDoc::text("f32.const".to_owned()),
-        Value::F64(_) =>RcDoc::text("f64.const".to_owned()),
+        Value::F32(_) => RcDoc::text("f32.const".to_owned()),
+        Value::F64(_) => RcDoc::text("f64.const".to_owned()),
     };
 
     let value = match value {
         Value::I32(n) => RcDoc::text(format!("{}", n)),
         Value::I64(n) => RcDoc::text(format!("{}", n)),
-        Value::F32(n) =>RcDoc::text(format!("{}", n)),
-        Value::F64(n) =>RcDoc::text(format!("{}", n)),
+        Value::F32(n) => RcDoc::text(format!("{}", n)),
+        Value::F64(n) => RcDoc::text(format!("{}", n)),
     };
 
     RcDoc::text("(")
         .append(ty)
+        .append(RcDoc::space())
         .append(value)
         .append(RcDoc::text(")"))
 }
 
 fn unop_to_doc(unop: &Unop) -> RcDoc<'static> {
     let Unop { op } = unop;
-    match op {
-        UnaryOp::RefI31 => RcDoc::text("(ref.i31)")
-    }
+    let op = match op {
+        UnaryOp::I32Eqz => "i32.eqz",
+        UnaryOp::RefI31 => "ref.i31",
+        UnaryOp::I31GetS => "i31.get_s",
+        UnaryOp::I31GetU => "i31.get_u",
+    };
+
+    RcDoc::text("(")
+        .append(RcDoc::text(op))
+        .append(RcDoc::text(")"))
+}
+
+fn binop_to_doc(binop: &Binop) -> RcDoc<'static> {
+    let Binop { op } = binop;
+    let op = match op {
+        BinaryOp::I32Eq => "i32.eq"
+    };
+
+    RcDoc::text("(")
+        .append(RcDoc::text(op))
+        .append(RcDoc::text(")"))
 }
 
 fn if_else_to_doc(instr_seq_arena: &Arena<InstrSeq>, if_else: &IfElse) -> RcDoc<'static> {
-    let &IfElse { consequent, alternative } = if_else;
+    let &IfElse {
+        consequent,
+        alternative,
+    } = if_else;
 
     let consequent = instr_seq_to_doc(instr_seq_arena, consequent);
     let alternative = instr_seq_to_doc(instr_seq_arena, alternative);
@@ -420,18 +456,22 @@ fn if_else_to_doc(instr_seq_arena: &Arena<InstrSeq>, if_else: &IfElse) -> RcDoc<
     RcDoc::text("(if")
         .append(block_type_to_doc(&UNITYPE.into_block_type_result()))
         .append(RcDoc::line())
-        .append(consequent).nest(1)
+        .append(consequent)
+        .nest(1)
         .append(RcDoc::line())
-        .append(alternative).nest(1)
+        .append(alternative)
+        .nest(1)
         .append(")")
 }
 
 fn param_to_doc(param: &ParamType) -> RcDoc<'static> {
     let ParamType { name, ty } = param;
 
-    let child_docs: Box<[RcDoc<'static>]> = Box::new([RcDoc::text(name.to_owned()), val_type_to_doc(ty)]);
+    let child_docs: Box<[RcDoc<'static>]> =
+        Box::new([RcDoc::text(name.to_owned()), val_type_to_doc(ty)]);
 
     RcDoc::text("(param")
+        .append(RcDoc::space())
         .append(RcDoc::intersperse(child_docs, Doc::line()).nest(1).group())
         .append(")")
 }
@@ -439,14 +479,15 @@ fn param_to_doc(param: &ParamType) -> RcDoc<'static> {
 fn block_type_to_doc(ty: &BlockType) -> RcDoc<'static> {
     match ty {
         BlockType::Result(ty) => result_type_to_doc(ty),
-        BlockType::TypeUse(ident) => RcDoc::text(ident.to_owned())
+        BlockType::TypeUse(ident) => RcDoc::text(ident.to_owned()),
     }
 }
 
 fn result_type_to_doc(ty: &ResultType) -> RcDoc<'static> {
     let ResultType(ty) = ty;
 
-    RcDoc::text("(param")
+    RcDoc::text("(result")
+        .append(RcDoc::space())
         .append(val_type_to_doc(ty))
         .append(")")
 }
@@ -463,27 +504,27 @@ fn num_type_to_doc(ty: &NumberType) -> RcDoc<'static> {
         NumberType::I32 => "i32",
         NumberType::I64 => "i64",
         NumberType::F32 => "f32",
-        NumberType::F64 => "f64"
+        NumberType::F64 => "f64",
     })
 }
 
 fn ref_type_to_doc(ty: &RefType) -> RcDoc<'static> {
-    let RefType { nullable, heap_type } = ty;
-    if *nullable {
-        RcDoc::text("(ref")
-            .append(heap_type_to_doc(heap_type))
-            .append(")")
-    } else {
-        RcDoc::text("(ref null")
-            .append(heap_type_to_doc(heap_type))
-            .append(")")
-    }
+    let RefType {
+        nullable,
+        heap_type,
+    } = ty;
+
+    let name = if *nullable { "(ref" } else { "(ref null" };
+    RcDoc::text(name)
+        .append(RcDoc::space())
+        .append(heap_type_to_doc(heap_type))
+        .append(")")
 }
 
 fn heap_type_to_doc(ty: &HeapType) -> RcDoc<'static> {
     match ty {
         HeapType::Abstract(ty) => abs_heap_type_to_doc(ty),
-        HeapType::Identifier(ident) => RcDoc::text(ident.to_owned())
+        HeapType::Identifier(ident) => RcDoc::text(ident.to_owned()),
     }
 }
 

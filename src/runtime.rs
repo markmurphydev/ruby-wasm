@@ -16,16 +16,21 @@
 //     // nil bit pattern is 0b0101
 //     vec![Instruction::I31GetU, Instruction::ConstI32(I32(0b0101)), Instruction::I32Eq]
 // }
-//
-// /// Is the given ruby-value equal to ruby-true?
-// /// `[Unitype] -> [I32]`
-// /// TODO -- We assume here that `Unitype ≡ I31`.
-// ///     To do this generally, we need to cast to i31, and compare.
-// pub fn is_false() -> Vec<Instruction> {
-//     // false bit pattern is 0b0001
-//     vec![Instruction::I31GetU, Instruction::ConstI32(I32(0b0001)), Instruction::I32Eq]
-// }
-//
+
+use crate::InstrSeqBuilder;
+use crate::wasm::{BinaryOp, UnaryOp};
+
+/// Is the given ruby-value equal to ruby-true?
+/// `[Unitype] -> [I32]`
+/// TODO -- We assume here that `Unitype ≡ I31`.
+///     To do this generally, we need to cast to i31, and compare.
+pub fn is_false(builder: &mut InstrSeqBuilder) {
+    // false bit pattern is 0b0001
+    builder.unop(UnaryOp::I31GetU)
+        .i32_const(0b0001)
+        .binop(BinaryOp::I32Eq);
+}
+
 // /// Is the given value ruby-truthy?
 // /// All Ruby values are ruby-truthy, except for:
 // /// - false

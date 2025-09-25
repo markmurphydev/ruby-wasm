@@ -13,7 +13,7 @@ pub struct Module {
     // pub tables: ModuleTables,
     // pub types: ModuleTypes,
     pub funcs: ModuleFunctions,
-    // pub globals: ModuleGlobals,
+    pub globals: ModuleGlobals,
     // pub locals: ModuleLocals,
     // pub exports: ModuleExports,
     // pub memories: ModuleMemories,
@@ -63,6 +63,76 @@ impl ModuleFunctions {
 
     /// Get a shared reference to this module's functions.
     pub fn iter(&self) -> impl Iterator<Item = &Function> {
+        self.arena.iter().map(|(_, f)| f)
+    }
+}
+
+
+/// The set of globals in each function in this module.
+#[derive(Debug, Default)]
+pub struct ModuleGlobals {
+    /// The arena where the globals are stored.
+    arena: Arena<Global>,
+}
+
+impl ModuleGlobals {
+    /// Adds a new imported global to this list.
+    pub fn add_import(
+        &mut self,
+        ty: ValType,
+        mutable: bool,
+        shared: bool,
+        import_id: ImportId,
+    ) -> GlobalId {
+        self.arena.alloc_with_id(|id| Global {
+            id,
+            ty,
+            mutable,
+            shared,
+            kind: GlobalKind::Import(import_id),
+            name: None,
+        })
+    }
+
+    /// Construct a new global, that does not originate from any of the input
+    /// wasm globals.
+    pub fn add_local(
+        &mut self,
+        ty: ValType,
+        mutable: bool,
+        shared: bool,
+        init: ConstExpr,
+    ) -> GlobalId {
+        self.arena.alloc_with_id(|id| Global {
+            id,
+            ty,
+            mutable,
+            shared,
+            kind: GlobalKind::Local(init),
+            name: None,
+        })
+    }
+
+    /// Gets a reference to a global given its id
+    pub fn get(&self, id: GlobalId) -> &Global {
+        &self.arena[id]
+    }
+
+    /// Gets a reference to a global given its id
+    pub fn get_mut(&mut self, id: GlobalId) -> &mut Global {
+        &mut self.arena[id]
+    }
+
+    /// Removes a global from this module.
+    ///
+    /// It is up to you to ensure that any potential references to the deleted
+    /// global are also removed, eg `get_global` expressions.
+    pub fn delete(&mut self, id: GlobalId) {
+        self.arena.delete(id);
+    }
+
+    /// Get a shared reference to this module's globals.
+    pub fn iter(&self) -> impl Iterator<Item = &Global> {
         self.arena.iter().map(|(_, f)| f)
     }
 }

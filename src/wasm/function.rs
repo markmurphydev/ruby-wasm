@@ -298,7 +298,6 @@ impl InstrSeqBuilder<'_> {
     /// ```
     pub fn loop_(
         &mut self,
-        ty: BlockType,
         make_loop: impl FnOnce(&mut InstrSeqBuilder),
     ) -> &mut Self {
         let mut builder = self.builder.dangling_instr_seq();
@@ -340,10 +339,17 @@ impl InstrSeqBuilder<'_> {
     /// ```
     pub fn if_else(
         &mut self,
-        ty: BlockType,
+        predicate: impl FnOnce(&mut InstrSeqBuilder),
         consequent: impl FnOnce(&mut InstrSeqBuilder),
         alternative: impl FnOnce(&mut InstrSeqBuilder),
     ) -> &mut Self {
+
+        let predicate = {
+            let mut builder = self.builder.dangling_instr_seq();
+            predicate(&mut builder);
+            builder.id
+        };
+
         let consequent = {
             let mut builder = self.builder.dangling_instr_seq();
             consequent(&mut builder);
@@ -357,6 +363,7 @@ impl InstrSeqBuilder<'_> {
         };
 
         self.instr(IfElse {
+            predicate,
             consequent,
             alternative,
         })
