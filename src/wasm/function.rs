@@ -28,15 +28,16 @@ impl Function {
         self.builder.ident_interner.get(self.builder.name)
     }
 
+    pub fn exported(&self) -> bool {
+        self.builder.exported
+    }
+
     pub fn params(&self) -> &ParamsType {
         &self.builder.params
     }
 
     pub fn results(&self) -> &ResultsType {
         &self.builder.results
-    }
-
-    fn xxx(&self) {
     }
 }
 
@@ -61,6 +62,8 @@ pub struct FunctionBuilder {
     /// But like other trees, we prefer `(arena, idx's)` to `(heap, Box<T>)`
     pub(super) instr_seq_arena: Arena<InstrSeq>,
     name: InternedIdentifier,
+    /// Is this function exported?
+    exported: bool,
     params: ParamsType,
     results: ResultsType,
     /// The entry-point into this function.
@@ -71,6 +74,7 @@ impl FunctionBuilder {
     /// Creates a new, empty function builder.
     pub fn new(
         name: &str,
+        exported: bool,
         params: ParamsType,
         results: ResultsType,
     ) -> Self {
@@ -84,6 +88,7 @@ impl FunctionBuilder {
             ident_interner,
             instr_seq_arena,
             name,
+            exported,
             params,
             results,
             entry_point,

@@ -264,6 +264,7 @@ pub fn compile(program: &R::Program) -> Module {
     // Build the top-level function
     let mut top_level_builder = FunctionBuilder::new(
         RUBY_TOP_LEVEL_FUNCTION_NAME,
+        true,
         Box::new([]),
         Box::new([UNITYPE.into_result_type()]),
     );

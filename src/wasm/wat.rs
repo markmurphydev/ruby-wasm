@@ -56,6 +56,17 @@ fn function_to_doc(func: &Function) -> RcDoc<'static> {
         ..
     } = &func.builder;
 
+    let name = func.name().to_owned();
+    let export_doc = if func.exported() {
+        RcDoc::space()
+            .append(RcDoc::text("(export"))
+            .append(RcDoc::space())
+            .append(RcDoc::text(name.clone()))
+            .append(")")
+    } else {
+        RcDoc::nil()
+    };
+
     let params = func.params().iter().map(|p| param_to_doc(p));
     let results = func.results().iter().map(|r| result_type_to_doc(r));
     let params_results = params.into_iter().chain(results.into_iter());
@@ -64,7 +75,8 @@ fn function_to_doc(func: &Function) -> RcDoc<'static> {
 
     RcDoc::text("(func")
         .append(RcDoc::space())
-        .append(RcDoc::text(func.name().to_owned()))
+        .append(RcDoc::text(name))
+        .append(export_doc)
         .append(RcDoc::line())
         .append(
             RcDoc::intersperse(params_results, Doc::line())
