@@ -1,8 +1,7 @@
 use crate::compiler::RUBY_TOP_LEVEL_FUNCTION_NAME;
+use crate::unitype::WasmtimeRefEq;
 use crate::wasm;
-use wasmtime::{AnyRef, Config, Engine, Instance, Module, Rooted, Store};
-
-type WasmUnitype = Rooted<AnyRef>;
+use wasmtime::{Config, Engine, Instance, Module, Store};
 
 pub fn run(module: wasm::module::Module) {
     let wat = module.to_pretty();
@@ -15,7 +14,7 @@ pub fn run(module: wasm::module::Module) {
     let mut store = Store::new(&engine, ());
     let instance = Instance::new(&mut store, &module, &[]);
 
-    let top_level = instance.unwrap().get_typed_func::<(), WasmUnitype>(&mut store, RUBY_TOP_LEVEL_FUNCTION_NAME).unwrap();
+    let top_level = instance.unwrap().get_typed_func::<(), WasmtimeRefEq>(&mut store, RUBY_TOP_LEVEL_FUNCTION_NAME).unwrap();
     let res = top_level.call(&mut store, ()).unwrap();
     // let top_level = instance.unwrap().get_func(&mut store, RUBY_TOP_LEVEL_FUNCTION_NAME).unwrap();
     // let mut res = vec![Val::AnyRef(None)];

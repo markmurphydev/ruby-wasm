@@ -1,7 +1,6 @@
 use clap::Parser as ParserTrait;
 use clap::Subcommand;
 use ruby_wasm::{compiler, run};
-use ruby_wasm::compiler::{FIXNUM_MARKER};
 use ruby_wasm::lexeme::LexemeKind;
 use ruby_wasm::lexer::Lexer;
 use ruby_wasm::parser::Parser;
@@ -126,9 +125,6 @@ fn main() {
         }
 
         Command::Scratch => {
-            // 22
-            let a = 1073741846i32 & !FIXNUM_MARKER;
-            println!("{}", a);
         }
     }
 }

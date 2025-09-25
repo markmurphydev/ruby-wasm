@@ -3,20 +3,14 @@
 // W for Wasm
 use crate::node::Subsequent;
 use crate::wasm::module::Module;
-use crate::wasm::types::{GlobalType, Mutability, NumberType, ValType, UNITYPE};
+use crate::wasm::types::{GlobalType, Mutability, NumType, ValType};
 use crate::wasm::UnaryOp;
 // R for Ruby
 use crate::{node as R, FunctionBuilder, InstrSeqBuilder};
 use crate::{runtime, ArenaProvider};
+use crate::unitype::Unitype;
 
 pub const RUBY_TOP_LEVEL_FUNCTION_NAME: &str = "__ruby_top_level_function";
-
-/// We give fixnums half an i31, marking MSB 1
-/// (0b1xx_xxxx...): i31
-const FIXNUM_BIT_WIDTH: u32 = 30;
-
-/// Fixnums are identified with a 1 in the MSB of the i31
-pub const FIXNUM_MARKER: i32 = 1 << 30;
 
 pub struct CompileCtx<'a> {
     pub module: &'a mut Module,
@@ -33,7 +27,7 @@ pub fn compile(program: &R::Program) -> Module {
         RUBY_TOP_LEVEL_FUNCTION_NAME,
         true,
         Box::new([]),
-        Box::new([UNITYPE.into_result_type()]),
+        Box::new([Unitype::UNITYPE.into_result_type()]),
     );
     compile_program(&mut ctx, &mut top_level_builder, program);
     top_level_builder.finish(&mut module.funcs);
@@ -89,48 +83,28 @@ fn compile_integer<A: ArenaProvider>(
     builder: &mut InstrSeqBuilder<A>,
     n: i64,
 ) {
-    // Strategy:
-    // Determine whether we're in range of a fixnum
-    // If not, add a const global int and get it
-    // TODO -- do this _somewhere else_
+    let unitype = Unitype::from_integer(n);
+    match unitype {
+        Unitype::Fixnum(fixnum) => const_i31(builder, fixnum),
+        Unitype::HeapNum(heapnum) => {
+            // `heapnum` is a constant value.
+            // So, create a global and get its value.
 
-    /// Minimum size required for 2's complement representation of the given number
-    /// Strategy from:
-    /// https://internals.rust-lang.org/t/add-methods-that-return-the-number-of-bits-necessary-to-represent-an-integer-in-binary-to-the-standard-library/21870/7
-    fn bit_width(n: i64) -> u32 {
-        i64::BITS - n.abs().leading_zeros() + 1
-    }
-
-    // If if-let guards were stable I'd use those with try_into.
-    match n {
-        n if bit_width(n) <= FIXNUM_BIT_WIDTH => {
-            let fixnum = FIXNUM_MARKER | i32::try_from(n).unwrap();
-            const_i31(builder, fixnum);
-        }
-        n if bit_width(n) <= i64::BITS => {
-            let n = i64::try_from(n).unwrap();
-            // TODO -- Need to intern this.
-            //  If you have 2 of the same-valued global it probably breaks at validation time.
-            //  Also, does this introduce illegal identifier characters?
-            let global_id = format!("$global-i32-{}", n);
+            // TODO -- We need to intern constant heapnums.
+            //  If you have 2 of the same-valued global this probably breaks at validation time.
+            let global_id = format!("$global-i32-{}", heapnum);
             let ty = GlobalType {
                 mutability: Mutability::Const,
-                value_type: ValType::NumberType(NumberType::I64),
+                value_type: ValType::NumType(NumType::I64),
             };
 
             ctx.module.globals.add(global_id.clone(), ty, |builder| {
-                builder.i64_const(n);
+                builder.i64_const(heapnum);
             });
 
             builder.global_get(global_id);
         }
-        _ => {
-            todo!(
-                "Bignums not yet implemented.
-                  [n={:x}] larger than W::I64",
-                22
-            )
-        }
+        _ => unreachable!()
     }
 }
 

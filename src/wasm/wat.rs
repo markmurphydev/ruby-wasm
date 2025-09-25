@@ -1,10 +1,12 @@
+use crate::FunctionBuilder;
+use crate::unitype::{Unitype};
 use crate::wasm::function::{Function, InstrSeq, InstrSeqId};
 use crate::wasm::module::{Module, ModuleFunctions};
 use crate::wasm::types::{
-    AbsHeapType, BlockType, HeapType, NumberType, ParamType, RefType, ResultType, ValType, UNITYPE,
+    AbsHeapType, BlockType, HeapType, Nullability, NumType, ParamType, RefType, ResultType,
+    ValType,
 };
 use crate::wasm::{BinaryOp, Binop, Block, Const, IfElse, Instr, Loop, UnaryOp, Unop, Value};
-use crate::FunctionBuilder;
 use id_arena::Arena;
 use pretty::{Doc, RcDoc};
 
@@ -17,11 +19,7 @@ impl Module {
 }
 
 fn module_to_doc(module: &Module) -> RcDoc<'static> {
-    let Module {
-        funcs,
-        start,
-        ..
-    } = module;
+    let Module { funcs, start, .. } = module;
 
     let start = match start {
         None => None,
@@ -114,16 +112,14 @@ fn instr_to_doc(instr_seq_arena: &Arena<InstrSeq>, instr: &Instr) -> RcDoc<'stat
         GlobalGet(g) => RcDoc::text("(global.get")
             .append(g.global.clone())
             .append(")"),
-        Br(b) => RcDoc::text("(br ")
-            .append(b.label.clone())
-            .append(")"),
+        Br(b) => RcDoc::text("(br ").append(b.label.clone()).append(")"),
     }
 }
 
 fn block_to_doc(instr_seq_arena: &Arena<InstrSeq>, block: &Block) -> RcDoc<'static> {
     let &Block { seq } = block;
     RcDoc::text("(block")
-        .append(block_type_to_doc(&UNITYPE.into_block_type_result()))
+        .append(block_type_to_doc(&Unitype::UNITYPE.into_block_type_result()))
         .append(RcDoc::line())
         .append(instr_seq_to_doc(instr_seq_arena, seq))
         .append(")")
@@ -135,7 +131,7 @@ fn loop_to_doc(instr_seq_arena: &Arena<InstrSeq>, l: &Loop) -> RcDoc<'static> {
         .append(RcDoc::space())
         .append(RcDoc::text(label.clone()))
         .append(RcDoc::space())
-        .append(block_type_to_doc(&UNITYPE.into_block_type_result()))
+        .append(block_type_to_doc(&Unitype::UNITYPE.into_block_type_result()))
         .append(RcDoc::line())
         .append(instr_seq_to_doc(instr_seq_arena, *seq))
         .append(")")
@@ -203,7 +199,7 @@ fn if_else_to_doc(instr_seq_arena: &Arena<InstrSeq>, if_else: &IfElse) -> RcDoc<
 
     RcDoc::text("(if")
         .append(RcDoc::space())
-        .append(block_type_to_doc(&UNITYPE.into_block_type_result()))
+        .append(block_type_to_doc(&Unitype::UNITYPE.into_block_type_result()))
         .append(RcDoc::line())
         .append(predicate)
         .append(RcDoc::line())
@@ -252,17 +248,17 @@ fn result_type_to_doc(ty: &ResultType) -> RcDoc<'static> {
 
 fn val_type_to_doc(ty: &ValType) -> RcDoc<'static> {
     match ty {
-        ValType::NumberType(ty) => num_type_to_doc(ty),
+        ValType::NumType(ty) => num_type_to_doc(ty),
         ValType::Ref(ty) => ref_type_to_doc(ty),
     }
 }
 
-fn num_type_to_doc(ty: &NumberType) -> RcDoc<'static> {
+fn num_type_to_doc(ty: &NumType) -> RcDoc<'static> {
     RcDoc::text(match ty {
-        NumberType::I32 => "i32",
-        NumberType::I64 => "i64",
-        NumberType::F32 => "f32",
-        NumberType::F64 => "f64",
+        NumType::I32 => "i32",
+        NumType::I64 => "i64",
+        NumType::F32 => "f32",
+        NumType::F64 => "f64",
     })
 }
 
@@ -272,7 +268,10 @@ fn ref_type_to_doc(ty: &RefType) -> RcDoc<'static> {
         heap_type,
     } = ty;
 
-    let name = if *nullable { "(ref null" } else { "(ref" };
+    let name = match nullable {
+        Nullability::Nullable => "(ref null",
+        Nullability::NonNullable => "(ref",
+    };
     RcDoc::text(name)
         .append(RcDoc::space())
         .append(heap_type_to_doc(heap_type))

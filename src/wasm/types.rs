@@ -1,25 +1,27 @@
 //! TODO -- I want `Type` to be `copy`, but I don't know if function types will fuck that up
 //!     Probably interning fixes everything?
 
-/// Wasm-supertype of all Ruby values
-/// ≡ `(ref eq)`
-pub const UNITYPE: RefType = RefType::new_abstract(AbsHeapType::Eq, false);
-
 #[derive(Clone, Debug, PartialEq, Eq, Hash)]
 pub enum ValType {
-    NumberType(NumberType),
+    NumType(NumType),
     // VecType,
     Ref(RefType),
 }
 
 #[derive(Clone, Copy, Debug, PartialEq, Eq, Hash)]
-pub enum NumberType {
+pub enum NumType {
     /// Ambiguously-signed 32-bit integer.
     I32,
     /// Ambiguously-signed 32-bit integer
     I64,
     F32,
     F64,
+}
+
+impl NumType {
+    pub fn to_val_type(self) -> ValType {
+        ValType::NumType(self)
+    }
 }
 
 #[derive(Clone, Debug, PartialEq, Eq, Hash)]
@@ -34,9 +36,15 @@ pub enum Mutability {
     Mut,
 }
 
+#[derive(Copy, Clone, Debug, PartialEq, Eq, Hash)]
+pub enum Nullability {
+    Nullable,
+    NonNullable,
+}
+
 #[derive(Clone, Debug, PartialEq, Eq, Hash)]
 pub struct RefType {
-    pub nullable: bool,
+    pub nullable: Nullability,
     pub heap_type: HeapType,
 }
 
@@ -46,48 +54,48 @@ pub struct RefType {
 impl RefType {
     /// Alias for the `anyref` type in WebAssembly.
     pub const ANYREF: RefType = RefType {
-        nullable: true,
+        nullable: Nullability::Nullable,
         heap_type: HeapType::Abstract(AbsHeapType::Any),
     };
 
     /// Alias for the `eqref` type in WebAssembly.
     pub const EQREF: RefType = RefType {
-        nullable: true,
+        nullable: Nullability::Nullable,
         heap_type: HeapType::Abstract(AbsHeapType::Eq),
     };
 
     /// Alias for the `funcref` type in WebAssembly.
     pub const FUNCREF: RefType = RefType {
-        nullable: true,
+        nullable: Nullability::Nullable,
         heap_type: HeapType::Abstract(AbsHeapType::Func),
     };
 
     /// Alias for the `externref` type in WebAssembly.
     pub const EXTERNREF: RefType = RefType {
-        nullable: true,
+        nullable: Nullability::Nullable,
         heap_type: HeapType::Abstract(AbsHeapType::Extern),
     };
 
     /// Alias for the `i31ref` type in WebAssembly.
     pub const I31REF: RefType = RefType {
-        nullable: true,
+        nullable: Nullability::Nullable,
         heap_type: HeapType::Abstract(AbsHeapType::I31),
     };
 
     /// Alias for the `arrayref` type in WebAssembly.
     pub const ARRAYREF: RefType = RefType {
-        nullable: true,
+        nullable: Nullability::Nullable,
         heap_type: HeapType::Abstract(AbsHeapType::Array),
     };
 
     /// Alias for the `exnref` type in WebAssembly.
     pub const EXNREF: RefType = RefType {
-        nullable: true,
+        nullable: Nullability::Nullable,
         heap_type: HeapType::Abstract(AbsHeapType::Exn),
     };
 
     /// Create a new abstract reference type.
-    pub const fn new_abstract(ty: AbsHeapType, nullable: bool) -> Self {
+    pub const fn new_abstract(ty: AbsHeapType, nullable: Nullability) -> Self {
         Self {
             nullable,
             heap_type: HeapType::Abstract(ty)
@@ -95,7 +103,7 @@ impl RefType {
     }
 
     /// Set the nullability of this reference type.
-    pub fn nullable(mut self, nullable: bool) -> Self {
+    pub fn nullable(mut self, nullable: Nullability) -> Self {
         self.nullable = nullable;
         self
     }
@@ -210,7 +218,19 @@ impl SubType {
 
 #[derive(Clone, Debug, PartialEq, Eq, Hash)]
 pub enum CompType {
+    StructType(StructType),
     FuncType(FuncType),
+}
+
+#[derive(Clone, Debug, PartialEq, Eq, Hash)]
+pub struct StructType {
+    pub fields: FieldsType,
+}
+
+impl StructType {
+    pub fn to_comp_type(self) -> CompType {
+        CompType::StructType(self)
+    }
 }
 
 /// Type of a function
@@ -220,8 +240,16 @@ pub struct FuncType {
     pub results: ResultsType,
 }
 
+pub type FieldsType = Box<[FieldType]>;
 pub type ParamsType = Box<[ParamType]>;
 pub type ResultsType = Box<[ResultType]>;
+
+#[derive(Clone, Debug, PartialEq, Eq, Hash)]
+pub struct FieldType {
+    pub name: String,
+    /// TODO -- Can also be `packtype`.
+    pub ty: ValType,
+}
 
 #[derive(Clone, Debug, PartialEq, Eq, Hash)]
 pub struct ParamType {
