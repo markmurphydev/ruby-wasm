@@ -272,7 +272,7 @@ fn ref_type_to_doc(ty: &RefType) -> RcDoc<'static> {
         heap_type,
     } = ty;
 
-    let name = if *nullable { "(ref" } else { "(ref null" };
+    let name = if *nullable { "(ref null" } else { "(ref" };
     RcDoc::text(name)
         .append(RcDoc::space())
         .append(heap_type_to_doc(heap_type))
