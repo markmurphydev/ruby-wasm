@@ -6,10 +6,10 @@
 //!     (maybe as part of a `CompileCtx` object)
 
 use crate::wasm::function::{ArenaProvider, Function, FunctionId, InstrSeq};
-use id_arena::{Arena, Id};
-use crate::InstrSeqBuilder;
+use crate::wasm::types::GlobalType;
 use crate::wasm::Global;
-use crate::wasm::types::{GlobalType, Mutability};
+use crate::InstrSeqBuilder;
+use id_arena::{Arena, Id};
 
 /// A wasm module.
 /// Walrus allocates all the data for the module inside
@@ -90,7 +90,7 @@ impl ModuleGlobals {
             builder.id
         };
 
-        let id = self.global_arena.alloc(Global {
+        self.global_arena.alloc(Global {
             name,
             ty,
             instr_seq: instr_seq_id,

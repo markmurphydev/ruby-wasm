@@ -5,15 +5,14 @@
 //! assert_eq!(-1, u64::MAX as i64);
 //! ```
 
-use pretty::BuildDoc;
 // W for Wasm
 use crate::node::Subsequent;
+use crate::wasm::module::Module;
+use crate::wasm::types::{GlobalType, Mutability, NumberType, ValType, UNITYPE};
 use crate::wasm::UnaryOp;
-use crate::wasm::module::{Module, ModuleGlobals};
-use crate::wasm::types::{GlobalType, Mutability, NumberType, UNITYPE, ValType};
-use crate::{ArenaProvider, runtime, wasm as W};
 // R for Ruby
-use crate::{FunctionBuilder, InstrSeqBuilder, node as R};
+use crate::{node as R, FunctionBuilder, InstrSeqBuilder};
+use crate::{runtime, ArenaProvider};
 
 pub const RUBY_TOP_LEVEL_FUNCTION_NAME: &str = "__ruby_top_level_function";
 

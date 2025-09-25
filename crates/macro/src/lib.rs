@@ -16,7 +16,7 @@ use syn::parse::{Parse, ParseStream};
 use syn::punctuated::Punctuated;
 use syn::DeriveInput;
 use syn::Error;
-use syn::{parse_macro_input, Ident, Result, Token};
+use syn::{parse_macro_input, Result, Token};
 
 #[proc_macro_attribute]
 pub fn wasm_instr(_attr: TokenStream, input: TokenStream) -> TokenStream {
@@ -95,15 +95,15 @@ impl Parse for WasmVariantOpts {
 
         impl Parse for Attr {
             fn parse(input: ParseStream) -> Result<Self> {
-                let attr: Ident = input.parse()?;
+                let attr: syn::Ident = input.parse()?;
                 if attr == "display_name" {
                     input.parse::<Token![=]>()?;
-                    let name = input.call(Ident::parse_any)?;
+                    let name = input.call(syn::Ident::parse_any)?;
                     return Ok(Attr::DisplayName(name));
                 }
                 if attr == "display_extra" {
                     input.parse::<Token![=]>()?;
-                    let name = input.call(Ident::parse_any)?;
+                    let name = input.call(syn::Ident::parse_any)?;
                     return Ok(Attr::DisplayExtra(name));
                 }
                 if attr == "skip_builder" {
@@ -304,10 +304,6 @@ fn create_builder(variants: &[WasmVariant]) -> impl quote::ToTokens {
 
         let mut method_name = name.to_string().to_snake_case();
 
-        let mut method_name_at = method_name.clone();
-        method_name_at.push_str("_at");
-        let method_name_at = syn::Ident::new(&method_name_at, Span::call_site());
-
         if method_name == "return" || method_name == "const" {
             method_name.push('_');
         } else if method_name == "block" {
@@ -327,12 +323,6 @@ fn create_builder(variants: &[WasmVariant]) -> impl quote::ToTokens {
 
         let doc = format!(
             "Push a new `{}` instruction onto this builder's block.",
-            name
-        );
-        let at_doc = format!(
-            "Splice a new `{}` instruction into this builder's block at the given index.\n\n\
-             # Panics\n\n\
-             Panics if `position > self.instrs.len()`.",
             name
         );
 

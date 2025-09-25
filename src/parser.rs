@@ -2,7 +2,6 @@
 
 use crate::lexer::Lexer;
 use crate::node as N;
-use std::iter::Peekable;
 use std::str::FromStr;
 use std::vec;
 
@@ -192,8 +191,8 @@ impl<'text> Parser<'text> {
 // TODO `nil ;;;;;` is a valid ruby program.
 #[cfg(test)]
 mod tests {
-    use crate::lexeme::Lexeme;
     use super::*;
+    use crate::lexeme::Lexeme;
 
     fn lex_to_eof(text: &str) -> Vec<Lexeme> {
         let mut lexemes = vec![];

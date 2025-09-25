@@ -7,7 +7,6 @@ pub mod compiler;
 pub mod binary;
 pub mod html;
 pub mod runtime;
-mod arena_set;
 pub mod run;
 
 pub use crate::wasm::wat;

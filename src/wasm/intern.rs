@@ -1,19 +1,16 @@
 //! Interner for WAT identifiers.
+//!
+//! Identifiers of the form `$symbol_name` are
+//! used as an alternative to indexed identifiers in WAT format.
+//!
+//! https://webassembly.github.io/spec/core/text/modules.html#indices
+//!
+//! Each _index space_ has a corresponding _identifier space_.
+//!
 //! attribution: Adapted from the "simplest possible interner" example here:
 //! https://matklad.github.io/2020/03/22/fast-simple-rust-interner.html
 
 use std::collections::HashMap;
-use id_arena::{Arena, Id};
-
-/// A WAT identifier.
-///
-/// Identifiers of the form `$symbol_name` are
-/// used as an alternative to indexed identifiers in WAT format.
-///
-/// https://webassembly.github.io/spec/core/text/modules.html#indices
-///
-/// Each _index space_ has a corresponding _identifier space_.
-pub struct Identifier(String);
 
 /// A handle to an interned identifier.
 #[derive(Clone, Copy, Debug, PartialEq, Eq, Hash)]

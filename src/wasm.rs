@@ -12,12 +12,9 @@ pub mod types;
 pub mod wat;
 mod intern;
 
-use std::ops::{Deref, DerefMut};
-use crate::wasm::types::{BlockType, GlobalType, ParamsType, ResultsType, ValType};
-use id_arena::Id;
-use wasm_macro::wasm_instr;
 use crate::wasm::function::InstrSeqId;
-use crate::wasm::intern::InternedIdentifier;
+use crate::wasm::types::GlobalType;
+use wasm_macro::wasm_instr;
 
 /// Constant values that can show up in WebAssembly
 #[derive(Debug, Clone, Copy)]

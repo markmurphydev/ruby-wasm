@@ -1,10 +1,6 @@
 //! TODO -- I want `Type` to be `copy`, but I don't know if function types will fuck that up
 //!     Probably interning fixes everything?
 
-use crate::arena_set::ArenaSet;
-use id_arena::Id;
-use crate::wasm::intern::InternedIdentifier;
-
 /// Wasm-supertype of all Ruby values
 /// ≡ `(ref eq)`
 pub const UNITYPE: RefType = RefType::new_abstract(AbsHeapType::Eq, false);

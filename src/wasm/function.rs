@@ -96,7 +96,7 @@ impl FunctionBuilder {
     }
 
     /// Get a `InstrSeqBuilder` for building and mutating this function's body.
-    pub fn func_body(&mut self) -> InstrSeqBuilder<Self> {
+    pub fn func_body(&mut self) -> InstrSeqBuilder<'_, Self> {
         let entry = self.entry_point;
         self.instr_seq(entry)
     }
@@ -126,7 +126,7 @@ impl FunctionBuilder {
     ///     .i32_const(42)
     ///     .drop();
     /// ```
-    pub fn instr_seq(&mut self, id: InstrSeqId) -> InstrSeqBuilder<Self> {
+    pub fn instr_seq(&mut self, id: InstrSeqId) -> InstrSeqBuilder<'_, Self> {
         InstrSeqBuilder { id, arena_provider: self }
     }
 
@@ -157,6 +157,7 @@ pub struct InstrSeqBuilder<'a, A> {
     pub arena_provider: &'a mut A,
 }
 
+//noinspection GrazieInspection
 impl <'a, A: ArenaProvider> InstrSeqBuilder<'a, A> {
     pub fn new(parent: &'a mut A) -> InstrSeqBuilder<'a, A> {
         let id = parent.arena().alloc(InstrSeq::new());
@@ -309,9 +310,9 @@ impl <'a, A: ArenaProvider> InstrSeqBuilder<'a, A> {
     pub fn if_else(
         &mut self,
         ctx: &mut CompileCtx<'_>,
-        mut predicate: impl FnOnce(&mut CompileCtx<'_>, &mut InstrSeqBuilder<A>),
-        mut consequent: impl FnOnce(&mut CompileCtx<'_>, &mut InstrSeqBuilder<A>),
-        mut alternative: impl FnOnce(&mut CompileCtx<'_>, &mut InstrSeqBuilder<A>),
+        predicate: impl FnOnce(&mut CompileCtx<'_>, &mut InstrSeqBuilder<A>),
+        consequent: impl FnOnce(&mut CompileCtx<'_>, &mut InstrSeqBuilder<A>),
+        alternative: impl FnOnce(&mut CompileCtx<'_>, &mut InstrSeqBuilder<A>),
     ) -> &mut Self {
 
         let predicate = {
@@ -339,7 +340,7 @@ impl <'a, A: ArenaProvider> InstrSeqBuilder<'a, A> {
         })
     }
 
-    fn dangling_instr_seq(&mut self) -> InstrSeqBuilder<A> {
+    fn dangling_instr_seq(&mut self) -> InstrSeqBuilder<'_, A> {
         let id = self.arena_provider.arena().alloc(InstrSeq::new());
         InstrSeqBuilder { id, arena_provider: self.arena_provider }
     }

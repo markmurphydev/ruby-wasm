@@ -1,4 +1,4 @@
-use std::ops::{Add, AddAssign, Sub};
+use std::ops::{Add, AddAssign};
 use serde::Serialize;
 
 /// Starts with line 1.
@@ -19,14 +19,6 @@ impl Add<CharDifference> for CharIdx {
         Self(self.0 + rhs.0)
     }
 }
-
-// impl Sub for CharIdx {
-//     type Output = CharDifference;
-//
-//     fn sub(self, rhs: Self) -> Self::Output {
-//         CharDifference(self.0 - rhs.0)
-//     }
-// }
 
 impl AddAssign<CharDifference> for CharIdx {
     fn add_assign(&mut self, rhs: CharDifference) {

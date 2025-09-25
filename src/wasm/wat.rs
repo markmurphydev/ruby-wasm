@@ -1,10 +1,10 @@
-use crate::FunctionBuilder;
 use crate::wasm::function::{Function, InstrSeq, InstrSeqId};
 use crate::wasm::module::{Module, ModuleFunctions};
 use crate::wasm::types::{
-    AbsHeapType, BlockType, HeapType, NumberType, ParamType, RefType, ResultType, UNITYPE, ValType,
+    AbsHeapType, BlockType, HeapType, NumberType, ParamType, RefType, ResultType, ValType, UNITYPE,
 };
 use crate::wasm::{BinaryOp, Binop, Block, Const, IfElse, Instr, Loop, UnaryOp, Unop, Value};
+use crate::FunctionBuilder;
 use id_arena::Arena;
 use pretty::{Doc, RcDoc};
 
@@ -18,9 +18,9 @@ impl Module {
 
 fn module_to_doc(module: &Module) -> RcDoc<'static> {
     let Module {
-        globals,
         funcs,
         start,
+        ..
     } = module;
 
     let start = match start {

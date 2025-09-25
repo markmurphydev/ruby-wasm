@@ -1,4 +1,4 @@
-use crate::lexeme::{CharDifference, CharIdx, Col, Lexeme, LexemeKind, Line};
+use crate::lexeme::{CharDifference, CharIdx, Lexeme, LexemeKind};
 use std::str::Chars;
 
 use crate::lexeme;
