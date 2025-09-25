@@ -49,20 +49,22 @@ fn module_functions_to_doc(module_functions: &ModuleFunctions) -> RcDoc<'static>
     RcDoc::intersperse(funcs, Doc::line())
 }
 
-fn function_to_doc(f: &Function) -> RcDoc<'static> {
+fn function_to_doc(func: &Function) -> RcDoc<'static> {
     let FunctionBuilder {
         instr_seq_arena,
         entry_point,
         ..
-    } = &f.builder;
+    } = &func.builder;
 
-    let params = f.params().iter().map(|p| param_to_doc(p));
-    let results = f.results().iter().map(|r| result_type_to_doc(r));
+    let params = func.params().iter().map(|p| param_to_doc(p));
+    let results = func.results().iter().map(|r| result_type_to_doc(r));
     let params_results = params.into_iter().chain(results.into_iter());
 
     let instr_seq_doc = instr_seq_to_doc(instr_seq_arena, *entry_point);
 
     RcDoc::text("(func")
+        .append(RcDoc::space())
+        .append(RcDoc::text(func.name().to_owned()))
         .append(RcDoc::line())
         .append(
             RcDoc::intersperse(params_results, Doc::line())

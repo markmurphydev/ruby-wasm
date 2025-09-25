@@ -15,7 +15,7 @@ use crate::{ArenaProvider, runtime, wasm as W};
 // R for Ruby
 use crate::{FunctionBuilder, InstrSeqBuilder, node as R};
 
-pub const RUBY_TOP_LEVEL_FUNCTION_NAME: &str = "__ruby_top_level_function";
+pub const RUBY_TOP_LEVEL_FUNCTION_NAME: &str = "$__ruby_top_level_function";
 
 /// We give fixnums half an i31, marking MSB 1
 /// (0b1xx_xxxx...): i31
