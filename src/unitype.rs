@@ -1,32 +1,43 @@
 //! Ruby values lowered to a union of all possible values.
 //! Converted into Wasm `(ref eq)` subtypes
+
+use pretty::RcDoc;
+use serde::Serialize;
 use crate::wasm::types::Nullability::NonNullable;
 use crate::wasm::types::{AbsHeapType, RefType};
 use wasmtime::{AnyRef, Rooted};
+
+/// Fixnums are identified with a 1 in the MSB of the i31
+const FIXNUM_MARKER: i32 = 1 << 30;
 
 /// We give fixnums half an i31, marking MSB 1
 /// (0b1xx_xxxx...): i31
 const FIXNUM_BIT_WIDTH: u32 = 30;
 
-/// Fixnums are identified with a 1 in the MSB of the i31
-pub const FIXNUM_MARKER: i32 = 1 << 30;
-
 /// `wasmtime`'s Rust-side representation of a Wasm `(ref eq)` value
 pub type WasmtimeRefEq = Rooted<AnyRef>;
 
+#[derive(Debug, Eq, PartialEq, Copy, Clone, Serialize)]
 pub enum Unitype {
     True,
     False,
     Nil,
-
-    Fixnum(i32),
+    // Internally, stored as the actual number, without the marker bit
+    Fixnum(Fixnum),
     HeapNum(i64),
 }
+
+#[derive(Debug, Eq, PartialEq, Copy, Clone, Serialize)]
+pub struct Fixnum(i32);
 
 impl Unitype {
     /// Wasm-supertype of all Ruby values
     /// ≡ `(ref eq)`
     pub const UNITYPE: RefType = RefType::new_abstract(AbsHeapType::Eq, NonNullable);
+
+    pub const FALSE_BIT_PATTERN: i32 = 0b0001;
+    pub const TRUE_BIT_PATTERN: i32 = 0b0011;
+    pub const NIL_BIT_PATTERN: i32 = 0b0101;
 
     // pub const I31_TYPE: RefType = RefType::new_abstract(AbsHeapType::I31, NonNullable);
     // pub const HEAP_NUM_TYPE: RefType = RefType
@@ -47,7 +58,7 @@ impl Unitype {
 
         match n {
             n if bit_width(n) <= FIXNUM_BIT_WIDTH => {
-                Unitype::Fixnum(FIXNUM_MARKER | i32::try_from(n).unwrap())
+                Unitype::Fixnum(Fixnum(i32::try_from(n).unwrap()))
             }
             n if bit_width(n) <= i64::BITS => Unitype::HeapNum(n),
             _ => {
@@ -62,7 +73,46 @@ impl Unitype {
 
     /// Parse a Wasm `(ref eq)` value into a `UnitypeValue`.
     /// Used only for displaying `wasmtime` output.
-    pub fn parse_ref_eq(ref_eq: WasmtimeRefEq) -> Self {
-        todo!()
+    pub fn parse_ref_eq(ref_eq: WasmtimeRefEq, store: &wasmtime::Store<()>) -> Self {
+        let is_i31 = ref_eq.is_i31(&store).unwrap();
+        if is_i31 {
+            let value = ref_eq.unwrap_i31(&store).unwrap().get_u32() as i32;
+            match value {
+                Self::FALSE_BIT_PATTERN => Self::False,
+                Self::TRUE_BIT_PATTERN => Self::True,
+                Self::NIL_BIT_PATTERN => Self::Nil,
+                val if (val & FIXNUM_MARKER) != 0 => Self::Fixnum(Fixnum(val & !FIXNUM_MARKER)),
+                _ => panic!("Invalid i31 bit pattern 0b{:b}", value)
+            }
+        } else {
+            todo!("IDK.")
+        }
+    }
+
+    pub fn to_i31_bits(self) -> i32 {
+        match self {
+            Unitype::True => Self::TRUE_BIT_PATTERN,
+            Unitype::False => Self::FALSE_BIT_PATTERN,
+            Unitype::Nil => Self::NIL_BIT_PATTERN,
+            Unitype::Fixnum(Fixnum(val)) => val | FIXNUM_MARKER,
+            Unitype::HeapNum(_) => panic!("Not an i31 value: {:?}", self),
+        }
+    }
+
+    pub fn to_pretty(self) -> String {
+        let mut w = Vec::new();
+        self.module_to_doc().render(80, &mut w).unwrap();
+        String::from_utf8(w).unwrap()
+    }
+
+    fn module_to_doc(self) -> RcDoc<'static> {
+        let text = match self {
+            Unitype::True => "true".to_owned(),
+            Unitype::False => "false".to_owned(),
+            Unitype::Nil => "nil".to_owned(),
+            Unitype::Fixnum(Fixnum(n)) => format!("{}", n),
+            Unitype::HeapNum(n) => format!("{}", n)
+        };
+        RcDoc::text(text)
     }
 }

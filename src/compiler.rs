@@ -85,7 +85,7 @@ fn compile_integer<A: ArenaProvider>(
 ) {
     let unitype = Unitype::from_integer(n);
     match unitype {
-        Unitype::Fixnum(fixnum) => const_i31(builder, fixnum),
+        fixnum@Unitype::Fixnum(_) => const_i31(builder, fixnum.to_i31_bits()),
         Unitype::HeapNum(heapnum) => {
             // `heapnum` is a constant value.
             // So, create a global and get its value.

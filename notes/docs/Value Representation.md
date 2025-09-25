@@ -29,10 +29,13 @@ Constants are stored in the low half of `i31`.
 
 I think we'll have space to spare, so I use a sparse representation that makes it a little easier to do boolean operations.
 Inspired by Hoot's representation. It might be identical currently.
-```
+```rust
 // In Wasm, you produce a `(i32.const 0bxxxx)`,
 //  then use the `ref.i31` instruction to convert.
 pub const FALSE: I32 = I32(0b0001);  
-pub const TRUE: I32 = I32(0b0011);  
-pub const NIL: I32 = I32(0b0101);
+//                             │└───is_bool
+//                             └────is_true
+pub const TRUE: I32  = I32(0b0011);  
+pub const NIL: I32   = I32(0b0100);
+//                            └─────is_nil
 ```
