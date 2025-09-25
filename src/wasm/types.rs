@@ -3,18 +3,13 @@
 
 use crate::arena_set::ArenaSet;
 use id_arena::Id;
+use crate::wasm::intern::InternedIdentifier;
 
 /// Wasm-supertype of all Ruby values
 /// ≡ `(ref eq)`
 pub const UNITYPE: RefType = RefType::new_abstract(AbsHeapType::Eq, false);
 
 #[derive(Clone, Debug, PartialEq, Eq, Hash)]
-pub enum Type {
-    Val(ValType),
-    SubType(SubType),
-}
-
-#[derive(Clone, Copy, Debug, PartialEq, Eq, Hash)]
 pub enum ValType {
     NumberType(NumberType),
     // VecType,
@@ -31,7 +26,7 @@ pub enum NumberType {
     F64,
 }
 
-#[derive(Clone, Copy, Debug, PartialEq, Eq, Hash)]
+#[derive(Clone, Debug, PartialEq, Eq, Hash)]
 pub struct GlobalType {
     pub mutability: Mutability,
     pub value_type: ValType,
@@ -43,7 +38,7 @@ pub enum Mutability {
     Var,
 }
 
-#[derive(Clone, Copy, Debug, PartialEq, Eq, Hash)]
+#[derive(Clone, Debug, PartialEq, Eq, Hash)]
 pub struct RefType {
     pub nullable: bool,
     pub heap_type: HeapType,
@@ -113,19 +108,19 @@ impl RefType {
         ValType::Ref(self)
     }
 
-    pub fn into_block_type(self) -> BlockType {
-        BlockType::Val(self.into_val_type())
+    pub fn into_result_type(self) -> ResultType {
+        ResultType(self.into_val_type())
     }
 
-    pub fn into_type(self) -> Type {
-        Type::Val(self.into_val_type())
+    pub fn into_block_type_result(self) -> BlockType {
+        BlockType::Result(self.into_result_type())
     }
 }
 
-#[derive(Clone, Copy, Debug, PartialEq, Eq, Hash)]
+#[derive(Clone, Debug, PartialEq, Eq, Hash)]
 pub enum HeapType {
     Abstract(AbsHeapType),
-    Concrete(TypeId),
+    Identifier(String),
 }
 
 /// An abstract heap type.
@@ -184,19 +179,13 @@ pub enum AbsHeapType {
 
     /// The abstract `noexn` heap type.
     NoExn,
-
-    /// The abstract `cont` heap type.
-    Cont,
-
-    /// The abstract `nocont` heap type.
-    NoCont,
 }
 
 /// The type of an instruction sequence
-#[derive(Copy, Clone, Debug, PartialEq, Eq, Hash)]
+#[derive(Clone, Debug, PartialEq, Eq, Hash)]
 pub enum BlockType {
-    Val(ValType),
-    Id(TypeId), // Should be SubType<Function>
+    Result(ResultType),
+    TypeUse(String),
 }
 
 /// A composite type with an optional list of supertypes it matches.
@@ -209,7 +198,7 @@ pub enum BlockType {
 #[derive(Clone, Debug, PartialEq, Eq, Hash)]
 pub struct SubType {
     pub is_final: bool,
-    pub supertypes: Option<Box<[TypeId]>>, // Should be SubType
+    pub supertypes: Option<Vec<Box<SubType>>>,
     pub comp_type: CompType,
 }
 
@@ -231,15 +220,18 @@ pub enum CompType {
 /// Type of a function
 #[derive(Clone, Debug, PartialEq, Eq, Hash)]
 pub struct FuncType {
-    pub params: Params,
-    pub results: Results,
+    pub params: ParamsType,
+    pub results: ResultsType,
 }
 
-pub type Params = Box<[Param]>;
-pub type Results = Box<[ValType]>;
+pub type ParamsType = Box<[ParamType]>;
+pub type ResultsType = Box<[ResultType]>;
 
 #[derive(Clone, Debug, PartialEq, Eq, Hash)]
-pub struct Param {
-    pub name: Option<String>,
+pub struct ParamType {
+    pub name: String,
     pub ty: ValType,
 }
+
+#[derive(Clone, Debug, PartialEq, Eq, Hash)]
+pub struct ResultType(pub ValType);

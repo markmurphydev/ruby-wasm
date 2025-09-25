@@ -33,12 +33,3 @@
 //         self.0.fmt(f)
 //     }
 // }
-
-use crate::wasm::InstrSeq;
-use crate::wasm::intern::InternedIdentifier;
-
-/// A WAT function definition.
-pub struct Function {
-    name: InternedIdentifier,
-    instr_seq: InstrSeq,
-}

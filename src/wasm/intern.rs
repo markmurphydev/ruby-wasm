@@ -16,10 +16,10 @@ use id_arena::{Arena, Id};
 pub struct Identifier(String);
 
 /// A handle to an interned identifier.
-#[derive(Clone, Copy, Debug, Hash)]
+#[derive(Clone, Copy, Debug, PartialEq, Eq, Hash)]
 pub struct InternedIdentifier(u32);
 
-#[derive(Default)]
+#[derive(Debug, Default)]
 pub struct IdentifierInterner {
     // This is a specialization of a bijective map
     // e.g. https://docs.rs/bimap/latest/bimap/

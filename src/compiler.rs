@@ -304,7 +304,7 @@ fn compile_expr(builder: &mut InstrSeqBuilder, expr: &R::Expr) {
 }
 
 fn compile_if_expr(builder: &mut InstrSeqBuilder, if_expr: &R::If) {
-    let ty = UNITYPE.into_block_type();
+    let ty = UNITYPE.into_block_type_result();
     builder.if_else(
         ty,
         |then_builder| {

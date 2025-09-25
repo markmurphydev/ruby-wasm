@@ -7,7 +7,6 @@
 //! MIT licensed
 
 pub mod function;
-pub mod function_builder;
 pub mod module;
 pub mod types;
 pub mod values;
@@ -15,9 +14,10 @@ pub mod wat;
 mod intern;
 
 use std::ops::{Deref, DerefMut};
-use crate::wasm::types::{BlockType, Params, Results, ValType};
+use crate::wasm::types::{BlockType, ParamsType, ResultsType, ValType};
 use id_arena::Id;
 use wasm_macro::wasm_instr;
+use crate::wasm::function::InstrSeqId;
 
 /// Constant values that can show up in WebAssembly
 #[derive(Debug, Clone, Copy)]
@@ -116,6 +116,7 @@ pub enum Instr {
     //     /// The global being set.
     //     global: GlobalId,
     // },
+
     /// `*.const`
     Const {
         /// The constant value.
@@ -183,9 +184,9 @@ pub enum Instr {
     //     #[walrus(skip_visit)] // should have already been visited
     //     default: InstrSeqId,
     // },
-
-    /// `drop`
-    Drop {},
+    // 
+    // /// `drop`
+    // Drop {},
 
     // /// `return`
     // Return {},
@@ -495,35 +496,6 @@ pub enum UnaryOp {
     // I31GetU,
 }
 
-/// The identifier for a `InstrSeq` within some `LocalFunction`.
-pub type InstrSeqId = Id<InstrSeq>;
-
-/// A sequence of instructions.
-#[derive(Debug, Default)]
-pub struct InstrSeq(pub Vec<Instr>);
-
-impl InstrSeq {
-    pub fn new() -> Self {
-        Default::default()
-    }
-}
-
-impl Deref for InstrSeq {
-    type Target = Vec<Instr>;
-
-    #[inline]
-    fn deref(&self) -> &Vec<Instr> {
-        &self.0
-    }
-}
-
-impl DerefMut for InstrSeq {
-    #[inline]
-    fn deref_mut(&mut self) -> &mut Vec<Instr> {
-        &mut self.0
-    }
-}
-
 /// The id of a local.
 pub type LocalId = Id<Local>;
 
@@ -549,8 +521,8 @@ impl Local {
     }
 
     /// Get this local's type.
-    pub fn ty(&self) -> ValType {
-        self.ty
+    pub fn ty(&self) -> &ValType {
+        &self.ty
     }
 }
 

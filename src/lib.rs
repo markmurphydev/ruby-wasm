@@ -8,7 +8,6 @@ pub mod binary;
 pub mod html;
 pub mod runtime;
 mod arena_set;
-pub mod ir;
 
 pub use crate::wasm::wat;
-pub use crate::wasm::function_builder::{FunctionBuilder, InstrSeqBuilder};
+pub use crate::wasm::function::{FunctionBuilder, InstrSeqBuilder};

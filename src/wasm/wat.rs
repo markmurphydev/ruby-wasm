@@ -277,10 +277,14 @@
 //     }
 // }
 
-use std::hash::{DefaultHasher, Hash};
+use crate::wasm::function::{Function, InstrSeq, InstrSeqId};
+use crate::wasm::module::{Module, ModuleFunctions};
+use crate::wasm::types::{AbsHeapType, BlockType, HeapType, NumberType, ParamType, RefType, ResultType, ValType, UNITYPE};
+use crate::wasm::{Block, Const, IfElse, Instr, Loop, UnaryOp, Unop, Value};
+use crate::FunctionBuilder;
+use id_arena::Arena;
 use pretty::{Doc, RcDoc};
-use crate::wasm::function::{Function, FunctionId, ModuleFunctions};
-use crate::wasm::module::Module;
+use std::hash::Hash;
 
 impl Module {
     pub fn to_pretty(&self) -> String {
@@ -292,13 +296,23 @@ impl Module {
 
 fn module_to_doc(module: &Module) -> RcDoc<'static> {
     let Module {
-        types, funcs, start, name: _name
+        funcs,
+        start,
+        name: _name,
     } = module;
+
+    let start = match start {
+        None => None,
+        &Some(start) => Some(funcs.get(start)),
+    };
+
     let child_docs: Box<[RcDoc<'static>]> = [
-        // types.to_doc(),
-        Some(funcs.to_doc()),
-        start.map(|func_id| func_id_to_doc(func_id)),
-    ].into_iter().filter_map(|doc| doc).collect();
+        Some(module_functions_to_doc(funcs)),
+        start.map(|f| function_to_doc(f)),
+    ]
+    .into_iter()
+    .filter_map(|doc| doc)
+    .collect();
 
     RcDoc::text("(")
         .append(RcDoc::text("module"))
@@ -306,22 +320,186 @@ fn module_to_doc(module: &Module) -> RcDoc<'static> {
         .append(RcDoc::text(")"))
 }
 
+fn module_functions_to_doc(module_functions: &ModuleFunctions) -> RcDoc<'static> {
+    let funcs: Box<[RcDoc<'static>]> = module_functions.iter().map(|f| function_to_doc(f)).collect();
+    RcDoc::intersperse(funcs, Doc::line())
+}
 
-impl ModuleFunctions {
-    fn to_doc(&self) -> RcDoc<'static> {
-        let funcs: Box<[RcDoc<'static>]> = self.iter().map(|func| func.to_doc()).collect();
-        todo!()
+fn function_to_doc(f: &Function) -> RcDoc<'static> {
+    let FunctionBuilder {
+        instr_seq_arena,
+        entry_point,
+        ..
+    } = &f.builder;
+
+    let params: Vec<RcDoc<'static>> = f.params().iter().map(|p| param_to_doc(p)).collect();
+    let results: Vec<RcDoc<'static>> = f.results().iter().map(|r| result_type_to_doc(r)).collect();
+    let params_results: Box<[RcDoc<'static>]> =
+        params.into_iter().chain(results.into_iter()).collect();
+
+    let instr_seq_doc = instr_seq_to_doc(instr_seq_arena, *entry_point);
+
+    RcDoc::text("(").append(
+        RcDoc::intersperse(params_results, Doc::line())
+            .nest(1)
+            .group(),
+    ).append(instr_seq_doc).nest(1)
+        .append(")")
+}
+
+fn instr_seq_to_doc(arena: &Arena<InstrSeq>, seq_id: InstrSeqId) -> RcDoc<'static> {
+    let seq = arena.get(seq_id).unwrap();
+    let instrs: Box<[RcDoc<'static>]> = seq.0.iter().map(|instr| instr_to_doc(arena, instr)).collect();
+
+    RcDoc::intersperse(instrs, RcDoc::line())
+}
+
+fn instr_to_doc(instr_seq_arena: &Arena<InstrSeq>, instr: &Instr) -> RcDoc<'static> {
+    match instr {
+        Instr::Block(b) => block_to_doc(instr_seq_arena, b),
+        Instr::Loop(l) => loop_to_doc(instr_seq_arena, l),
+        Instr::Const(c) => const_to_doc(c),
+        Instr::Unop(u) => unop_to_doc(u),
+        Instr::IfElse(i) => if_else_to_doc(instr_seq_arena, i),
     }
 }
 
-impl Function {
-    fn to_doc(&self) -> RcDoc<'static> {
-        let Function { kind, name, .. } = self;
+fn block_to_doc(instr_seq_arena: &Arena<InstrSeq>, block: &Block) -> RcDoc<'static> {
+    let &Block { seq } = block;
+    RcDoc::text("(block")
+        .append(block_type_to_doc(&UNITYPE.into_block_type_result()))
+        .append(RcDoc::line())
+        .append(instr_seq_to_doc(instr_seq_arena, seq)).nest(1)
+        .append(")")
+}
 
-        todo!()
+fn loop_to_doc(instr_seq_arena: &Arena<InstrSeq>, l: &Loop) -> RcDoc<'static> {
+    let &Loop { seq } = l;
+    RcDoc::text("(loop")
+        .append(block_type_to_doc(&UNITYPE.into_block_type_result()))
+        .append(RcDoc::line())
+        .append(instr_seq_to_doc(instr_seq_arena, seq)).nest(1)
+        .append(")")
+}
+
+fn const_to_doc(c: &Const) -> RcDoc<'static> {
+    let Const { value } = c;
+    let ty = match value {
+        Value::I32(_) => RcDoc::text("i32.const".to_owned()),
+        Value::I64(_) => RcDoc::text("i64.const".to_owned()),
+        Value::F32(_) =>RcDoc::text("f32.const".to_owned()),
+        Value::F64(_) =>RcDoc::text("f64.const".to_owned()),
+    };
+
+    let value = match value {
+        Value::I32(n) => RcDoc::text(format!("{}", n)),
+        Value::I64(n) => RcDoc::text(format!("{}", n)),
+        Value::F32(n) =>RcDoc::text(format!("{}", n)),
+        Value::F64(n) =>RcDoc::text(format!("{}", n)),
+    };
+
+    RcDoc::text("(")
+        .append(ty)
+        .append(value)
+        .append(RcDoc::text(")"))
+}
+
+fn unop_to_doc(unop: &Unop) -> RcDoc<'static> {
+    let Unop { op } = unop;
+    match op {
+        UnaryOp::RefI31 => RcDoc::text("(ref.i31)")
     }
 }
 
-fn func_id_to_doc(func_id: FunctionId) -> RcDoc<'static> {
-    RcDoc::text(format!("${:?}", func_id.hash(&mut DefaultHasher::new())).to_string())
+fn if_else_to_doc(instr_seq_arena: &Arena<InstrSeq>, if_else: &IfElse) -> RcDoc<'static> {
+    let &IfElse { consequent, alternative } = if_else;
+
+    let consequent = instr_seq_to_doc(instr_seq_arena, consequent);
+    let alternative = instr_seq_to_doc(instr_seq_arena, alternative);
+
+    RcDoc::text("(if")
+        .append(block_type_to_doc(&UNITYPE.into_block_type_result()))
+        .append(RcDoc::line())
+        .append(consequent).nest(1)
+        .append(RcDoc::line())
+        .append(alternative).nest(1)
+        .append(")")
+}
+
+fn param_to_doc(param: &ParamType) -> RcDoc<'static> {
+    let ParamType { name, ty } = param;
+
+    let child_docs: Box<[RcDoc<'static>]> = Box::new([RcDoc::text(name.to_owned()), val_type_to_doc(ty)]);
+
+    RcDoc::text("(param")
+        .append(RcDoc::intersperse(child_docs, Doc::line()).nest(1).group())
+        .append(")")
+}
+
+fn block_type_to_doc(ty: &BlockType) -> RcDoc<'static> {
+    match ty {
+        BlockType::Result(ty) => result_type_to_doc(ty),
+        BlockType::TypeUse(ident) => RcDoc::text(ident.to_owned())
+    }
+}
+
+fn result_type_to_doc(ty: &ResultType) -> RcDoc<'static> {
+    let ResultType(ty) = ty;
+
+    RcDoc::text("(param")
+        .append(val_type_to_doc(ty))
+        .append(")")
+}
+
+fn val_type_to_doc(ty: &ValType) -> RcDoc<'static> {
+    match ty {
+        ValType::NumberType(ty) => num_type_to_doc(ty),
+        ValType::Ref(ty) => ref_type_to_doc(ty),
+    }
+}
+
+fn num_type_to_doc(ty: &NumberType) -> RcDoc<'static> {
+    RcDoc::text(match ty {
+        NumberType::I32 => "i32",
+        NumberType::I64 => "i64",
+        NumberType::F32 => "f32",
+        NumberType::F64 => "f64"
+    })
+}
+
+fn ref_type_to_doc(ty: &RefType) -> RcDoc<'static> {
+    let RefType { nullable, heap_type } = ty;
+    if *nullable {
+        RcDoc::text("(ref")
+            .append(heap_type_to_doc(heap_type))
+            .append(")")
+    } else {
+        RcDoc::text("(ref null")
+            .append(heap_type_to_doc(heap_type))
+            .append(")")
+    }
+}
+
+fn heap_type_to_doc(ty: &HeapType) -> RcDoc<'static> {
+    match ty {
+        HeapType::Abstract(ty) => abs_heap_type_to_doc(ty),
+        HeapType::Identifier(ident) => RcDoc::text(ident.to_owned())
+    }
+}
+
+fn abs_heap_type_to_doc(ty: &AbsHeapType) -> RcDoc<'static> {
+    RcDoc::text(match ty {
+        AbsHeapType::Func => "func",
+        AbsHeapType::Extern => "extern",
+        AbsHeapType::Any => "any",
+        AbsHeapType::None => "none",
+        AbsHeapType::NoExtern => "noextern",
+        AbsHeapType::NoFunc => "nofunc",
+        AbsHeapType::Eq => "eq",
+        AbsHeapType::Struct => "struct",
+        AbsHeapType::Array => "array",
+        AbsHeapType::I31 => "i31",
+        AbsHeapType::Exn => "exn",
+        AbsHeapType::NoExn => "noexn",
+    })
 }
