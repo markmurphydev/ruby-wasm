@@ -9,15 +9,15 @@
 pub mod function;
 pub mod module;
 pub mod types;
-pub mod values;
 pub mod wat;
 mod intern;
 
 use std::ops::{Deref, DerefMut};
-use crate::wasm::types::{BlockType, ParamsType, ResultsType, ValType};
+use crate::wasm::types::{BlockType, GlobalType, ParamsType, ResultsType, ValType};
 use id_arena::Id;
 use wasm_macro::wasm_instr;
 use crate::wasm::function::InstrSeqId;
+use crate::wasm::intern::InternedIdentifier;
 
 /// Constant values that can show up in WebAssembly
 #[derive(Debug, Clone, Copy)]
@@ -34,7 +34,7 @@ pub enum Value {
 
 /// An enum of all the different kinds of wasm instructions.
 ///
-/// Note that the `#[walrus_expr]` macro rewrites this enum's variants from
+/// Note that the `#[wasm_expr]` macro rewrites this enum's variants from
 ///
 /// ```ignore
 /// enum Instr {
@@ -104,13 +104,13 @@ pub enum Instr {
     //     /// The local being set.
     //     local: LocalId,
     // },
-    //
-    // /// `global.get n`
-    // GlobalGet {
-    //     /// The global being got.
-    //     global: GlobalId,
-    // },
-    //
+
+    /// `global.get n`
+    GlobalGet {
+        /// The global being got.
+        global: String,
+    },
+
     // /// `global.set n`
     // GlobalSet {
     //     /// The global being set.
@@ -587,124 +587,37 @@ pub enum BinaryOp {
     // F64Copysign,
 }
 
-/// The id of a local.
-pub type LocalId = Id<Local>;
-
-/// A local variable or parameter.
-#[derive(Clone, Debug, PartialEq, Eq, Hash)]
-pub struct Local {
-    id: LocalId,
-    ty: ValType,
-    /// A human-readable name for this local, often useful when debugging
-    /// TODO -- All these names should get folded into the ID types
-    pub name: Option<String>,
+#[derive(Debug)]
+pub struct Global {
+    pub name: String,
+    pub ty: GlobalType,
+    /// Instruction sequence to construct this global.
+    ///     Id into the module's `ModuleGlobals`'s `instr_seq_arena`
+    pub instr_seq: InstrSeqId,
 }
 
-impl Local {
-    /// Construct a new local from the given id and type.
-    pub fn new(id: LocalId, ty: ValType) -> Local {
-        Local { id, ty, name: None }
-    }
-
-    /// Get this local's id that is unique across the whole module.
-    pub fn id(&self) -> LocalId {
-        self.id
-    }
-
-    /// Get this local's type.
-    pub fn ty(&self) -> &ValType {
-        &self.ty
-    }
-}
-
-// #[derive(Debug, Clone)]
-// pub enum Instruction {
-//     // Number instructions
-//     ConstI32(I32),
-//     ConstI64(I64),
-//     /// Convert an `i32` to a `(ref i31)`
-//     RefI31,
-//     /// Convert a `(ref i31)` to `i32`, treating as unsigned
-//     I31GetU,
-//
-//     // Global instructions
-//     GlobalGet(GlobalIdx),
-//
-//     I32Xor,
-//     I32Or,
-//     I32Eqz,
-//     I32Eq,
-//
-//     // Control instructions
-//     If(If),
-//     Loop(Loop),
-// }
-
-// #[derive(Debug, Clone)]
-// /// (if label block_type? predicate_instrs* (then then_instrs*) (else else_instrs*)?)
-// pub struct If {
-//     /// Idk. Is it for named breaks?
-//     pub label: Option<String>,
-//
-//     /// The return type of the if, else blocks
-//     /// TODO: This should be a union of something and valtype
-//     /// TODO: This might always be Unitype, or might sometimes be Unitype, sometimes Void
-//     pub block_type: Type,
-//
-//     pub predicate_instrs: Vec<Instruction>,
-//
-//     pub then_instrs: Vec<Instruction>,
-//     pub else_instrs: Vec<Instruction>,
+// /// A local variable or parameter.
+// #[derive(Clone, Debug, PartialEq, Eq, Hash)]
+// pub struct Local {
+//     ty: ValType,
+//     /// A human-readable name for this local, often useful when debugging
+//     /// TODO -- All these names should get folded into the ID types
+//     pub name: Option<String>,
 // }
 //
-// #[derive(Debug, Clone)]
-// pub struct Loop {
-//     pub label: Option<String>,
-//     /// The return type of the loop instructions
-//     pub block_type: Type,
-//     pub instructions: Vec<Instruction>,
-// }
-
-// ==== Wasm Module Items ====
-
-// #[derive(Debug, Clone)]
-// pub enum FunctionIdx {
-//     // TODO -- Spec defines indices to be wasm-u32
-//     // https://webassembly.github.io/spec/core/syntax/modules.html#syntax-start
-//     Index(U32),
-//     Id(String),
-// }
+// impl Local {
+//     /// Construct a new local from the given id and type.
+//     pub fn new(id: LocalId, ty: ValType) -> Local {
+//         Local { id, ty, name: None }
+//     }
 //
-// #[derive(Debug, Clone)]
-// pub struct Function {
-//     pub id: Option<String>,
-//     pub body: Expr,
-// }
-
-// /// Sequence of instructions
-// /// https://webassembly.github.io/spec/core/syntax/instructions.html#syntax-expr
-// #[derive(Debug, Clone)]
-// pub struct Expr(pub Vec<Instruction>);
-
-// #[derive(Debug, Clone)]
-// pub enum GlobalIdx {
-//     Idx(U32),
-//     Id(String),
-// }
-
-// #[derive(Debug, Clone)]
-// pub struct Global {
-//     pub id: Option<String>,
-//     pub global_type: GlobalType,
-//     pub expr: Expr,
-// }
+//     /// Get this local's id that is unique across the whole module.
+//     pub fn id(&self) -> LocalId {
+//         self.id
+//     }
 //
-// #[derive(Debug, Clone)]
-// pub struct Module {
-//     pub functions: Vec<Function>,
-//     pub exports: Vec<FunctionIdx>,
-//     pub globals: Vec<Global>,
-//     /// A function `() -> ()` which _initializes_ the wasm module
-//     /// NB: _not_ a main function
-//     pub start: Option<FunctionIdx>,
+//     /// Get this local's type.
+//     pub fn ty(&self) -> &ValType {
+//         &self.ty
+//     }
 // }

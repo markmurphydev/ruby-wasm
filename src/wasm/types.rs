@@ -35,7 +35,7 @@ pub struct GlobalType {
 #[derive(Clone, Copy, Debug, PartialEq, Eq, Hash)]
 pub enum Mutability {
     Const,
-    Var,
+    Mut,
 }
 
 #[derive(Clone, Debug, PartialEq, Eq, Hash)]

@@ -83,14 +83,14 @@ fn main() {
         Command::Compile { text } => {
             let parser = Parser::new(Lexer::new(&text));
             let program = parser.parse();
-            let wasm = compiler::compile(program);
+            let wasm = compiler::compile(&program);
             println!("{:?}", wasm);
         }
 
         Command::Wat { text } => {
             let parser = Parser::new(Lexer::new(&text));
             let program = parser.parse();
-            let wasm = compiler::compile(program);
+            let wasm = compiler::compile(&program);
             let wat = wasm.to_pretty();
             println!("{}", wat);
         }
@@ -98,7 +98,7 @@ fn main() {
         Command::Wasm { text } => {
             let parser = Parser::new(Lexer::new(&text));
             let program = parser.parse();
-            let module = compiler::compile(program);
+            let module = compiler::compile(&program);
             // let bytes = binary::module_to_binary(&module);
             // binary::print_bytes(&bytes);
         }
@@ -106,7 +106,7 @@ fn main() {
         Command::Html { text } => {
             let parser = Parser::new(Lexer::new(&text));
             let program = parser.parse();
-            let module = compiler::compile(program);
+            let module = compiler::compile(&program);
             // let bytes = binary::module_to_binary(&module);
             // let html = html::make_html_wrapper(&bytes);
             // println!("{}", html);

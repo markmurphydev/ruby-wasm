@@ -10,4 +10,4 @@ pub mod runtime;
 mod arena_set;
 
 pub use crate::wasm::wat;
-pub use crate::wasm::function::{FunctionBuilder, InstrSeqBuilder};
+pub use crate::wasm::function::{ArenaProvider, FunctionBuilder, InstrSeqBuilder};

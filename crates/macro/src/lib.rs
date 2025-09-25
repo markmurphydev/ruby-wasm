@@ -349,7 +349,7 @@ fn create_builder(variants: &[WasmVariant]) -> impl quote::ToTokens {
     }
     quote! {
         #[allow(missing_docs)]
-        impl crate::InstrSeqBuilder<'_> {
+        impl <A: crate::ArenaProvider> crate::InstrSeqBuilder<'_, A> {
             #(#builder_methods)*
         }
     }

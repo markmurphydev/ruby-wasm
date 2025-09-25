@@ -4,10 +4,11 @@
 
 use crate::wasm::intern::{IdentifierInterner, InternedIdentifier};
 use crate::wasm::module::ModuleFunctions;
-use crate::wasm::types::{BlockType, ParamsType, ResultsType};
+use crate::wasm::types::{ParamsType, ResultsType};
 use crate::wasm::{Block, IfElse, Instr, Loop, Value};
 use id_arena::{Arena, Id};
 use std::ops::{Deref, DerefMut};
+use crate::compiler::CompileCtx;
 
 pub type FunctionId = Id<Function>;
 
@@ -90,7 +91,7 @@ impl FunctionBuilder {
     }
 
     /// Get a `InstrSeqBuilder` for building and mutating this function's body.
-    pub fn func_body(&mut self) -> InstrSeqBuilder {
+    pub fn func_body(&mut self) -> InstrSeqBuilder<Self> {
         let entry = self.entry_point;
         self.instr_seq(entry)
     }
@@ -120,47 +121,8 @@ impl FunctionBuilder {
     ///     .i32_const(42)
     ///     .drop();
     /// ```
-    pub fn instr_seq(&mut self, id: InstrSeqId) -> InstrSeqBuilder {
-        InstrSeqBuilder { id, builder: self }
-    }
-
-    /// Create a new instruction sequence that is unreachable.
-    ///
-    /// It is your responsibility to
-    ///
-    /// * make a `Instr::Block`, `Instr::Loop`, or `Instr::IfElse` that uses
-    ///   this instruction sequence, and
-    ///
-    /// * append that `Instr` into a parent instruction sequence via
-    ///   `InstrSeqBuilder::instr` or `InstrSeqBuilder::instr_at`
-    ///
-    /// or else this built up instruction sequence will never be used.
-    ///
-    /// # Example
-    ///
-    /// ```ignore
-    /// use walrus::ir::*;
-    ///
-    /// let mut module = walrus::Module::default();
-    /// let mut builder = walrus::FunctionBuilder::new(&mut module.types, &[], &[]);
-    ///
-    /// // Create an empty, dangling instruction sequemce.
-    /// let mut seq = builder.dangling_instr_seq(None);
-    /// let seq_id = seq.id();
-    ///
-    /// // Do stuff with the sequence...
-    /// drop(seq);
-    ///
-    /// // Finally, make our instruction sequence reachable by adding an
-    /// // block/loop/if-else instruction that uses it to a reachable instruction
-    /// // sequence.
-    /// builder
-    ///     .func_body()
-    ///     .instr(Block { seq: seq_id });
-    /// ```
-    pub fn dangling_instr_seq(&mut self) -> InstrSeqBuilder {
-        let id = self.instr_seq_arena.alloc(InstrSeq::new());
-        InstrSeqBuilder { id, builder: self }
+    pub fn instr_seq(&mut self, id: InstrSeqId) -> InstrSeqBuilder<Self> {
+        InstrSeqBuilder { id, arena_provider: self }
     }
 
     /// Finishes this builder, wrapping it all up and inserting it into the
@@ -171,36 +133,38 @@ impl FunctionBuilder {
     }
 }
 
-/// A builder returned by instruction sequence-construction methods to build up
-/// instructions within a block/loop/if-else over time.
-pub struct InstrSeqBuilder<'fb> {
-    pub id: InstrSeqId,
-    pub builder: &'fb mut FunctionBuilder,
+/// Trait for types that
+pub trait ArenaProvider
+where Self: Sized {
+    fn arena(&mut self) -> &mut Arena<InstrSeq>;
 }
 
-impl InstrSeqBuilder<'_> {
-    /// Returns the id of the instruction sequence that we're building.
-    // #[inline]
-    // pub fn id(&self) -> InstrSeqId {
-    //     self.id
-    // }
+impl <'a> ArenaProvider for FunctionBuilder {
+    fn arena(&mut self) -> &mut Arena<InstrSeq> {
+        &mut self.instr_seq_arena
+    }
+}
 
-    // /// Get this instruction sequence's instructions.
-    // pub fn instrs(&self) -> &[(Instr, InstrLocId)] {
-    //     &self.builder.arena[self.id]
-    // }
+/// A builder returned by instruction sequence-construction methods to build up
+/// instructions within a block/loop/if-else over time.
+pub struct InstrSeqBuilder<'a, A> {
+    pub id: InstrSeqId,
+    pub arena_provider: &'a mut A,
+}
 
-    // /// Get this instruction sequence's instructions mutably.
-    // pub fn instrs_mut(&mut self) -> &mut Vec<(Instr, InstrLocId)> {
-    //     &mut self.builder.arena[self.id].instrs
-    // }
+impl <'a, A: ArenaProvider> InstrSeqBuilder<'a, A> {
+    pub fn new(parent: &'a mut A) -> InstrSeqBuilder<'a, A> {
+        let id = parent.arena().alloc(InstrSeq::new());
+        Self {
+            id,
+            arena_provider: parent,
+        }
+    }
 
     /// Pushes a new instruction onto this builder's sequence.
     #[inline]
     pub fn instr(&mut self, instr: impl Into<Instr>) -> &mut Self {
-        self.builder.instr_seq_arena[self.id]
-            .0
-            .push(instr.into());
+        self.arena_provider.arena()[self.id].0.push(instr.into());
         self
     }
 
@@ -265,10 +229,9 @@ impl InstrSeqBuilder<'_> {
     /// ```
     pub fn block(
         &mut self,
-        ty: BlockType,
-        make_block: impl FnOnce(&mut InstrSeqBuilder),
+        make_block: impl FnOnce(&mut InstrSeqBuilder<A>),
     ) -> &mut Self {
-        let mut builder = self.builder.dangling_instr_seq();
+        let mut builder = self.dangling_instr_seq();
         make_block(&mut builder);
         let seq = builder.id;
         self.instr(Block { seq })
@@ -298,9 +261,9 @@ impl InstrSeqBuilder<'_> {
     /// ```
     pub fn loop_(
         &mut self,
-        make_loop: impl FnOnce(&mut InstrSeqBuilder),
+        make_loop: impl FnOnce(&mut InstrSeqBuilder<A>),
     ) -> &mut Self {
-        let mut builder = self.builder.dangling_instr_seq();
+        let mut builder = self.dangling_instr_seq();
         make_loop(&mut builder);
         let seq = builder.id;
         self.instr(Loop { seq })
@@ -339,26 +302,27 @@ impl InstrSeqBuilder<'_> {
     /// ```
     pub fn if_else(
         &mut self,
-        predicate: impl FnOnce(&mut InstrSeqBuilder),
-        consequent: impl FnOnce(&mut InstrSeqBuilder),
-        alternative: impl FnOnce(&mut InstrSeqBuilder),
+        ctx: &mut CompileCtx<'_>,
+        mut predicate: impl FnOnce(&mut CompileCtx<'_>, &mut InstrSeqBuilder<A>),
+        mut consequent: impl FnOnce(&mut CompileCtx<'_>, &mut InstrSeqBuilder<A>),
+        mut alternative: impl FnOnce(&mut CompileCtx<'_>, &mut InstrSeqBuilder<A>),
     ) -> &mut Self {
 
         let predicate = {
-            let mut builder = self.builder.dangling_instr_seq();
-            predicate(&mut builder);
+            let mut builder = self.dangling_instr_seq();
+            predicate(ctx, &mut builder);
             builder.id
         };
 
         let consequent = {
-            let mut builder = self.builder.dangling_instr_seq();
-            consequent(&mut builder);
+            let mut builder = self.dangling_instr_seq();
+            consequent(ctx, &mut builder);
             builder.id
         };
 
         let alternative = {
-            let mut builder = self.builder.dangling_instr_seq();
-            alternative(&mut builder);
+            let mut builder = self.dangling_instr_seq();
+            alternative(ctx, &mut builder);
             builder.id
         };
 
@@ -367,6 +331,11 @@ impl InstrSeqBuilder<'_> {
             consequent,
             alternative,
         })
+    }
+
+    fn dangling_instr_seq(&mut self) -> InstrSeqBuilder<A> {
+        let id = self.arena_provider.arena().alloc(InstrSeq::new());
+        InstrSeqBuilder { id, arena_provider: self.arena_provider }
     }
 }
 
