@@ -1,4 +1,3 @@
-use std::fs;
 use base64::Engine;
 
 /// Write an HTML wrapper that runs the given .wasm file

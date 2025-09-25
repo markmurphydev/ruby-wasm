@@ -1,6 +1,6 @@
 use clap::Parser as ParserTrait;
 use clap::Subcommand;
-use ruby_wasm::compiler;
+use ruby_wasm::{compiler, run};
 use ruby_wasm::compiler::{FIXNUM_MARKER};
 use ruby_wasm::lexeme::LexemeKind;
 use ruby_wasm::lexer::Lexer;
@@ -42,6 +42,12 @@ enum Command {
 
     /// Compiles the given program, printing a `.wasm` binary representation
     Wasm {
+        /// Text of program to compile
+        text: String,
+    },
+
+    /// Compiles and runs the given program.
+    Run {
         /// Text of program to compile
         text: String,
     },
@@ -99,17 +105,24 @@ fn main() {
             let parser = Parser::new(Lexer::new(&text));
             let program = parser.parse();
             let module = compiler::compile(&program);
-            // let bytes = binary::module_to_binary(&module);
-            // binary::print_bytes(&bytes);
+            let bytes = binary::module_to_binary(&module);
+            binary::print_bytes(&bytes);
+        }
+
+        Command::Run { text } => {
+            let parser = Parser::new(Lexer::new(&text));
+            let program = parser.parse();
+            let module = compiler::compile(&program);
+            run::run(module)
         }
 
         Command::Html { text } => {
             let parser = Parser::new(Lexer::new(&text));
             let program = parser.parse();
             let module = compiler::compile(&program);
-            // let bytes = binary::module_to_binary(&module);
-            // let html = html::make_html_wrapper(&bytes);
-            // println!("{}", html);
+            let bytes = binary::module_to_binary(&module);
+            let html = html::make_html_wrapper(&bytes);
+            println!("{}", html);
         }
 
         Command::Scratch => {

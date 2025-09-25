@@ -15,7 +15,7 @@ use crate::{ArenaProvider, runtime, wasm as W};
 // R for Ruby
 use crate::{FunctionBuilder, InstrSeqBuilder, node as R};
 
-const RUBY_TOP_LEVEL_FUNCTION_NAME: &str = "__ruby_top_level_function";
+pub const RUBY_TOP_LEVEL_FUNCTION_NAME: &str = "__ruby_top_level_function";
 
 /// We give fixnums half an i31, marking MSB 1
 /// (0b1xx_xxxx...): i31
@@ -465,9 +465,6 @@ fn compile_expr_to_wasm_predicate<A: ArenaProvider>(
     compile_expr(ctx, builder, expr);
     runtime::is_false(builder);
     builder.unop(UnaryOp::I32Eqz);
-    // instrs.append(&mut runtime::is_false());
-    // instrs.push(W::Instruction::I32Eqz);
-    // instrs
 }
 
 fn const_i31<A: ArenaProvider>(builder: &mut InstrSeqBuilder<A>, val: i32) {
