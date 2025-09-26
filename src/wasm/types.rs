@@ -28,7 +28,7 @@ impl NumType {
 #[derive(Clone, Debug, PartialEq, Eq, Hash)]
 pub struct GlobalType {
     pub mutable: Mutability,
-    pub value_type: ValType,
+    pub val_type: ValType,
 }
 
 #[derive(Clone, Copy, Debug, PartialEq, Eq, Hash)]

@@ -38,13 +38,13 @@ impl Unitype {
     /// Global<Unitype>
     pub const GLOBAL_CONST_TYPE: GlobalType = GlobalType {
         mutable: Mutability::Const,
-        value_type: Self::UNITYPE.into_val_type()
+        val_type: Self::UNITYPE.into_val_type()
     };
 
     /// mut Global<Unitype>
     pub const GLOBAL_TYPE: GlobalType = GlobalType {
         mutable: Mutability::Mut,
-        value_type: Self::UNITYPE.into_val_type()
+        val_type: Self::UNITYPE.into_val_type()
     };
 
     pub const FALSE_BIT_PATTERN: i32 = 0b0001;
