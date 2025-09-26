@@ -68,9 +68,9 @@ fn compile_expr<A: ArenaProvider>(
 ) {
     match expr {
         &R::Expr::Integer(n) => compile_integer(ctx, builder, n),
-        R::Expr::False => const_i31(builder, 0b001),
-        R::Expr::True => const_i31(builder, 0b0011),
-        R::Expr::Nil => const_i31(builder, 0b0101),
+        R::Expr::False => const_i31(builder, Unitype::FALSE_BIT_PATTERN),
+        R::Expr::True => const_i31(builder, Unitype::TRUE_BIT_PATTERN),
+        R::Expr::Nil => const_i31(builder, Unitype::NIL_BIT_PATTERN),
         R::Expr::If(if_expr) => compile_if_expr(ctx, builder, &*if_expr),
         R::Expr::While(while_expr) => compile_while_expr(ctx, builder, &*while_expr),
         R::Expr::Until(until_expr) => compile_until_expr(ctx, builder, &*until_expr),
@@ -125,7 +125,7 @@ fn compile_if_expr<A: ArenaProvider>(
             compile_statements(ctx, then_builder, statements);
         },
         |ctx, else_builder| match subsequent {
-            Subsequent::None => const_i31(else_builder, 0b0101),
+            Subsequent::None => const_i31(else_builder, Unitype::NIL_BIT_PATTERN),
             Subsequent::Elsif(if_expr) => compile_if_expr(ctx, else_builder, &if_expr),
             Subsequent::Else(else_expr) => {
                 compile_statements(ctx, else_builder, &else_expr.statements)
@@ -191,8 +191,6 @@ fn compile_until_expr<A: ArenaProvider>(
             },
             |ctx, builder| compile_statements(ctx, builder, statements),
             |_ctx, builder| {
-                // Just return nil
-                // const_i31(builder, 0b0101)
                 builder.br(label);
             },
         );
