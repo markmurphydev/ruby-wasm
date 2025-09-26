@@ -1,6 +1,6 @@
 use crate::FunctionBuilder;
 use crate::unitype::Unitype;
-use crate::wasm::function::{Function, InstrSeq, InstrSeqId};
+use crate::wasm::function::{ExportStatus, Function, InstrSeq, InstrSeqId};
 use crate::wasm::module::{Module, ModuleFunctions, ModuleGlobals};
 use crate::wasm::types::{
     AbsHeapType, BlockType, GlobalType, HeapType, Mutability, Nullability, NumType, ParamType,
@@ -100,14 +100,15 @@ fn function_to_doc(func: &Function) -> RcDoc<'static> {
 
     let name = func.name().to_owned();
     let name_doc = text("$").append(text(name.clone()));
-    let export_doc = if func.exported() {
+    let export_doc = match func.exported() {
+        ExportStatus::Exported =>
         line()
             .append(text("(export"))
             .append(space())
             .append(text(format!("\"{}\"", name)))
-            .append(")")
-    } else {
-        RcDoc::nil()
+            .append(")"),
+        ExportStatus::NotExported =>
+            RcDoc::nil()
     };
 
     let params = func.params().iter().map(|p| param_to_doc(p));

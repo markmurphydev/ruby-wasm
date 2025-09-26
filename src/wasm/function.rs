@@ -26,7 +26,7 @@ impl Function {
         self.builder.ident_interner.get(self.builder.name)
     }
 
-    pub fn exported(&self) -> bool {
+    pub fn exported(&self) -> ExportStatus {
         self.builder.exported
     }
 
@@ -37,6 +37,13 @@ impl Function {
     pub fn results(&self) -> &ResultsType {
         &self.builder.results
     }
+}
+
+/// Is this item exported?
+#[derive(Debug, Copy, Clone)]
+pub enum ExportStatus {
+    Exported,
+    NotExported
 }
 
 /// Build instances of `LocalFunction`.
@@ -60,8 +67,7 @@ pub struct FunctionBuilder {
     /// But like other trees, we prefer `(arena, idx's)` to `(heap, Box<T>)`
     pub(super) instr_seq_arena: Arena<InstrSeq>,
     name: InternedIdentifier,
-    /// Is this function exported?
-    exported: bool,
+    exported: ExportStatus,
     params: ParamsType,
     results: ResultsType,
     /// The entry-point into this function.
@@ -70,7 +76,7 @@ pub struct FunctionBuilder {
 
 impl FunctionBuilder {
     /// Creates a new, empty function builder.
-    pub fn new(name: &str, exported: bool, params: ParamsType, results: ResultsType) -> Self {
+    pub fn new(name: &str, exported: ExportStatus, params: ParamsType, results: ResultsType) -> Self {
         let mut ident_interner = IdentifierInterner::new();
         let name = ident_interner.intern(name);
 

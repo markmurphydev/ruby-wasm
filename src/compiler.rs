@@ -9,6 +9,7 @@ use crate::wasm::types::{GlobalType, Mutability, NumType, ValType};
 use crate::unitype::Unitype;
 use crate::{runtime};
 use crate::{FunctionBuilder, InstrSeqBuilder, node as R};
+use crate::wasm::function::ExportStatus;
 
 pub const RUBY_TOP_LEVEL_FUNCTION_NAME: &str = "__ruby_top_level_function";
 
@@ -25,7 +26,7 @@ pub fn compile(program: &R::Program) -> Module {
     // Build the top-level function
     let mut top_level_builder = FunctionBuilder::new(
         RUBY_TOP_LEVEL_FUNCTION_NAME,
-        true,
+        ExportStatus::Exported,
         Box::new([]),
         Box::new([Unitype::UNITYPE.into_result_type()]),
     );
