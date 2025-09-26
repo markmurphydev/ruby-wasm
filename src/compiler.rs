@@ -74,6 +74,7 @@ fn compile_expr<A: ArenaProvider>(
         R::Expr::If(if_expr) => compile_if_expr(ctx, builder, &*if_expr),
         R::Expr::While(while_expr) => compile_while_expr(ctx, builder, &*while_expr),
         R::Expr::Until(until_expr) => compile_until_expr(ctx, builder, &*until_expr),
+        _ => todo!("Global read, write")
     }
 }
 

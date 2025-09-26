@@ -6,6 +6,7 @@ use std::str::FromStr;
 use std::vec;
 
 use crate::lexeme::{Lexeme, LexemeKind as LK, LexemeKind};
+use crate::node::GlobalVariableRead;
 
 /// Strategy:
 /// - Lex on-demand
@@ -76,6 +77,8 @@ impl<'text> Parser<'text> {
             LK::False => expect_simple_kw!(LK::False, N::Expr::False),
             LK::Nil => expect_simple_kw!(LK::Nil, N::Expr::Nil),
 
+            LK::GlobalVariable {..} => Some(self.global_variable()),
+
             // Control flow
             // LK::If => Some(N::Expr::If(Box::new(self.if_expr()))),
             LK::If => box_expr_variant!(self.if_expr(), N::Expr::If),
@@ -110,7 +113,7 @@ impl<'text> Parser<'text> {
                 let if_expr = self.if_expr();
                 N::Subsequent::Elsif(Box::new(if_expr))
             }
-            _ => N::Subsequent::None
+            _ => N::Subsequent::None,
         };
 
         if expects_end_lexeme {
@@ -121,6 +124,34 @@ impl<'text> Parser<'text> {
             predicate,
             statements: then_statements,
             subsequent,
+        }
+    }
+
+    /// Parse global variable into either a `GlobalWrite` or a `GlobalRead`
+    /// Pre: `self.lexer.next().kind == LexemeKind::GlobalVariable`
+    fn global_variable(&mut self) -> N::Expr {
+        let global = self.lexer.next();
+        let Lexeme {
+            kind: LK::GlobalVariable { text },
+            ..
+        } = global
+        else {
+            unreachable!("Not a `GlobalVariable`: {:?}", global)
+        };
+
+        let name = text.chars().skip(1).collect();
+
+        // Check whether this is `GlobalWrite`
+        // ```
+        // $asdf = 22
+        // ```
+        match self.lexer.peek().kind {
+            LK::Equal => {
+                self.lexer.next();
+                let rhs = self.expr().expect("Assignment with no RHS");
+                N::Expr::GlobalVariableWrite(Box::new(N::GlobalVariableWrite { name, expr: rhs }))
+            }
+            _ => N::Expr::GlobalVariableRead(Box::new(GlobalVariableRead { name }))
         }
     }
 
@@ -166,10 +197,8 @@ impl<'text> Parser<'text> {
     /// Peek the next token. If it's of kind `expected`, consume it.
     fn consume_if_found(&mut self, expected: LK) -> Option<Lexeme> {
         match self.lexer.peek() {
-            Lexeme { kind, .. } if kind == expected => {
-                Some(self.lexer.next())
-            },
-            _ => None
+            Lexeme { kind, .. } if kind == expected => Some(self.lexer.next()),
+            _ => None,
         }
     }
 
@@ -193,18 +222,33 @@ impl<'text> Parser<'text> {
 mod tests {
     use super::*;
     use crate::lexeme::Lexeme;
+    use serde_lexpr::print;
+    use std::process::Command;
 
-    fn lex_to_eof(text: &str) -> Vec<Lexeme> {
-        let mut lexemes = vec![];
-        let mut lexer = Lexer::new(text);
-        loop {
-            let lexeme = lexer.next();
-            let eof = lexeme.kind == LK::Eof;
-            lexemes.push(lexeme);
-            if eof {
-                return lexemes;
-            }
-        }
+    /// Parse the given text
+    /// and return pretty-printed sexpr
+    /// This only works so long as the lexer can be driven independently of the parser.
+    fn parse_to_sexpr(text: &str) -> String {
+        let parser = Parser::new(Lexer::new(text));
+        let program = parser.parse();
+
+        // TODO: formatting as elisp, cause we're using emacs for pretty-printing...
+        let sexpr = serde_lexpr::to_string_custom(&program, print::Options::elisp()).unwrap();
+        format_sexpr(&sexpr)
+    }
+
+    /// Pretty print given sexpr
+    /// TODO -- Remove the emacs dependency...
+    fn format_sexpr(sexpr: &str) -> String {
+        let pp_command = format!(
+            "(pp (car (read-from-string \"{}\"))))",
+            sexpr.replace(r#"""#, r#"\""#)
+        );
+        let output = Command::new("emacs")
+            .args(["--batch", "--eval", &pp_command])
+            .output()
+            .unwrap();
+        String::from_utf8(output.stdout).unwrap()
     }
 
     // TODO -- There's gotta be a good way to test tree equality.
@@ -233,5 +277,31 @@ mod tests {
         //         assert_eq!(Expr::Integer(-22_222), statements.body[0]);
         //     }
         // }
+    }
+
+    mod globals {
+        use crate::parser::tests::parse_to_sexpr;
+        use expect_test::expect;
+
+        #[test]
+        fn global_read() {
+            let text = "$asdf";
+            let expected = expect![[r#"
+                ((statements (body (GlobalVariableRead (name . "asdf")))))
+            "#]];
+            let actual = parse_to_sexpr(text);
+            expected.assert_eq(&actual);
+        }
+
+        #[test]
+        fn global_write() {
+            let text = "$asdf = 22";
+            let expected = expect![[r#"
+                ((statements
+                  (body (GlobalVariableWrite (name . "asdf") (expr Integer . 22)))))
+            "#]];
+            let actual = parse_to_sexpr(text);
+            expected.assert_eq(&actual);
+        }
     }
 }

@@ -99,6 +99,11 @@ pub enum LexemeKind {
     /// Class variable of the form `@@<IDENTIFIER>`
     ClassVariable,
 
+    /// Global variable of the form `$<IDENTIFIER>`
+    GlobalVariable {
+        text: String
+    },
+
     /// Constant. Starts with an uppercase letter, then can be any `<IDENTIFIER>` characters
     Constant,
     Identifier,

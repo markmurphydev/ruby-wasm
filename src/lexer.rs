@@ -88,11 +88,13 @@ impl<'text> Lexer<'text> {
                 c if c.is_ascii_digit() => self.integer_or_float(start_idx),
 
                 '\'' => {
+                    // TODO: I think this `next()` is wrong
                     self.iter.next();
                     self.single_quote_string(start_idx)
                 }
 
                 '@' => {
+                    // TODO: I think this `next()` is wrong
                     self.iter.next();
                     match self.iter.peek() {
                         Some((_, '@')) => {
@@ -104,6 +106,12 @@ impl<'text> Lexer<'text> {
                         None => panic!("Bare `@`"),
                     }
                 }
+
+                '$' => match self.iter.peek() {
+                    Some((_, c)) if is_identifier_start(c) => self.global_variable(start_idx),
+                    Some(_) => panic!("Bare `$`"),
+                    None => panic!("Bare `$`"),
+                },
 
                 // Punctuation
                 // TODO: This can definitely be replaced by a macro that generates the match chain.
@@ -328,7 +336,7 @@ impl<'text> Lexer<'text> {
                 ';' => Lexeme::new(Semicolon, start_idx, CharDifference(1)),
                 c if c.is_ascii_uppercase() => self.constant(start_idx),
                 c if is_identifier_start(c) => self.identifier_or_keyword(start_idx, c),
-                _ => panic!(),
+                c => panic!("Unexpected char {}", c),
             },
         };
 
@@ -465,6 +473,31 @@ impl<'text> Lexer<'text> {
                     self.iter.next();
                 }
                 _ => return Lexeme::new(ClassVariable, start_idx, CharDifference(len)),
+            }
+        }
+    }
+
+    /// Lexes a global variable of the form `$<IDENTIFIER>`
+    /// Pre: `$` has been consumed
+    fn global_variable(&mut self, start_idx: CharIdx) -> Lexeme {
+        let mut len = 1;
+
+        loop {
+            let c = self.iter.peek();
+            match c {
+                Some((_, c)) if is_identifier_char(c) => {
+                    len += 1;
+                    self.iter.next();
+                }
+                _ => {
+                    let lexeme_text =
+                        lexeme::text_in_range(self.text, start_idx, CharDifference(len));
+                    return Lexeme::new(
+                        GlobalVariable { text: lexeme_text },
+                        start_idx,
+                        CharDifference(len),
+                    );
+                }
             }
         }
     }
@@ -862,7 +895,10 @@ mod tests {
     /// Pretty print given sexpr
     /// TODO -- Remove the emacs dependency...
     fn format_sexpr(sexpr: &str) -> String {
-        let pp_command = format!("(pp (car (read-from-string \"{}\"))))", sexpr.replace(r#"""#, r#"\""#));
+        let pp_command = format!(
+            "(pp (car (read-from-string \"{}\"))))",
+            sexpr.replace(r#"""#, r#"\""#)
+        );
         let output = Command::new("emacs")
             .args(["--batch", "--eval", &pp_command])
             .output()
@@ -938,6 +974,17 @@ mod tests {
              ((kind . False) (start . 9) (len . 5))
              ((kind . Newline) (start . 14) (len . 1))
              ((kind . Eof) (start . 15) (len . 0)))
+        "#]];
+        let actual = lex_to_sexpr(text);
+        expected.assert_eq(&actual);
+    }
+
+    #[test]
+    fn global_variable() {
+        let text = "$asdf";
+        let expected = expect![[r#"
+        (((kind GlobalVariable (text . "$asdf")) (start . 0) (len . 5))
+         ((kind . Eof) (start . 5) (len . 0)))
         "#]];
         let actual = lex_to_sexpr(text);
         expected.assert_eq(&actual);
