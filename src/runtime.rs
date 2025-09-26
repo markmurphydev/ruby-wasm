@@ -5,7 +5,7 @@
 //!     But you'd need to explicitly take in args
 //! TODO -- We would like to use IR ruby-values here.
 
-use crate::{ArenaProvider, InstrSeqBuilder};
+use crate::{CompileCtx, InstrSeqBuilder};
 use crate::unitype::Unitype;
 use crate::wasm::{BinaryOp, UnaryOp};
 
@@ -13,10 +13,10 @@ use crate::wasm::{BinaryOp, UnaryOp};
 /// `[Unitype] -> [I32]`
 /// TODO -- We assume here that `Unitype ≡ I31`.
 ///     To do this generally, we need to cast to i31, and compare.
-pub fn is_false<A: ArenaProvider>(builder: &mut InstrSeqBuilder<A>) {
-    builder.unop(UnaryOp::I31GetU)
-        .i32_const(Unitype::FALSE_BIT_PATTERN)
-        .binop(BinaryOp::I32Eq);
+pub fn is_false(ctx: &mut CompileCtx<'_>, builder: &InstrSeqBuilder) {
+    builder.unop(ctx, UnaryOp::I31GetU)
+        .i32_const(ctx, Unitype::FALSE_BIT_PATTERN)
+        .binop(ctx, BinaryOp::I32Eq);
 }
 
 // /// Is the given value ruby-truthy?

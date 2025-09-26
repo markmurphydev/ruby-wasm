@@ -588,8 +588,9 @@ pub enum BinaryOp {
 pub struct Global {
     pub name: String,
     pub ty: GlobalType,
-    /// Instruction sequence to construct this global.
-    ///     Id into the module's `ModuleGlobals`'s `instr_seq_arena`
+    /// Id of the root of the instr-seq tree this global initializes
+    ///     Id into the module's `instr_seq_arena`
+    /// TODO -- actually ambiguous rn.
     pub instr_seq: InstrSeqId,
 }
 

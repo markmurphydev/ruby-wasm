@@ -11,4 +11,5 @@ pub mod run;
 pub mod unitype;
 
 pub use crate::wasm::wat;
-pub use crate::wasm::function::{ArenaProvider, FunctionBuilder, InstrSeqBuilder};
+pub use crate::compiler::CompileCtx;
+pub use crate::wasm::function::{FunctionBuilder, InstrSeqBuilder};

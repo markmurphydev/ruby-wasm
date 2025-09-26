@@ -332,14 +332,14 @@ fn create_builder(variants: &[WasmVariant]) -> impl quote::ToTokens {
         builder_methods.push(quote! {
             #[inline]
             #[doc=#doc]
-            pub fn #method_name(&mut self, #(#args),*) -> &mut Self {
-                self.instr(#name { #(#arg_names),* })
+            pub fn #method_name(&self, ctx: &mut crate::CompileCtx<'_>, #(#args),*) -> &Self {
+                self.instr(ctx, #name { #(#arg_names),* })
             }
         });
     }
     quote! {
         #[allow(missing_docs)]
-        impl <A: crate::ArenaProvider> crate::InstrSeqBuilder<'_, A> {
+        impl crate::InstrSeqBuilder {
             #(#builder_methods)*
         }
     }

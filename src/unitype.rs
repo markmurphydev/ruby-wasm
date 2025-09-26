@@ -4,7 +4,7 @@
 use pretty::RcDoc;
 use serde::Serialize;
 use crate::wasm::types::Nullability::NonNullable;
-use crate::wasm::types::{AbsHeapType, RefType};
+use crate::wasm::types::{AbsHeapType, GlobalType, Mutability, RefType};
 use wasmtime::{AnyRef, Rooted};
 
 /// Fixnums are identified with a 1 in the MSB of the i31
@@ -34,6 +34,18 @@ impl Unitype {
     /// Wasm-supertype of all Ruby values
     /// ≡ `(ref eq)`
     pub const UNITYPE: RefType = RefType::new_abstract(AbsHeapType::Eq, NonNullable);
+
+    /// Global<Unitype>
+    pub const GLOBAL_CONST_TYPE: GlobalType = GlobalType {
+        mutable: Mutability::Const,
+        value_type: Self::UNITYPE.into_val_type()
+    };
+
+    /// mut Global<Unitype>
+    pub const GLOBAL_TYPE: GlobalType = GlobalType {
+        mutable: Mutability::Mut,
+        value_type: Self::UNITYPE.into_val_type()
+    };
 
     pub const FALSE_BIT_PATTERN: i32 = 0b0001;
     pub const TRUE_BIT_PATTERN: i32 = 0b0011;

@@ -1,6 +1,7 @@
 //! TODO -- I want `Type` to be `copy`, but I don't know if function types will fuck that up
 //!     Probably interning fixes everything?
 
+
 #[derive(Clone, Debug, PartialEq, Eq, Hash)]
 pub enum ValType {
     NumType(NumType),
@@ -26,7 +27,7 @@ impl NumType {
 
 #[derive(Clone, Debug, PartialEq, Eq, Hash)]
 pub struct GlobalType {
-    pub mutability: Mutability,
+    pub mutable: Mutability,
     pub value_type: ValType,
 }
 
@@ -108,15 +109,15 @@ impl RefType {
         self
     }
 
-    pub fn into_val_type(self) -> ValType {
+    pub const fn into_val_type(self) -> ValType {
         ValType::Ref(self)
     }
 
-    pub fn into_result_type(self) -> ResultType {
+    pub const fn into_result_type(self) -> ResultType {
         ResultType(self.into_val_type())
     }
 
-    pub fn into_block_type_result(self) -> BlockType {
+    pub const fn into_block_type_result(self) -> BlockType {
         BlockType::Result(self.into_result_type())
     }
 }

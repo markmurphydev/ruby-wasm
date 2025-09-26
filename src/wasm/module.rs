@@ -5,8 +5,9 @@
 //!     The way to do it would be to pass `&mut Interner` to each `____Builder` method
 //!     (maybe as part of a `CompileCtx` object)
 
-use crate::wasm::function::{ArenaProvider, Function, FunctionId, InstrSeq};
-use crate::wasm::types::GlobalType;
+use crate::unitype::Unitype;
+use crate::wasm::function::{Function, FunctionId, InstrSeq, InstrSeqId};
+use crate::wasm::intern::IdentifierInterner;
 use crate::wasm::Global;
 use crate::InstrSeqBuilder;
 use id_arena::{Arena, Id};
@@ -19,6 +20,12 @@ use id_arena::{Arena, Id};
 #[derive(Debug, Default)]
 #[allow(missing_docs)]
 pub struct Module {
+    /// Symbol interner used for everything but functions (don't ask...)
+    /// TODO: Fix.
+    pub interner: IdentifierInterner,
+    /// Instr seq arena used for everything but functions TODO -- fix
+    pub instr_seq_arena: Arena<InstrSeq>,
+
     // pub imports: ModuleImports,
     pub funcs: ModuleFunctions,
     pub globals: ModuleGlobals,
@@ -60,7 +67,6 @@ impl ModuleFunctions {
     }
 }
 
-
 pub type GlobalId = Id<Global>;
 
 /// The set of globals in each function in this module.
@@ -76,26 +82,31 @@ impl ModuleGlobals {
         Self::default()
     }
 
-    /// Construct a new global, that does not originate from any of the input
-    /// wasm globals.
-    pub fn add(
-        &mut self,
-        name: String,
-        ty: GlobalType,
-        instr_seq_f: impl FnOnce(&mut InstrSeqBuilder<Self>),
-    ) {
-        let instr_seq_id = {
-            let mut builder = InstrSeqBuilder::new(self);
-            instr_seq_f(&mut builder);
-            builder.id
-        };
-
-        self.global_arena.alloc(Global {
-            name,
-            ty,
-            instr_seq: instr_seq_id,
-        });
+    pub fn add(&mut self, global: Global) {
+        self.global_arena.alloc(global);
     }
+
+    // /// Construct a new global, that does not originate from any of the input
+    // /// wasm globals.
+    // pub fn add(
+    //     &mut self,
+    //     ctx: &mut CompileCtx<'_>,
+    //     name: String,
+    //     ty: GlobalType,
+    //     instr_seq_f: impl FnOnce(&mut CompileCtx<'_>, &InstrSeqBuilder),
+    // ) {
+    //     let instr_seq_id = {
+    //         let mut builder = InstrSeqBuilder::new(&mut ctx.module.instr_seq_arena);
+    //         instr_seq_f(ctx, &mut builder);
+    //         builder.id
+    //     };
+    //
+    //     self.global_arena.alloc(Global {
+    //         name,
+    //         ty,
+    //         instr_seq: instr_seq_id,
+    //     });
+    // }
 
     /// Gets a reference to a global given its id
     pub fn get(&self, id: GlobalId) -> &Global {
@@ -113,8 +124,30 @@ impl ModuleGlobals {
     }
 }
 
-impl ArenaProvider for ModuleGlobals {
-    fn arena(&mut self) -> &mut Arena<InstrSeq> {
-        &mut self.instr_seq_arena
+pub struct GlobalBuilder {
+    name: String,
+    /// Id of the root of the instr-seq tree this global initializes
+    instr_seq_id: InstrSeqId,
+}
+
+impl GlobalBuilder {
+    pub fn new(module: &mut Module, name: String) -> Self {
+        let arena = &mut module.instr_seq_arena;
+        let instr_seq_id = arena.alloc(InstrSeq::new());
+        Self { name, instr_seq_id }
+    }
+
+    /// Get an `InstrSeqBuilder` for building this global's body.
+    pub fn instr_seq(&self) -> InstrSeqBuilder {
+        InstrSeqBuilder { id: self.instr_seq_id }
+    }
+
+    pub fn finish(self, globals: &mut ModuleGlobals) {
+        let global = Global {
+            name: self.name,
+            ty: Unitype::GLOBAL_TYPE,
+            instr_seq: self.instr_seq_id
+        };
+        globals.add(global)
     }
 }
