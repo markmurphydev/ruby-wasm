@@ -1,6 +1,3 @@
-//! TODO -- I want `Type` to be `copy`, but I don't know if function types will fuck that up
-//!     Probably interning fixes everything?
-
 
 #[derive(Clone, Debug, PartialEq, Eq, Hash)]
 pub enum ValType {
@@ -203,7 +200,7 @@ pub enum BlockType {
 #[derive(Clone, Debug, PartialEq, Eq, Hash)]
 pub struct SubType {
     pub is_final: bool,
-    pub supertypes: Option<Vec<Box<SubType>>>,
+    pub supertypes: Option<Box<[SubType]>>,
     pub comp_type: CompType,
 }
 

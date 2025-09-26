@@ -4,12 +4,12 @@
 use crate::node::{GlobalVariableRead, GlobalVariableWrite, Subsequent};
 use crate::wasm::UnaryOp;
 use crate::wasm::module::{GlobalBuilder, Module};
-use crate::wasm::types::{GlobalType, Mutability, NumType, ValType};
 // R for Ruby
+use crate::runtime;
 use crate::unitype::Unitype;
-use crate::{runtime};
-use crate::{FunctionBuilder, InstrSeqBuilder, node as R};
 use crate::wasm::function::ExportStatus;
+use crate::wasm::instr_seq::InstrSeqBuilder;
+use crate::{FunctionBuilder, node as R};
 
 pub const RUBY_TOP_LEVEL_FUNCTION_NAME: &str = "__ruby_top_level_function";
 
@@ -25,6 +25,7 @@ pub fn compile(program: &R::Program) -> Module {
 
     // Build the top-level function
     let mut top_level_builder = FunctionBuilder::new(
+        &mut ctx,
         RUBY_TOP_LEVEL_FUNCTION_NAME,
         ExportStatus::Exported,
         Box::new([]),
@@ -62,19 +63,19 @@ fn compile_statements(
     compile_expr(ctx, builder, &body[last_statement_idx])
 }
 
-fn compile_expr(
-    ctx: &mut CompileCtx<'_>,
-    builder: &InstrSeqBuilder,
-    expr: &R::Expr,
-) {
+fn compile_expr(ctx: &mut CompileCtx<'_>, builder: &InstrSeqBuilder, expr: &R::Expr) {
     match expr {
         &R::Expr::Integer(n) => compile_integer(ctx, builder, n),
         R::Expr::False => const_i31(ctx, builder, Unitype::FALSE_BIT_PATTERN),
         R::Expr::True => const_i31(ctx, builder, Unitype::TRUE_BIT_PATTERN),
         R::Expr::Nil => const_i31(ctx, builder, Unitype::NIL_BIT_PATTERN),
 
-        R::Expr::GlobalVariableWrite(global_write) => compile_global_variable_write(ctx, global_write),
-        R::Expr::GlobalVariableRead(global_read) => compile_global_variable_read(ctx, builder, global_read),
+        R::Expr::GlobalVariableWrite(global_write) => {
+            compile_global_variable_write(ctx, global_write)
+        }
+        R::Expr::GlobalVariableRead(global_read) => {
+            compile_global_variable_read(ctx, builder, global_read)
+        }
 
         R::Expr::If(if_expr) => compile_if_expr(ctx, builder, &*if_expr),
         R::Expr::While(while_expr) => compile_while_expr(ctx, builder, &*while_expr),
@@ -83,11 +84,7 @@ fn compile_expr(
 }
 
 /// Convert the given integer into a Wasm fixnum or const global representation
-fn compile_integer(
-    ctx: &mut CompileCtx<'_>,
-    builder: &InstrSeqBuilder,
-    n: i64,
-) {
+fn compile_integer(ctx: &mut CompileCtx<'_>, builder: &InstrSeqBuilder, n: i64) {
     let unitype = Unitype::from_integer(n);
     match unitype {
         fixnum @ Unitype::Fixnum(_) => const_i31(ctx, builder, fixnum.to_i31_bits()),
@@ -101,7 +98,7 @@ fn compile_integer(
 
             let global_builder = GlobalBuilder::new(ctx.module, global_id.clone());
             global_builder.instr_seq().i64_const(ctx, heapnum);
-            global_builder.finish(&mut ctx.module.globals);
+            global_builder.finish(ctx);
 
             builder.global_get(ctx, global_id);
         }
@@ -110,16 +107,13 @@ fn compile_integer(
 }
 
 /// Add a global to the Module, setting its value to the write's rhs.
-fn compile_global_variable_write(
-    ctx: &mut CompileCtx<'_>,
-    global_write: &GlobalVariableWrite,
-) {
+fn compile_global_variable_write(ctx: &mut CompileCtx<'_>, global_write: &GlobalVariableWrite) {
     let GlobalVariableWrite { name, expr } = global_write;
 
     let global_builder = GlobalBuilder::new(ctx.module, name.clone());
     let instr_seq_builder = global_builder.instr_seq();
     compile_expr(ctx, &instr_seq_builder, expr);
-    global_builder.finish(&mut ctx.module.globals);
+    global_builder.finish(ctx);
 }
 
 fn compile_global_variable_read(
@@ -132,11 +126,7 @@ fn compile_global_variable_read(
     builder.global_get(ctx, name.clone());
 }
 
-fn compile_if_expr(
-    ctx: &mut CompileCtx<'_>,
-    builder: &InstrSeqBuilder,
-    if_expr: &R::If,
-) {
+fn compile_if_expr(ctx: &mut CompileCtx<'_>, builder: &InstrSeqBuilder, if_expr: &R::If) {
     let R::If {
         predicate,
         statements,
@@ -158,11 +148,7 @@ fn compile_if_expr(
     );
 }
 
-fn compile_while_expr(
-    ctx: &mut CompileCtx<'_>,
-    builder: &InstrSeqBuilder,
-    while_expr: &R::While,
-) {
+fn compile_while_expr(ctx: &mut CompileCtx<'_>, builder: &InstrSeqBuilder, while_expr: &R::While) {
     // while ->
     // (loop
     //   (if UNITYPE predicate
@@ -189,11 +175,7 @@ fn compile_while_expr(
     });
 }
 
-fn compile_until_expr(
-    ctx: &mut CompileCtx<'_>,
-    builder: &InstrSeqBuilder,
-    until_expr: &R::Until,
-) {
+fn compile_until_expr(ctx: &mut CompileCtx<'_>, builder: &InstrSeqBuilder, until_expr: &R::Until) {
     // TODO -- It might be nicer to have an IR where `until` is lowered to `while`
     // while ->
     // (loop

@@ -5,9 +5,10 @@
 //!     But you'd need to explicitly take in args
 //! TODO -- We would like to use IR ruby-values here.
 
-use crate::{CompileCtx, InstrSeqBuilder};
+use crate::CompileCtx;
 use crate::unitype::Unitype;
 use crate::wasm::{BinaryOp, UnaryOp};
+use crate::wasm::instr_seq::InstrSeqBuilder;
 
 /// Is the given ruby-value equal to ruby-true?
 /// `[Unitype] -> [I32]`

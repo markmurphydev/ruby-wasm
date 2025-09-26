@@ -221,7 +221,6 @@ impl<'text> Parser<'text> {
 #[cfg(test)]
 mod tests {
     use super::*;
-    use crate::lexeme::Lexeme;
     use serde_lexpr::print;
     use std::process::Command;
 

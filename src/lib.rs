@@ -10,6 +10,7 @@ pub mod runtime;
 pub mod run;
 pub mod unitype;
 
+pub use wasm::instr_seq::InstrSeqBuilder;
 pub use crate::wasm::wat;
 pub use crate::compiler::CompileCtx;
-pub use crate::wasm::function::{FunctionBuilder, InstrSeqBuilder};
+pub use crate::wasm::function::FunctionBuilder;

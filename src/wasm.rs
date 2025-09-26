@@ -11,10 +11,12 @@ pub mod module;
 pub mod types;
 pub mod wat;
 mod intern;
+pub mod instr_seq;
 
-use crate::wasm::function::InstrSeqId;
+use instr_seq::InstrSeqId;
 use crate::wasm::types::GlobalType;
 use wasm_macro::wasm_instr;
+use crate::wasm::intern::InternedIdentifier;
 
 /// Constant values that can show up in WebAssembly
 #[derive(Debug, Clone, Copy)]
@@ -586,7 +588,7 @@ pub enum BinaryOp {
 
 #[derive(Debug)]
 pub struct Global {
-    pub name: String,
+    pub name: InternedIdentifier,
     pub ty: GlobalType,
     /// Id of the root of the instr-seq tree this global initializes
     ///     Id into the module's `instr_seq_arena`
