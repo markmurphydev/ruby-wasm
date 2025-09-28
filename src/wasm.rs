@@ -108,7 +108,7 @@ pub enum Instr {
     /// `global.get n`
     GlobalGet {
         /// The global being got.
-        global: String,
+        name: String,
     },
 
     // /// `global.set n`

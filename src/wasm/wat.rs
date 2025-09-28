@@ -1,3 +1,9 @@
+//! Pretty-print a [Module] as WAT.
+//!
+//! Pretty-printing tips:
+//! - To indent the first line of a nested block,
+//!     make sure it's the first element of the nested append.
+
 use crate::unitype::Unitype;
 use crate::wasm::function::{ExportStatus, Function};
 use crate::wasm::instr_seq::{InstrSeq, InstrSeqId};
@@ -16,6 +22,8 @@ use std::borrow::Cow;
 
 type Doc = RcDoc<'static>;
 
+const INDENT: isize = 2;
+
 impl Module {
     pub fn to_pretty(&self) -> String {
         let mut w = Vec::new();
@@ -24,6 +32,11 @@ impl Module {
     }
 }
 
+/// ```wat
+/// (module
+///     <globals>
+///     <functions>)
+/// ```
 fn module_to_doc(module: &Module) -> Doc {
     let Module {
         interner,
@@ -38,7 +51,7 @@ fn module_to_doc(module: &Module) -> Doc {
         &Some(start) => Some(funcs.get(start)),
     };
 
-    let child_docs = [
+    let module_fields = [
         Some(module_globals_to_doc(interner, instr_seq_arena, globals)),
         Some(module_functions_to_doc(&interner, &instr_seq_arena, funcs)),
         start.map(|f| function_to_doc(&interner, &instr_seq_arena, f)),
@@ -47,11 +60,18 @@ fn module_to_doc(module: &Module) -> Doc {
     .filter_map(|doc| doc);
 
     text("(module")
-        .append(line())
-        .append(RcDoc::intersperse(child_docs, Doc::line()).append(text(")")))
-        .nest(2)
+        .append(
+            hardline()
+                .append(intersperse(module_fields, hardline()))
+                .nest(INDENT),
+        )
+        .append(")")
+        .group()
 }
 
+/// ```wat
+/// <global>*
+/// ```
 fn module_globals_to_doc(
     interner: &IdentifierInterner,
     instr_seqs: &Arena<InstrSeq>,
@@ -61,7 +81,7 @@ fn module_globals_to_doc(
         .iter()
         .map(|(_, g)| global_to_doc(interner, instr_seqs, g))
         .collect();
-    RcDoc::intersperse(globals, Doc::line())
+    intersperse(globals, hardline())
 }
 
 /// ```wat
@@ -76,20 +96,21 @@ fn global_to_doc(interner: &IdentifierInterner, arena: &Arena<InstrSeq>, global:
     } = global;
 
     let name = interner.get(*name);
-    let name = text("\"").append(name.to_owned()).append(text("\""));
+    let name = format!("\"{}\"", name);
 
     let ty = global_type_to_doc(ty);
     let instr_seq = instr_seq_to_doc(arena, *instr_seq);
 
     text("(global ")
-        .append(space())
-        .append(name)
-        .append(space())
-        .append(ty)
         .append(line())
+        .append(name)
+        .append(line())
+        .append(ty)
+        .append(hardline())
         .append(instr_seq)
         .append(")")
-        .nest(2)
+        .nest(INDENT)
+        .group()
 }
 
 fn module_functions_to_doc(
@@ -101,9 +122,20 @@ fn module_functions_to_doc(
         .iter()
         .map(|f| function_to_doc(interner, instr_seq_arena, f))
         .collect();
-    RcDoc::intersperse(funcs, Doc::line())
+    intersperse(funcs, hardline())
 }
 
+/// ```wat
+/// func ::=
+/// (func <id> <export> <param>* <result>+
+///     <instr_seq>)
+///
+/// export ::=
+/// (export "<name>")
+///
+/// result ::=
+/// (result <val_type>)
+/// ```
 fn function_to_doc(
     interner: &IdentifierInterner,
     instr_seq_arena: &Arena<InstrSeq>,
@@ -118,20 +150,23 @@ fn function_to_doc(
     } = function;
 
     let name = interner.get(*name);
-    let name_doc = text("$").append(text(name.to_owned()));
+    let name_doc = format!("${}", name);
 
     let exported = match exported {
-        ExportStatus::Exported => line()
-            .append(text("(export"))
-            .append(space())
-            .append(text(format!("\"{}\"", name)))
-            .append(")"),
-        ExportStatus::NotExported => RcDoc::nil(),
+        ExportStatus::Exported => line().append(format!("(export \"{}\")", name)),
+        ExportStatus::NotExported => nil(),
     };
 
-    let params = params.iter().map(|p| param_to_doc(p));
-    let results = results.iter().map(|r| result_type_to_doc(r));
-    let params_results = params.into_iter().chain(results.into_iter());
+    let params = if params.is_empty() {
+        nil()
+    } else {
+        let params = params.iter().map(|p| param_type_to_doc(p));
+        line().append(intersperse(params, line()).group())
+    };
+    let results = {
+        let results = results.iter().map(|r| result_type_to_doc(r));
+        line().append(intersperse(results, line()).group())
+    };
 
     let instr_seq_doc = instr_seq_to_doc(instr_seq_arena, *entry_point);
 
@@ -139,16 +174,13 @@ fn function_to_doc(
         .append(line())
         .append(name_doc)
         .append(exported)
-        .append(line())
-        .append(
-            RcDoc::intersperse(params_results, Doc::line())
-                .nest(2)
-                .group(),
-        )
+        .append(params)
+        .append(results)
+        .append(hardline())
+        .append(instr_seq_doc)
+        .append(")")
+        .nest(INDENT)
         .group()
-        .append(line())
-        .append(instr_seq_doc.append(text(")")))
-        .nest(2)
 }
 
 fn instr_seq_to_doc(arena: &Arena<InstrSeq>, seq_id: InstrSeqId) -> Doc {
@@ -159,7 +191,7 @@ fn instr_seq_to_doc(arena: &Arena<InstrSeq>, seq_id: InstrSeqId) -> Doc {
         .map(|instr| instr_to_doc(arena, instr))
         .collect();
 
-    RcDoc::intersperse(instrs, line())
+    intersperse(instrs, line())
 }
 
 fn instr_to_doc(instr_seq_arena: &Arena<InstrSeq>, instr: &Instr) -> Doc {
@@ -172,38 +204,51 @@ fn instr_to_doc(instr_seq_arena: &Arena<InstrSeq>, instr: &Instr) -> Doc {
         Binop(b) => binop_to_doc(b),
         IfElse(i) => if_else_to_doc(instr_seq_arena, i),
         Drop(_) => text("(drop)"),
-        GlobalGet(g) => text("(global.get")
-            .append(space())
-            .append(g.global.clone())
-            .append(")"),
-        Br(b) => text("(br ").append(b.label.clone()).append(")"),
+        GlobalGet(global) => text(format!("(global.get {})", global.name.clone())),
+        Br(br) => text(format!("(br {})", br.label.clone())),
     }
 }
 
+/// ```wat
+/// (block <label> <block_type>
+///     <instr>*)
+/// ```
 fn block_to_doc(instr_seq_arena: &Arena<InstrSeq>, block: &Block) -> Doc {
     let &Block { seq } = block;
+    let block_type = block_type_to_doc(&Unitype::UNITYPE.into_block_type_result());
+    let instr_seq = instr_seq_to_doc(instr_seq_arena, seq);
     text("(block")
-        .append(block_type_to_doc(
-            &Unitype::UNITYPE.into_block_type_result(),
-        ))
-        .append(line())
-        .append(instr_seq_to_doc(instr_seq_arena, seq))
+        .append(
+            line().append(block_type).group(), // insert label here
+        )
+        .append(hardline())
+        .append(instr_seq)
         .append(")")
+        .nest(INDENT)
+        .group()
 }
 
+/// ```wat
+/// (loop <label> <block_type>
+///     <instr>*)
+/// ```
 fn loop_to_doc(instr_seq_arena: &Arena<InstrSeq>, l: &Loop) -> Doc {
     let Loop { label, seq } = l;
+    let block_type = block_type_to_doc(&Unitype::UNITYPE.into_block_type_result());
+    let instr_seq = instr_seq_to_doc(instr_seq_arena, *seq);
     text("(loop")
-        .append(space())
-        .append(text(label.clone()))
-        .append(space())
-        .append(block_type_to_doc(
-            &Unitype::UNITYPE.into_block_type_result(),
-        ))
-        .append(line())
+        .append(
+            line()
+                .append(label.clone())
+                .append(line())
+                .append(block_type)
+                .group(),
+        )
+        .append(hardline())
         .append(instr_seq_to_doc(instr_seq_arena, *seq))
         .append(")")
-        .nest(2)
+        .nest(INDENT)
+        .group()
 }
 
 fn const_to_doc(c: &Const) -> Doc {
@@ -226,7 +271,8 @@ fn const_to_doc(c: &Const) -> Doc {
         .append(ty)
         .append(space())
         .append(value)
-        .append(text(")"))
+        .append(")")
+        .group()
 }
 
 fn unop_to_doc(unop: &Unop) -> Doc {
@@ -238,7 +284,7 @@ fn unop_to_doc(unop: &Unop) -> Doc {
         UnaryOp::I31GetU => "i31.get_u",
     };
 
-    text("(").append(text(op)).append(text(")"))
+    text(format!("({})", op))
 }
 
 fn binop_to_doc(binop: &Binop) -> Doc {
@@ -247,9 +293,15 @@ fn binop_to_doc(binop: &Binop) -> Doc {
         BinaryOp::I32Eq => "i32.eq",
     };
 
-    text("(").append(text(op)).append(text(")"))
+    text(format!("({})", op))
 }
 
+/// ```wat
+/// (if <label> <block_type>
+///     <instr>*
+///     (then <instr>+)
+///     (else <instr>+)?)
+/// ```
 fn if_else_to_doc(instr_seq_arena: &Arena<InstrSeq>, if_else: &IfElse) -> Doc {
     let &IfElse {
         predicate,
@@ -257,42 +309,69 @@ fn if_else_to_doc(instr_seq_arena: &Arena<InstrSeq>, if_else: &IfElse) -> Doc {
         alternative,
     } = if_else;
 
+    let block_type = block_type_to_doc(&Unitype::UNITYPE.into_block_type_result());
     let predicate = instr_seq_to_doc(instr_seq_arena, predicate);
-    let consequent = instr_seq_to_doc(instr_seq_arena, consequent);
-    let alternative = instr_seq_to_doc(instr_seq_arena, alternative);
+    let consequent = {
+        let seq = instr_seq_to_doc(instr_seq_arena, consequent);
+        text("(then")
+            .append(hardline())
+            .append(seq)
+            .append(")")
+            .nest(INDENT)
+    };
+    let alternative = {
+        let seq = instr_seq_to_doc(instr_seq_arena, alternative);
+        text("(else")
+            .append(hardline())
+            .append(seq)
+            .append(")")
+            .nest(INDENT)
+    };
 
     text("(if")
-        .append(space())
-        .append(block_type_to_doc(
-            &Unitype::UNITYPE.into_block_type_result(),
-        ))
-        .append(line())
+        .append(
+            line().append(block_type).group(), // insert label here
+        )
+        .append(hardline())
         .append(predicate)
-        .append(line())
-        .append(
-            text("(then")
-                .append(line().append(consequent).append(")"))
-                .nest(2),
-        )
-        .append(line())
-        .append(
-            text("(else")
-                .append(line().append(alternative).append(")"))
-                .nest(2),
-        )
-        .nest(2)
+        .append(hardline())
+        .append(consequent)
+        .append(hardline())
+        .append(alternative)
         .append(")")
+        .nest(INDENT)
 }
 
-fn param_to_doc(param: &ParamType) -> Doc {
+/// ```wat
+/// (param <id> <val_type>)
+/// ```
+fn param_type_to_doc(param: &ParamType) -> Doc {
     let ParamType { name, ty } = param;
 
-    let child_docs: Box<[Doc]> = Box::new([text(name.to_owned()), val_type_to_doc(ty)]);
+    let name = name.to_owned();
+    let ty = val_type_to_doc(ty);
 
     text("(param")
-        .append(space())
-        .append(RcDoc::intersperse(child_docs, Doc::line()).nest(1).group())
+        .append(line())
+        .append(name)
+        .append(line())
+        .append(ty)
+        .nest(INDENT)
+        .group()
+}
+
+/// ```wat
+/// (result <val_type>)
+/// ```
+fn result_type_to_doc(ty: &ResultType) -> Doc {
+    let ResultType(ty) = ty;
+
+    text("(result")
+        .append(line())
+        .append(val_type_to_doc(ty))
         .append(")")
+        .nest(INDENT)
+        .group()
 }
 
 /// ```wat
@@ -303,7 +382,12 @@ fn global_type_to_doc(ty: &GlobalType) -> Doc {
     let GlobalType { mutable, val_type } = ty;
     let val_type = val_type_to_doc(val_type);
     match mutable {
-        Mutability::Mut => text("(mut ").append(space()).append(val_type).append(")"),
+        Mutability::Mut => text("(mut")
+            .append(line())
+            .append(val_type)
+            .append(")")
+            .nest(INDENT)
+            .group(),
         Mutability::Const => val_type,
     }
 }
@@ -313,15 +397,6 @@ fn block_type_to_doc(ty: &BlockType) -> Doc {
         BlockType::Result(ty) => result_type_to_doc(ty),
         BlockType::TypeUse(ident) => text(ident.to_owned()),
     }
-}
-
-fn result_type_to_doc(ty: &ResultType) -> Doc {
-    let ResultType(ty) = ty;
-
-    text("(result")
-        .append(space())
-        .append(val_type_to_doc(ty))
-        .append(")")
 }
 
 fn val_type_to_doc(ty: &ValType) -> Doc {
@@ -340,20 +415,27 @@ fn num_type_to_doc(ty: &NumType) -> Doc {
     })
 }
 
+/// ```wat
+/// (ref null? <heap_type>)
+/// ```
 fn ref_type_to_doc(ty: &RefType) -> Doc {
     let RefType {
         nullable,
         heap_type,
     } = ty;
 
-    let name = match nullable {
-        Nullability::Nullable => "(ref null",
-        Nullability::NonNullable => "(ref",
+    let nullability = match nullable {
+        Nullability::Nullable => space().append(text("null")),
+        Nullability::NonNullable => nil()
     };
-    text(name)
-        .append(space())
+
+    text("(ref")
+        .append(nullability)
+        .append(line())
         .append(heap_type_to_doc(heap_type))
         .append(")")
+        .nest(INDENT)
+        .group()
 }
 
 fn heap_type_to_doc(ty: &HeapType) -> Doc {
@@ -390,4 +472,16 @@ fn space() -> Doc {
 
 fn line() -> Doc {
     RcDoc::line()
+}
+
+fn hardline() -> Doc {
+    RcDoc::hardline()
+}
+
+fn intersperse<D: IntoIterator<Item = Doc>>(docs: D, separator: Doc) -> Doc {
+    RcDoc::intersperse(docs, separator)
+}
+
+fn nil() -> Doc {
+    RcDoc::nil()
 }
