@@ -3,7 +3,7 @@ use crate::unitype::{Unitype, WasmtimeRefEq};
 use crate::wasm;
 use wasmtime::{Config, Engine, Instance, Module, Store};
 
-pub fn run(module: wasm::module::Module) {
+pub fn run(module: wasm::module::Module) -> String {
     let wat = module.to_pretty();
     let mut config = Config::new();
     config.wasm_gc(true);
@@ -18,6 +18,5 @@ pub fn run(module: wasm::module::Module) {
     let res = top_level.call(&mut store, ()).unwrap();
 
     let output = Unitype::parse_ref_eq(res, &store).to_pretty();
-
-    println!("{:}", output);
+    output
 }

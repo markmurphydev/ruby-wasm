@@ -78,6 +78,7 @@ impl<'text> Parser<'text> {
             LK::Nil => expect_simple_kw!(LK::Nil, N::Expr::Nil),
 
             LK::GlobalVariable {..} => Some(self.global_variable()),
+            LK::Constant {..} => Some(self.constant()),
 
             // Control flow
             // LK::If => Some(N::Expr::If(Box::new(self.if_expr()))),
@@ -152,6 +153,27 @@ impl<'text> Parser<'text> {
                 N::Expr::GlobalVariableWrite(Box::new(N::GlobalVariableWrite { name, expr: rhs }))
             }
             _ => N::Expr::GlobalVariableRead(Box::new(GlobalVariableRead { name }))
+        }
+    }
+
+    /// Parse a constant into either `ConstantWrite` or `ConstantRead`
+    /// Pre: `self.lexer.next().kind == LexemeKind::Constant`
+    fn constant(&mut self) -> N::Expr {
+        let constant = self.lexer.next();
+        let Lexeme {
+            kind: LK::Constant { text }, ..
+        } = constant
+            else {
+                unreachable!("Not a `Constant`: {:?}", constant)
+            };
+
+        match self.lexer.peek().kind {
+            LK::Equal => {
+                self.lexer.next();
+                let rhs = self.expr().expect("Assignment with no RHS");
+                N::Expr::ConstantWrite(Box::new(N::ConstantWrite { name: text, expr: rhs }))
+            }
+            _ => N::Expr::ConstantRead(Box::new(N::ConstantRead { name: text }))
         }
     }
 
@@ -298,6 +320,21 @@ mod tests {
             let expected = expect![[r#"
                 ((statements
                   (body (GlobalVariableWrite (name . "asdf") (expr Integer . 22)))))
+            "#]];
+            let actual = parse_to_sexpr(text);
+            expected.assert_eq(&actual);
+        }
+    }
+
+    mod constants {
+        use crate::parser::tests::parse_to_sexpr;
+        use expect_test::expect;
+
+        #[test]
+        fn object() {
+            let text = "Object";
+            let expected = expect![[r#"
+                ((statements (body (ConstantRead (name . "Object")))))
             "#]];
             let actual = parse_to_sexpr(text);
             expected.assert_eq(&actual);

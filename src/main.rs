@@ -1,10 +1,10 @@
 use clap::Parser as ParserTrait;
 use clap::Subcommand;
-use ruby_wasm::{compiler, run};
 use ruby_wasm::lexeme::LexemeKind;
 use ruby_wasm::lexer::Lexer;
 use ruby_wasm::parser::Parser;
 use ruby_wasm::{binary, html};
+use ruby_wasm::compiler;
 
 #[derive(clap::Parser)]
 #[command(version, about, long_about = None)]
@@ -109,10 +109,7 @@ fn main() {
         }
 
         Command::Run { text } => {
-            let parser = Parser::new(Lexer::new(&text));
-            let program = parser.parse();
-            let module = compiler::compile(&program);
-            run::run(module)
+            println!("{}", ruby_wasm::run_text(text))
         }
 
         Command::Html { text } => {

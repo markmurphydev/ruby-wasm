@@ -245,7 +245,7 @@ fn loop_to_doc(instr_seq_arena: &Arena<InstrSeq>, l: &Loop) -> Doc {
                 .group(),
         )
         .append(hardline())
-        .append(instr_seq_to_doc(instr_seq_arena, *seq))
+        .append(instr_seq)
         .append(")")
         .nest(INDENT)
         .group()

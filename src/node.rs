@@ -20,6 +20,8 @@ pub enum Expr {
     Nil,
     GlobalVariableWrite(Box<GlobalVariableWrite>),
     GlobalVariableRead(Box<GlobalVariableRead>),
+    ConstantWrite(Box<ConstantWrite>),
+    ConstantRead(Box<ConstantRead>),
     If(Box<If>),
     While(Box<While>),
     Until(Box<Until>),
@@ -33,6 +35,17 @@ pub struct GlobalVariableWrite {
 
 #[derive(Debug, Clone, PartialEq, Eq, Serialize)]
 pub struct GlobalVariableRead {
+    pub name: String,
+}
+
+#[derive(Debug, Clone, PartialEq, Eq, Serialize)]
+pub struct ConstantWrite {
+    pub name: String,
+    pub expr: Expr,
+}
+
+#[derive(Debug, Clone, PartialEq, Eq, Serialize)]
+pub struct ConstantRead {
     pub name: String,
 }
 

@@ -13,4 +13,13 @@ pub mod unitype;
 pub use wasm::instr_seq::InstrSeqBuilder;
 pub use crate::wasm::wat;
 pub use crate::compiler::CompileCtx;
+use crate::lexer::Lexer;
+use crate::parser::Parser;
 pub use crate::wasm::function::FunctionBuilder;
+
+pub fn run_text(text: String) -> String {
+    let parser = Parser::new(Lexer::new(&text));
+    let program = parser.parse();
+    let module = compiler::compile(&program);
+    run::run(module)
+}

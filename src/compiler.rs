@@ -76,6 +76,8 @@ fn compile_expr(ctx: &mut CompileCtx<'_>, builder: &InstrSeqBuilder, expr: &R::E
         R::Expr::GlobalVariableRead(global_read) => {
             compile_global_variable_read(ctx, builder, global_read)
         }
+        R::Expr::ConstantWrite(_constant_write) => todo!(),
+        R::Expr::ConstantRead(_constant_read) => todo!(),
 
         R::Expr::If(if_expr) => compile_if_expr(ctx, builder, &*if_expr),
         R::Expr::While(while_expr) => compile_while_expr(ctx, builder, &*while_expr),

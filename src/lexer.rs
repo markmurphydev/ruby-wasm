@@ -513,7 +513,15 @@ impl<'text> Lexer<'text> {
                     len += 1;
                     self.iter.next();
                 }
-                _ => return Lexeme::new(Constant, start_idx, CharDifference(len)),
+                _ => {
+                    let lexeme_text =
+                        lexeme::text_in_range(self.text, start_idx, CharDifference(len));
+                    return Lexeme::new(
+                        Constant { text: lexeme_text },
+                        start_idx,
+                        CharDifference(len),
+                    );
+                }
             }
         }
     }
@@ -985,6 +993,17 @@ mod tests {
         let expected = expect![[r#"
         (((kind GlobalVariable (text . "$asdf")) (start . 0) (len . 5))
          ((kind . Eof) (start . 5) (len . 0)))
+        "#]];
+        let actual = lex_to_sexpr(text);
+        expected.assert_eq(&actual);
+    }
+
+    #[test]
+    fn constants() {
+        let text = "Object";
+        let expected = expect![[r#"
+            (((kind Constant (text . "Object")) (start . 0) (len . 6))
+             ((kind . Eof) (start . 6) (len . 0)))
         "#]];
         let actual = lex_to_sexpr(text);
         expected.assert_eq(&actual);

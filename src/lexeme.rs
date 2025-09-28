@@ -1,5 +1,5 @@
-use std::ops::{Add, AddAssign};
 use serde::Serialize;
+use std::ops::{Add, AddAssign};
 
 /// Starts with line 1.
 #[derive(Debug, Eq, PartialEq, Copy, Clone, Serialize)]
@@ -43,21 +43,17 @@ pub struct Lexeme {
 }
 
 impl Lexeme {
-    pub fn new(
-        kind: LexemeKind,
-        start: CharIdx,
-        len: CharDifference,
-    ) -> Self {
-        Self {
-            kind,
-            start,
-            len
-        }
+    pub fn new(kind: LexemeKind, start: CharIdx, len: CharDifference) -> Self {
+        Self { kind, start, len }
     }
 
     /// Get the text spanned by this lexeme. O(n).
     pub fn to_source(self, program_text: &str) -> String {
-        program_text.chars().skip(self.start.0).take(self.len.0).collect()
+        program_text
+            .chars()
+            .skip(self.start.0)
+            .take(self.len.0)
+            .collect()
     }
 }
 
@@ -84,7 +80,7 @@ pub enum LexemeKind {
     /// Integer of the form `\d[\d_]+\d`
     /// TODO: Recognize 0x, 0b, ...
     IntegerLiteral {
-        text: String
+        text: String,
     },
     /// Float of the form `\d[\d_]+\d(\.\d[\d_]+\d)?`
     /// TODO: Recognize float exponents
@@ -101,11 +97,13 @@ pub enum LexemeKind {
 
     /// Global variable of the form `$<IDENTIFIER>`
     GlobalVariable {
-        text: String
+        text: String,
     },
 
     /// Constant. Starts with an uppercase letter, then can be any `<IDENTIFIER>` characters
-    Constant,
+    Constant {
+        text: String,
+    },
     Identifier,
 
     // Punctuation
