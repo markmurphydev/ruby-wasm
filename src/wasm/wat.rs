@@ -401,7 +401,7 @@ fn block_type_to_doc(ty: &BlockType) -> Doc {
 
 fn val_type_to_doc(ty: &ValType) -> Doc {
     match ty {
-        ValType::NumType(ty) => num_type_to_doc(ty),
+        ValType::Num(ty) => num_type_to_doc(ty),
         ValType::Ref(ty) => ref_type_to_doc(ty),
     }
 }

@@ -1,7 +1,7 @@
 
 #[derive(Clone, Debug, PartialEq, Eq, Hash)]
 pub enum ValType {
-    NumType(NumType),
+    Num(NumType),
     // VecType,
     Ref(RefType),
 }
@@ -18,7 +18,7 @@ pub enum NumType {
 
 impl NumType {
     pub fn to_val_type(self) -> ValType {
-        ValType::NumType(self)
+        ValType::Num(self)
     }
 }
 
@@ -216,8 +216,9 @@ impl SubType {
 
 #[derive(Clone, Debug, PartialEq, Eq, Hash)]
 pub enum CompType {
-    StructType(StructType),
-    FuncType(FuncType),
+    Struct(StructType),
+    Array(FieldType),
+    Func(FuncType),
 }
 
 #[derive(Clone, Debug, PartialEq, Eq, Hash)]
@@ -227,7 +228,7 @@ pub struct StructType {
 
 impl StructType {
     pub fn to_comp_type(self) -> CompType {
-        CompType::StructType(self)
+        CompType::Struct(self)
     }
 }
 
@@ -245,14 +246,26 @@ pub type ResultsType = Box<[ResultType]>;
 #[derive(Clone, Debug, PartialEq, Eq, Hash)]
 pub struct FieldType {
     pub name: String,
-    /// TODO -- Can also be `packtype`.
-    pub ty: ValType,
+    pub mutability: Mutability,
+    pub ty: StorageType,
 }
 
 #[derive(Clone, Debug, PartialEq, Eq, Hash)]
 pub struct ParamType {
     pub name: String,
     pub ty: ValType,
+}
+
+#[derive(Clone, Debug, PartialEq, Eq, Hash)]
+pub enum StorageType {
+    Val(ValType),
+    Pack(PackType),
+}
+
+#[derive(Clone, Debug, PartialEq, Eq, Hash)]
+pub enum PackType {
+    I8,
+    I16,
 }
 
 #[derive(Clone, Debug, PartialEq, Eq, Hash)]
