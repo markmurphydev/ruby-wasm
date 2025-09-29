@@ -6,20 +6,24 @@ pub mod wasm;
 pub mod compiler;
 pub mod binary;
 pub mod html;
-pub mod runtime;
 pub mod run;
 pub mod unitype;
+pub mod core;
 
-pub use wasm::instr_seq::InstrSeqBuilder;
-pub use crate::wasm::wat;
 pub use crate::compiler::CompileCtx;
+pub use crate::wasm::function::FunctionBuilder;
+pub use crate::wasm::wat;
+pub use wasm::instr_seq::InstrSeqBuilder;
+
+use crate::core::add_core_items;
 use crate::lexer::Lexer;
 use crate::parser::Parser;
-pub use crate::wasm::function::FunctionBuilder;
 
 pub fn run_text(text: String) -> String {
     let parser = Parser::new(Lexer::new(&text));
     let program = parser.parse();
-    let module = compiler::compile(&program);
+    let mut module = wasm::module::Module::new();
+    let mut ctx = add_core_items(&mut module);
+    compiler::compile(&mut ctx, &program);
     run::run(module)
 }

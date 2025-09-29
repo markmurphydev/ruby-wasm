@@ -206,6 +206,7 @@ fn instr_to_doc(instr_seq_arena: &Arena<InstrSeq>, instr: &Instr) -> Doc {
         Drop(_) => text("(drop)"),
         GlobalGet(global) => text(format!("(global.get {})", global.name.clone())),
         Br(br) => text(format!("(br {})", br.label.clone())),
+        _ => todo!()
     }
 }
 

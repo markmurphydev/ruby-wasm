@@ -140,9 +140,13 @@ impl InstrSeqBuilder {
         )
     }
 
-    pub fn const_i31(&self, ctx: &mut CompileCtx<'_>, val: i32) -> &Self {
+    pub fn i31_const(&self, ctx: &mut CompileCtx<'_>, val: i32) -> &Self {
         self.i32_const(ctx, val).unop(ctx, UnaryOp::RefI31)
     }
+
+    // pub fn const_string(&self, _ctx: &mut CompileCtx<'_>, s: &str) -> &Self {
+    //     todo!()
+    // }
 
     fn dangling_instr_seq(&self, ctx: &mut CompileCtx<'_>) -> InstrSeqBuilder {
         let id = ctx.module.instr_seq_arena.alloc(InstrSeq::new());

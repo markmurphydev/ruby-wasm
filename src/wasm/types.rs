@@ -232,6 +232,11 @@ impl StructType {
     }
 }
 
+#[derive(Clone, Debug, PartialEq, Eq, Hash)]
+pub struct ArrayType {
+    pub field: FieldType,
+}
+
 /// Type of a function
 #[derive(Clone, Debug, PartialEq, Eq, Hash)]
 pub struct FuncType {

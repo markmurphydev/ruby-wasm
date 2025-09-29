@@ -34,6 +34,9 @@ impl Unitype {
     /// ≡ `(ref eq)`
     pub const UNITYPE: RefType = RefType::new_abstract(AbsHeapType::Eq, Nullability::NonNullable);
 
+    /// `(ref i31)`
+    pub const REF_I31: RefType = RefType::new_abstract(AbsHeapType::I31, Nullability::NonNullable);
+
     pub const STRING_ARRAY_TYPE_NAME: &'static str = "$string_array";
     pub const STRING_ARRAY_TYPE: CompType = CompType::Array(FieldType {
         mutability: Mutability::Const,

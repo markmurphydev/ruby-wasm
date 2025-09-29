@@ -7,16 +7,19 @@
 //! MIT licensed
 
 pub mod function;
+pub mod instr_seq;
+mod intern;
 pub mod module;
 pub mod types;
 pub mod wat;
-mod intern;
-pub mod instr_seq;
 
-use instr_seq::InstrSeqId;
-use crate::wasm::types::GlobalType;
-use wasm_macro::wasm_instr;
 use crate::wasm::intern::InternedIdentifier;
+use crate::wasm::types::{GlobalType, RefType};
+use instr_seq::InstrSeqId;
+use wasm_macro::wasm_instr;
+
+// #[cfg(test)]
+// pub use test_utils::build_test_program;
 
 /// Constant values that can show up in WebAssembly
 #[derive(Debug, Clone, Copy)]
@@ -73,12 +76,12 @@ pub enum Instr {
         seq: InstrSeqId,
     },
 
-    // /// `call`
-    // Call {
-    //     /// The function being invoked.
-    //     func: FunctionId,
-    // },
-    //
+    /// `call`
+    Call {
+        /// The identifier of function being invoked.
+        func: String,
+    },
+
     // /// `call_indirect`
     // CallIndirect {
     //     /// The type signature of the function we're calling
@@ -86,13 +89,13 @@ pub enum Instr {
     //     /// The table which `func` below is indexing into
     //     table: TableId,
     // },
-    //
-    // /// `local.get n`
-    // LocalGet {
-    //     /// The local being got.
-    //     local: LocalId,
-    // },
-    //
+
+    /// `local.get n`
+    LocalGet {
+        /// The local being got.
+        name: String,
+    },
+
     // /// `local.set n`
     // LocalSet {
     //     /// The local being set.
@@ -104,7 +107,6 @@ pub enum Instr {
     //     /// The local being set.
     //     local: LocalId,
     // },
-
     /// `global.get n`
     GlobalGet {
         /// The global being got.
@@ -116,7 +118,6 @@ pub enum Instr {
     //     /// The global being set.
     //     global: GlobalId,
     // },
-
     /// `*.const`
     Const {
         /// The constant value.
@@ -129,7 +130,6 @@ pub enum Instr {
     //     #[walrus(skip_visit)]
     //     op: TernaryOp,
     // },
-
     /// Binary operations, those requiring two operands
     Binop {
         /// The operation being performed
@@ -152,19 +152,18 @@ pub enum Instr {
     //
     // /// `unreachable`
     // Unreachable {},
-
     /// `br`
     Br {
         /// The target block to branch to.
         label: String,
     },
 
-    // /// `br_if`
-    // BrIf {
-    //     /// The target block to branch to when the condition is met.
-    //     #[walrus(skip_visit)] // should have already been visited
-    //     block: InstrSeqId,
-    // },
+    /// `br_if`
+    BrIf {
+        /// The target block to branch to when the condition is met.
+        block: String,
+    },
+
     /// `if <predicate> then <consequent> else <alternative> end`
     #[wasm(skip_builder)]
     IfElse {
@@ -175,6 +174,7 @@ pub enum Instr {
         /// The block to execute when the condition is false.
         alternative: InstrSeqId,
     },
+
     // /// `br_table`
     // BrTable {
     //     /// The table of target blocks.
@@ -185,7 +185,6 @@ pub enum Instr {
     //     #[walrus(skip_visit)] // should have already been visited
     //     default: InstrSeqId,
     // },
-
     /// `drop`
     Drop {},
 
@@ -356,7 +355,13 @@ pub enum Instr {
     //     /// The function that this instruction is referencing
     //     func: FunctionId,
     // },
-    //
+
+    /// `ref.test`
+    RefTest { ty: RefType },
+
+    /// `ref.cast`
+    RefCast { to_ty: RefType },
+
     // /// `v128.bitselect`
     // V128Bitselect {},
     //
@@ -596,28 +601,34 @@ pub struct Global {
     pub instr_seq: InstrSeqId,
 }
 
-// /// A local variable or parameter.
-// #[derive(Clone, Debug, PartialEq, Eq, Hash)]
-// pub struct Local {
-//     ty: ValType,
-//     /// A human-readable name for this local, often useful when debugging
-//     /// TODO -- All these names should get folded into the ID types
-//     pub name: Option<String>,
-// }
+// #[cfg(test)]
+// mod test_utils {
+//     use wasmtime::Extern::Global;
+//     use crate::compiler::RUBY_TOP_LEVEL_FUNCTION_NAME;
+//     use crate::unitype::Unitype;
+//     use crate::wasm::function::ExportStatus;
+//     use crate::wasm::module::GlobalBuilder;
+//     use crate::{CompileCtx, FunctionBuilder};
 //
-// impl Local {
-//     /// Construct a new local from the given id and type.
-//     pub fn new(id: LocalId, ty: ValType) -> Local {
-//         Local { id, ty, name: None }
-//     }
+//     pub fn build_test_program<'a>(
+//         ctx: &'a mut CompileCtx<'_>,
+//         globals: Vec<(String, impl FnOnce(&'_ mut CompileCtx<'_>, &GlobalBuilder))>,
+//         functions: impl FnOnce(&'_ mut CompileCtx<'_>, &FunctionBuilder),
+//     ) {
+//         for (name, initializer) in globals {
+//             let builder = GlobalBuilder::new(ctx.module, name);
+//             initializer(ctx, &builder);
+//             builder.finish(ctx);
+//         }
 //
-//     /// Get this local's id that is unique across the whole module.
-//     pub fn id(&self) -> LocalId {
-//         self.id
-//     }
-//
-//     /// Get this local's type.
-//     pub fn ty(&self) -> &ValType {
-//         &self.ty
+//         let top_level_function_builder = FunctionBuilder::new(
+//             ctx,
+//             RUBY_TOP_LEVEL_FUNCTION_NAME,
+//             ExportStatus::Exported,
+//             Box::new([]),
+//             Box::new([Unitype::UNITYPE.into_result_type()]),
+//         );
+//         functions(ctx, &top_level_function_builder);
+//         top_level_function_builder.finish(&mut ctx.module.funcs);
 //     }
 // }

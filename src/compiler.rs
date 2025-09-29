@@ -2,14 +2,12 @@
 
 // W for Wasm
 use crate::node::{GlobalVariableRead, GlobalVariableWrite, Subsequent};
-use crate::wasm::UnaryOp;
-use crate::wasm::module::{GlobalBuilder, Module};
-// R for Ruby
-use crate::runtime;
 use crate::unitype::Unitype;
 use crate::wasm::function::ExportStatus;
 use crate::wasm::instr_seq::InstrSeqBuilder;
-use crate::{FunctionBuilder, node as R};
+use crate::wasm::module::{GlobalBuilder, Module};
+use crate::wasm::UnaryOp;
+use crate::{node as R, FunctionBuilder};
 
 pub const RUBY_TOP_LEVEL_FUNCTION_NAME: &str = "__ruby_top_level_function";
 
@@ -17,24 +15,18 @@ pub struct CompileCtx<'a> {
     pub module: &'a mut Module,
 }
 
-pub fn compile(program: &R::Program) -> Module {
-    let mut module = Module::new();
-    let mut ctx = CompileCtx {
-        module: &mut module,
-    };
+pub fn compile(ctx: &mut CompileCtx<'_>, program: &R::Program) {
 
     // Build the top-level function
     let top_level_builder = FunctionBuilder::new(
-        &mut ctx,
+        ctx,
         RUBY_TOP_LEVEL_FUNCTION_NAME,
         ExportStatus::Exported,
         Box::new([]),
         Box::new([Unitype::UNITYPE.into_result_type()]),
     );
-    compile_program(&mut ctx, &top_level_builder, program);
-    top_level_builder.finish(&mut module.funcs);
-
-    module
+    compile_program(ctx, &top_level_builder, program);
+    top_level_builder.finish(&mut ctx.module.funcs);
 }
 
 fn compile_program(
@@ -67,13 +59,13 @@ fn compile_expr(ctx: &mut CompileCtx<'_>, builder: &InstrSeqBuilder, expr: &R::E
     match expr {
         &R::Expr::Integer(n) => compile_integer(ctx, builder, n),
         R::Expr::False => {
-            builder.const_i31(ctx, Unitype::FALSE_BIT_PATTERN);
+            builder.i31_const(ctx, Unitype::FALSE_BIT_PATTERN);
         }
         R::Expr::True => {
-            builder.const_i31(ctx, Unitype::TRUE_BIT_PATTERN);
+            builder.i31_const(ctx, Unitype::TRUE_BIT_PATTERN);
         }
         R::Expr::Nil => {
-            builder.const_i31(ctx, Unitype::NIL_BIT_PATTERN);
+            builder.i31_const(ctx, Unitype::NIL_BIT_PATTERN);
         }
 
         R::Expr::GlobalVariableWrite(global_write) => {
@@ -96,7 +88,7 @@ fn compile_integer(ctx: &mut CompileCtx<'_>, builder: &InstrSeqBuilder, n: i64) 
     let unitype = Unitype::from_integer(n);
     match unitype {
         fixnum @ Unitype::Fixnum(_) => {
-            builder.const_i31(ctx, fixnum.to_i31_bits());
+            builder.i31_const(ctx, fixnum.to_i31_bits());
         }
         Unitype::HeapNum(heapnum) => {
             // `heapnum` is a constant value.
@@ -150,7 +142,7 @@ fn compile_if_expr(ctx: &mut CompileCtx<'_>, builder: &InstrSeqBuilder, if_expr:
         },
         |ctx, builder| match subsequent {
             Subsequent::None => {
-                builder.const_i31(ctx, Unitype::NIL_BIT_PATTERN);
+                builder.i31_const(ctx, Unitype::NIL_BIT_PATTERN);
             }
             Subsequent::Elsif(if_expr) => compile_if_expr(ctx, builder, &if_expr),
             Subsequent::Else(else_expr) => compile_statements(ctx, builder, &else_expr.statements),
@@ -223,6 +215,5 @@ fn compile_expr_to_wasm_predicate(
     expr: &R::Expr,
 ) {
     compile_expr(ctx, builder, expr);
-    runtime::is_false(ctx, builder);
-    builder.unop(ctx, UnaryOp::I32Eqz);
+    builder.call(ctx, "is_false".to_string()).unop(ctx, UnaryOp::I32Eqz);
 }

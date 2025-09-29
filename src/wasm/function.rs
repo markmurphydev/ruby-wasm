@@ -61,7 +61,7 @@ impl FunctionBuilder {
     }
 
     /// Get a `InstrSeqBuilder` for building and mutating this function's body.
-    pub fn func_body(&mut self) -> InstrSeqBuilder {
+    pub fn func_body(&self) -> InstrSeqBuilder {
         // `InstrSeqBuilder` just wraps a `InstrSeqId`.
         //  any two with the same ID write to the same instr_seq.
         InstrSeqBuilder {
