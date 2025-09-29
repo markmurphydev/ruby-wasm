@@ -239,13 +239,12 @@ pub struct FuncType {
     pub results: ResultsType,
 }
 
-pub type FieldsType = Box<[FieldType]>;
+pub type FieldsType = Box<[(String, FieldType)]>;
 pub type ParamsType = Box<[ParamType]>;
 pub type ResultsType = Box<[ResultType]>;
 
 #[derive(Clone, Debug, PartialEq, Eq, Hash)]
 pub struct FieldType {
-    pub name: String,
     pub mutability: Mutability,
     pub ty: StorageType,
 }
@@ -266,6 +265,12 @@ pub enum StorageType {
 pub enum PackType {
     I8,
     I16,
+}
+
+impl PackType {
+    pub const fn into_storage_type(self) -> StorageType {
+        StorageType::Pack(self)
+    }
 }
 
 #[derive(Clone, Debug, PartialEq, Eq, Hash)]

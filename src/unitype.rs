@@ -2,9 +2,8 @@
 //! Converted into Wasm `(ref eq)` subtypes
 
 use pretty::RcDoc;
+use crate::wasm::types::{AbsHeapType, CompType, FieldType, GlobalType, HeapType, Mutability, Nullability, PackType, RefType};
 use serde::Serialize;
-use crate::wasm::types::Nullability::NonNullable;
-use crate::wasm::types::{AbsHeapType, GlobalType, Mutability, RefType};
 use wasmtime::{AnyRef, Rooted};
 
 /// Fixnums are identified with a 1 in the MSB of the i31
@@ -33,7 +32,19 @@ pub struct Fixnum(i32);
 impl Unitype {
     /// Wasm-supertype of all Ruby values
     /// ≡ `(ref eq)`
-    pub const UNITYPE: RefType = RefType::new_abstract(AbsHeapType::Eq, NonNullable);
+    pub const UNITYPE: RefType = RefType::new_abstract(AbsHeapType::Eq, Nullability::NonNullable);
+
+    pub const STRING_ARRAY_TYPE_NAME: &'static str = "$string_array";
+    pub const STRING_ARRAY_TYPE: CompType = CompType::Array(FieldType {
+        mutability: Mutability::Const,
+        ty: PackType::I8.into_storage_type(),
+    });
+    pub fn string_ref_type() -> RefType {
+        RefType {
+            nullable: Nullability::NonNullable,
+            heap_type: HeapType::Identifier(Self::STRING_ARRAY_TYPE_NAME.to_string()),
+        }
+    }
 
     /// Global<Unitype>
     pub const GLOBAL_CONST_TYPE: GlobalType = GlobalType {
