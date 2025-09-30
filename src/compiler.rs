@@ -24,14 +24,14 @@ pub fn compile(program: &R::Program) -> Module {
     };
 
     // Build the top-level function
-    let mut top_level_builder = FunctionBuilder::new(
+    let top_level_builder = FunctionBuilder::new(
         &mut ctx,
         RUBY_TOP_LEVEL_FUNCTION_NAME,
         ExportStatus::Exported,
         Box::new([]),
         Box::new([Unitype::UNITYPE.into_result_type()]),
     );
-    compile_program(&mut ctx, &mut top_level_builder, program);
+    compile_program(&mut ctx, &top_level_builder, program);
     top_level_builder.finish(&mut module.funcs);
 
     module
@@ -39,7 +39,7 @@ pub fn compile(program: &R::Program) -> Module {
 
 fn compile_program(
     ctx: &mut CompileCtx<'_>,
-    top_level_builder: &mut FunctionBuilder,
+    top_level_builder: &FunctionBuilder,
     program: &R::Program,
 ) {
     compile_statements(ctx, &mut top_level_builder.func_body(), &program.statements);
@@ -66,9 +66,15 @@ fn compile_statements(
 fn compile_expr(ctx: &mut CompileCtx<'_>, builder: &InstrSeqBuilder, expr: &R::Expr) {
     match expr {
         &R::Expr::Integer(n) => compile_integer(ctx, builder, n),
-        R::Expr::False => const_i31(ctx, builder, Unitype::FALSE_BIT_PATTERN),
-        R::Expr::True => const_i31(ctx, builder, Unitype::TRUE_BIT_PATTERN),
-        R::Expr::Nil => const_i31(ctx, builder, Unitype::NIL_BIT_PATTERN),
+        R::Expr::False => {
+            builder.const_i31(ctx, Unitype::FALSE_BIT_PATTERN);
+        }
+        R::Expr::True => {
+            builder.const_i31(ctx, Unitype::TRUE_BIT_PATTERN);
+        }
+        R::Expr::Nil => {
+            builder.const_i31(ctx, Unitype::NIL_BIT_PATTERN);
+        }
 
         R::Expr::GlobalVariableWrite(global_write) => {
             compile_global_variable_write(ctx, global_write)
@@ -89,7 +95,9 @@ fn compile_expr(ctx: &mut CompileCtx<'_>, builder: &InstrSeqBuilder, expr: &R::E
 fn compile_integer(ctx: &mut CompileCtx<'_>, builder: &InstrSeqBuilder, n: i64) {
     let unitype = Unitype::from_integer(n);
     match unitype {
-        fixnum @ Unitype::Fixnum(_) => const_i31(ctx, builder, fixnum.to_i31_bits()),
+        fixnum @ Unitype::Fixnum(_) => {
+            builder.const_i31(ctx, fixnum.to_i31_bits());
+        }
         Unitype::HeapNum(heapnum) => {
             // `heapnum` is a constant value.
             // So, create a global and get its value.
@@ -136,16 +144,16 @@ fn compile_if_expr(ctx: &mut CompileCtx<'_>, builder: &InstrSeqBuilder, if_expr:
     } = if_expr;
     builder.if_else(
         ctx,
-        |ctx, pred_builder| compile_expr_to_wasm_predicate(ctx, pred_builder, predicate),
-        |ctx, then_builder| {
-            compile_statements(ctx, then_builder, statements);
+        |ctx, builder| compile_expr_to_wasm_predicate(ctx, builder, predicate),
+        |ctx, builder| {
+            compile_statements(ctx, builder, statements);
         },
-        |ctx, else_builder| match subsequent {
-            Subsequent::None => const_i31(ctx, else_builder, Unitype::NIL_BIT_PATTERN),
-            Subsequent::Elsif(if_expr) => compile_if_expr(ctx, else_builder, &if_expr),
-            Subsequent::Else(else_expr) => {
-                compile_statements(ctx, else_builder, &else_expr.statements)
+        |ctx, builder| match subsequent {
+            Subsequent::None => {
+                builder.const_i31(ctx, Unitype::NIL_BIT_PATTERN);
             }
+            Subsequent::Elsif(if_expr) => compile_if_expr(ctx, builder, &if_expr),
+            Subsequent::Else(else_expr) => compile_statements(ctx, builder, &else_expr.statements),
         },
     );
 }
@@ -217,8 +225,4 @@ fn compile_expr_to_wasm_predicate(
     compile_expr(ctx, builder, expr);
     runtime::is_false(ctx, builder);
     builder.unop(ctx, UnaryOp::I32Eqz);
-}
-
-fn const_i31(ctx: &mut CompileCtx<'_>, builder: &InstrSeqBuilder, val: i32) {
-    builder.i32_const(ctx, val).unop(ctx, UnaryOp::RefI31);
 }

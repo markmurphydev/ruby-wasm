@@ -5,7 +5,7 @@
 use std::ops::{Deref, DerefMut};
 use id_arena::{Arena, Id};
 use crate::CompileCtx;
-use crate::wasm::{Block, IfElse, Instr, Loop, Value};
+use crate::wasm::{Block, IfElse, Instr, Loop, UnaryOp, Value};
 
 /// A builder returned by instruction sequence-construction methods to build up
 /// instructions within a block/loop/if-else over time.
@@ -138,6 +138,10 @@ impl InstrSeqBuilder {
                 alternative,
             },
         )
+    }
+
+    pub fn const_i31(&self, ctx: &mut CompileCtx<'_>, val: i32) -> &Self {
+        self.i32_const(ctx, val).unop(ctx, UnaryOp::RefI31)
     }
 
     fn dangling_instr_seq(&self, ctx: &mut CompileCtx<'_>) -> InstrSeqBuilder {
