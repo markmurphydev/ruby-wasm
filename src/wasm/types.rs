@@ -1,4 +1,3 @@
-
 #[derive(Clone, Debug, PartialEq, Eq, Hash)]
 pub enum ValType {
     Num(NumType),
@@ -17,8 +16,16 @@ pub enum NumType {
 }
 
 impl NumType {
-    pub fn to_val_type(self) -> ValType {
+    pub const fn into_val_type(self) -> ValType {
         ValType::Num(self)
+    }
+
+    pub const fn into_result_type(self) -> ResultType {
+        ResultType(self.into_val_type())
+    }
+
+    pub const fn into_block_type_result(self) -> BlockType {
+        BlockType::Result(self.into_result_type())
     }
 }
 
@@ -96,7 +103,7 @@ impl RefType {
     pub const fn new_abstract(ty: AbsHeapType, nullable: Nullability) -> Self {
         Self {
             nullable,
-            heap_type: HeapType::Abstract(ty)
+            heap_type: HeapType::Abstract(ty),
         }
     }
 
@@ -112,6 +119,13 @@ impl RefType {
 
     pub const fn into_result_type(self) -> ResultType {
         ResultType(self.into_val_type())
+    }
+
+    pub const fn into_global_type(self, mutable: Mutability) -> GlobalType {
+        GlobalType {
+            mutable,
+            val_type: self.into_val_type(),
+        }
     }
 
     pub const fn into_block_type_result(self) -> BlockType {
@@ -217,7 +231,7 @@ impl SubType {
 #[derive(Clone, Debug, PartialEq, Eq, Hash)]
 pub enum CompType {
     Struct(StructType),
-    Array(FieldType),
+    Array(ArrayType),
     Func(FuncType),
 }
 

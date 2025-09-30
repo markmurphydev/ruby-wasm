@@ -71,14 +71,15 @@ impl<'text> Parser<'text> {
         let lexeme = self.lexer.peek();
         match lexeme.kind {
             LK::IntegerLiteral { .. } => self.integer_literal(),
+            LK::SingleQuoteStringLiteral { .. } => self.single_quote_string_literal(),
 
             // Keywords
             LK::True => expect_simple_kw!(LK::True, N::Expr::True),
             LK::False => expect_simple_kw!(LK::False, N::Expr::False),
             LK::Nil => expect_simple_kw!(LK::Nil, N::Expr::Nil),
 
-            LK::GlobalVariable {..} => Some(self.global_variable()),
-            LK::Constant {..} => Some(self.constant()),
+            LK::GlobalVariable { .. } => Some(self.global_variable()),
+            LK::Constant { .. } => Some(self.constant()),
 
             // Control flow
             // LK::If => Some(N::Expr::If(Box::new(self.if_expr()))),
@@ -152,7 +153,7 @@ impl<'text> Parser<'text> {
                 let rhs = self.expr().expect("Assignment with no RHS");
                 N::Expr::GlobalVariableWrite(Box::new(N::GlobalVariableWrite { name, expr: rhs }))
             }
-            _ => N::Expr::GlobalVariableRead(Box::new(GlobalVariableRead { name }))
+            _ => N::Expr::GlobalVariableRead(Box::new(GlobalVariableRead { name })),
         }
     }
 
@@ -161,19 +162,23 @@ impl<'text> Parser<'text> {
     fn constant(&mut self) -> N::Expr {
         let constant = self.lexer.next();
         let Lexeme {
-            kind: LK::Constant { text }, ..
+            kind: LK::Constant { text },
+            ..
         } = constant
-            else {
-                unreachable!("Not a `Constant`: {:?}", constant)
-            };
+        else {
+            unreachable!("Not a `Constant`: {:?}", constant)
+        };
 
         match self.lexer.peek().kind {
             LK::Equal => {
                 self.lexer.next();
                 let rhs = self.expr().expect("Assignment with no RHS");
-                N::Expr::ConstantWrite(Box::new(N::ConstantWrite { name: text, expr: rhs }))
+                N::Expr::ConstantWrite(Box::new(N::ConstantWrite {
+                    name: text,
+                    expr: rhs,
+                }))
             }
-            _ => N::Expr::ConstantRead(Box::new(N::ConstantRead { name: text }))
+            _ => N::Expr::ConstantRead(Box::new(N::ConstantRead { name: text })),
         }
     }
 
@@ -212,6 +217,18 @@ impl<'text> Parser<'text> {
         let lexeme = self.lexer.next();
         match lexeme.kind {
             LK::IntegerLiteral { text } => Some(N::Expr::Integer(i64::from_str(&text).unwrap())),
+            _ => unreachable!(),
+        }
+    }
+
+    /// Pre: `self.lexer.next().kind == LexemeKind::SingleQuoteStringLiteral`
+    fn single_quote_string_literal(&mut self) -> Option<N::Expr> {
+        let lexeme = self.lexer.next();
+        match lexeme.kind {
+            LK::SingleQuoteStringLiteral { text } => {
+                let inner = text[1..text.len() - 1].to_string();
+                Some(N::Expr::SingleQuoteString(inner))
+            }
             _ => unreachable!(),
         }
     }
@@ -298,6 +315,24 @@ mod tests {
         //         assert_eq!(Expr::Integer(-22_222), statements.body[0]);
         //     }
         // }
+    }
+
+    #[test]
+    fn single_quote_string_literal() {
+        let text = "'22'";
+        let parser = Parser::new(Lexer::new(text));
+        let program = parser.parse();
+
+        match program {
+            N::Program { statements } => {
+                assert_eq!(1, statements.body.len());
+                // Strips quotes
+                assert_eq!(
+                    N::Expr::SingleQuoteString("22".to_string()),
+                    statements.body[0]
+                );
+            }
+        }
     }
 
     mod globals {

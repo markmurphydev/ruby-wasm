@@ -87,7 +87,9 @@ pub enum LexemeKind {
     FloatLiteral,
     /// String literal surrounded by single quotes.
     /// Allows only the escape characters `\'` and `\\`
-    SingleQuoteStringLiteral,
+    SingleQuoteStringLiteral {
+        text: String,
+    },
 
     /// Instance variable of the form `@<IDENTIFIER>`
     InstanceVariable,

@@ -5,13 +5,13 @@
 //!     The way to do it would be to pass `&mut Interner` to each `____Builder` method
 //!     (maybe as part of a `CompileCtx` object)
 
-use crate::CompileCtx;
-use crate::unitype::Unitype;
-use crate::wasm::Global;
 use crate::wasm::function::{Function, FunctionId};
 use crate::wasm::instr_seq::InstrSeqBuilder;
 use crate::wasm::instr_seq::{InstrSeq, InstrSeqId};
 use crate::wasm::intern::{IdentifierInterner, InternedIdentifier};
+use crate::wasm::types::GlobalType;
+use crate::wasm::{Global, TypeDef};
+use crate::CompileCtx;
 use id_arena::{Arena, Id};
 
 /// A wasm module.
@@ -28,7 +28,8 @@ pub struct Module {
     pub instr_seq_arena: Arena<InstrSeq>,
     /// Arena containing all globals.
     pub global_arena: Arena<Global>,
-
+    /// Arena containing all named type definitions.
+    pub type_def_arena: Arena<TypeDef>,
     // pub imports: ModuleImports,
     pub funcs: ModuleFunctions,
     // pub exports: ModuleExports,
@@ -73,12 +74,13 @@ pub type GlobalId = Id<Global>;
 
 pub struct GlobalBuilder {
     name: InternedIdentifier,
+    ty: GlobalType,
     /// Id of the root of the instr-seq tree this global initializes
     instr_seq: InstrSeqId,
 }
 
 impl GlobalBuilder {
-    pub fn new(module: &mut Module, name: String) -> Self {
+    pub fn new(module: &mut Module, ty: GlobalType, name: String) -> Self {
         let interner = &mut module.interner;
         let name = interner.intern(&name);
 
@@ -87,6 +89,7 @@ impl GlobalBuilder {
 
         Self {
             name,
+            ty,
             instr_seq: instr_seq_id,
         }
     }
@@ -97,10 +100,14 @@ impl GlobalBuilder {
     }
 
     pub fn finish(self, ctx: &mut CompileCtx) {
-        let GlobalBuilder { name, instr_seq } = self;
+        let GlobalBuilder {
+            name,
+            ty,
+            instr_seq,
+        } = self;
         let global = Global {
             name,
-            ty: Unitype::GLOBAL_TYPE,
+            ty,
             instr_seq,
         };
         ctx.module.global_arena.alloc(global);

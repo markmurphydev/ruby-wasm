@@ -1,8 +1,8 @@
 //! Wasm -> .wasm binary printer
 //! Currently goes Wasm -> .wat -> .wasm (with `wat` library)
 
-use std::io::Write;
 use crate::wasm::module::Module;
+use std::io::Write;
 
 /// Convert the given Wasm module to its binary representation.
 pub fn module_to_binary(module: &Module) -> Vec<u8> {

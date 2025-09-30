@@ -1,8 +1,11 @@
 //! Ruby values lowered to a union of all possible values.
 //! Converted into Wasm `(ref eq)` subtypes
 
+use crate::wasm::types::{
+    AbsHeapType, ArrayType, CompType, FieldType, GlobalType, HeapType, Mutability, Nullability,
+    PackType, RefType,
+};
 use pretty::RcDoc;
-use crate::wasm::types::{AbsHeapType, CompType, FieldType, GlobalType, HeapType, Mutability, Nullability, PackType, RefType};
 use serde::Serialize;
 use wasmtime::{AnyRef, Rooted};
 
@@ -16,7 +19,7 @@ const FIXNUM_BIT_WIDTH: u32 = 30;
 /// `wasmtime`'s Rust-side representation of a Wasm `(ref eq)` value
 pub type WasmtimeRefEq = Rooted<AnyRef>;
 
-#[derive(Debug, Eq, PartialEq, Copy, Clone, Serialize)]
+#[derive(Debug, Eq, PartialEq, Clone, Serialize)]
 pub enum Unitype {
     True,
     False,
@@ -24,6 +27,7 @@ pub enum Unitype {
     // Internally, stored as the actual number, without the marker bit
     Fixnum(Fixnum),
     HeapNum(i64),
+    String(String),
 }
 
 #[derive(Debug, Eq, PartialEq, Copy, Clone, Serialize)]
@@ -37,28 +41,30 @@ impl Unitype {
     /// `(ref i31)`
     pub const REF_I31: RefType = RefType::new_abstract(AbsHeapType::I31, Nullability::NonNullable);
 
-    pub const STRING_ARRAY_TYPE_NAME: &'static str = "$string_array";
-    pub const STRING_ARRAY_TYPE: CompType = CompType::Array(FieldType {
-        mutability: Mutability::Const,
-        ty: PackType::I8.into_storage_type(),
+    pub const STRING_TYPE_NAME: &'static str = "unitype-string";
+    pub const STRING_TYPE: CompType = CompType::Array(ArrayType {
+        field: FieldType {
+            mutability: Mutability::Const,
+            ty: PackType::I8.into_storage_type(),
+        },
     });
     pub fn string_ref_type() -> RefType {
         RefType {
             nullable: Nullability::NonNullable,
-            heap_type: HeapType::Identifier(Self::STRING_ARRAY_TYPE_NAME.to_string()),
+            heap_type: HeapType::Identifier(Self::STRING_TYPE_NAME.to_string()),
         }
     }
 
     /// Global<Unitype>
     pub const GLOBAL_CONST_TYPE: GlobalType = GlobalType {
         mutable: Mutability::Const,
-        val_type: Self::UNITYPE.into_val_type()
+        val_type: Self::UNITYPE.into_val_type(),
     };
 
     /// mut Global<Unitype>
-    pub const GLOBAL_TYPE: GlobalType = GlobalType {
+    pub const GLOBAL_MUT_TYPE: GlobalType = GlobalType {
         mutable: Mutability::Mut,
-        val_type: Self::UNITYPE.into_val_type()
+        val_type: Self::UNITYPE.into_val_type(),
     };
 
     pub const FALSE_BIT_PATTERN: i32 = 0b0001;
@@ -99,7 +105,7 @@ impl Unitype {
 
     /// Parse a Wasm `(ref eq)` value into a `UnitypeValue`.
     /// Used only for displaying `wasmtime` output.
-    pub fn parse_ref_eq(ref_eq: WasmtimeRefEq, store: &wasmtime::Store<()>) -> Self {
+    pub fn parse_ref_eq(ref_eq: WasmtimeRefEq, store: &mut wasmtime::Store<()>) -> Self {
         let is_i31 = ref_eq.is_i31(&store).unwrap();
         if is_i31 {
             let value = ref_eq.unwrap_i31(&store).unwrap().get_u32() as i32;
@@ -108,10 +114,27 @@ impl Unitype {
                 Self::TRUE_BIT_PATTERN => Self::True,
                 Self::NIL_BIT_PATTERN => Self::Nil,
                 val if (val & FIXNUM_MARKER) != 0 => Self::Fixnum(Fixnum(val & !FIXNUM_MARKER)),
-                _ => panic!("Invalid i31 bit pattern 0b{:b}", value)
+                _ => panic!("Invalid i31 bit pattern 0b{:b}", value),
             }
         } else {
-            todo!("IDK.")
+            match ref_eq {
+                arr if ref_eq.is_array(&store).unwrap() => {
+                    // TODO -- assuming all arrays are string arrays
+                    let arr = arr.as_array(&store).unwrap().unwrap();
+                    let bytes: Vec<u8> = arr
+                        .elems(store)
+                        .unwrap()
+                        .map(|byte| {
+                            // `arr.elems` zero-extends `i8` and `i16` into `Val::I32`
+                            let byte = byte.i32().unwrap();
+                            byte as u8
+                        })
+                        .collect();
+                    let string = String::from_utf8(bytes).unwrap();
+                    Unitype::String(string)
+                }
+                _ => panic!(),
+            }
         }
     }
 
@@ -122,6 +145,7 @@ impl Unitype {
             Unitype::Nil => Self::NIL_BIT_PATTERN,
             Unitype::Fixnum(Fixnum(val)) => val | FIXNUM_MARKER,
             Unitype::HeapNum(_) => panic!("Not an i31 value: {:?}", self),
+            Unitype::String(_) => panic!("Not an i31 value: {:?}", self),
         }
     }
 
@@ -137,7 +161,8 @@ impl Unitype {
             Unitype::False => "false".to_owned(),
             Unitype::Nil => "nil".to_owned(),
             Unitype::Fixnum(Fixnum(n)) => format!("{}", n),
-            Unitype::HeapNum(n) => format!("{}", n)
+            Unitype::HeapNum(n) => format!("{}", n),
+            Unitype::String(s) => format!("\"{}\"", s),
         };
         RcDoc::text(text)
     }

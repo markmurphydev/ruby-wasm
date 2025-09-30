@@ -431,10 +431,12 @@ impl<'text> Lexer<'text> {
                     Some(_) => (),
                 },
                 Some((idx, '\'')) => {
+                    let len = len_inclusive(start_idx, idx);
+                    let lexeme_text = lexeme::text_in_range(self.text, start_idx, len);
                     return Lexeme::new(
-                        SingleQuoteStringLiteral,
+                        SingleQuoteStringLiteral { text: lexeme_text },
                         start_idx,
-                        len_inclusive(start_idx, idx),
+                        len,
                     );
                 }
                 Some(_) => (),
@@ -1004,6 +1006,19 @@ mod tests {
         let expected = expect![[r#"
             (((kind Constant (text . "Object")) (start . 0) (len . 6))
              ((kind . Eof) (start . 6) (len . 0)))
+        "#]];
+        let actual = lex_to_sexpr(text);
+        expected.assert_eq(&actual);
+    }
+
+    #[test]
+    fn single_quote_string_literals() {
+        // TODO -- lex ` '2\'2' ` correctly
+        let text = "'22'";
+        let expected = expect![[r#"
+            (((kind SingleQuoteStringLiteral (text . "'22'")) (start . 0)
+              (len . 4))
+             ((kind . Eof) (start . 4) (len . 0)))
         "#]];
         let actual = lex_to_sexpr(text);
         expected.assert_eq(&actual);

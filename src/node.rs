@@ -3,7 +3,7 @@ use serde::Serialize;
 /// Root of the AST
 #[derive(Debug, Clone, PartialEq, Eq, Serialize)]
 pub struct Program {
-    pub statements: Statements
+    pub statements: Statements,
 }
 
 #[derive(Debug, Clone, PartialEq, Eq, Serialize)]
@@ -15,6 +15,7 @@ pub struct Statements {
 pub enum Expr {
     /// TODO -- Final representation will not be `i64`
     Integer(i64),
+    SingleQuoteString(String),
     True,
     False,
     Nil,
@@ -53,7 +54,7 @@ pub struct ConstantRead {
 pub struct If {
     pub predicate: Expr,
     pub statements: Statements,
-    pub subsequent: Subsequent
+    pub subsequent: Subsequent,
 }
 
 #[derive(Debug, Clone, PartialEq, Eq, Serialize)]
@@ -72,7 +73,7 @@ pub struct Until {
 pub enum Subsequent {
     None,
     Elsif(Box<If>),
-    Else(Else)
+    Else(Else),
 }
 
 #[derive(Debug, Clone, PartialEq, Eq, Serialize)]

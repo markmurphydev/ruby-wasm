@@ -14,9 +14,12 @@ pub fn run(module: wasm::module::Module) -> String {
     let mut store = Store::new(&engine, ());
     let instance = Instance::new(&mut store, &module, &[]);
 
-    let top_level = instance.unwrap().get_typed_func::<(), WasmtimeRefEq>(&mut store, RUBY_TOP_LEVEL_FUNCTION_NAME).unwrap();
+    let top_level = instance
+        .unwrap()
+        .get_typed_func::<(), WasmtimeRefEq>(&mut store, RUBY_TOP_LEVEL_FUNCTION_NAME)
+        .unwrap();
     let res = top_level.call(&mut store, ()).unwrap();
 
-    let output = Unitype::parse_ref_eq(res, &store).to_pretty();
+    let output = Unitype::parse_ref_eq(res, &mut store).to_pretty();
     output
 }

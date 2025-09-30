@@ -1,16 +1,16 @@
-use std::fs;
 use clap::Parser as ParserTrait;
 use clap::Subcommand;
-use wasmtime::{Config, Engine, Instance, Store};
-use ruby_wasm::lexeme::LexemeKind;
-use ruby_wasm::lexer::Lexer;
-use ruby_wasm::parser::Parser;
-use ruby_wasm::{binary, html, CompileCtx};
 use ruby_wasm::compiler;
 use ruby_wasm::compiler::RUBY_TOP_LEVEL_FUNCTION_NAME;
 use ruby_wasm::core::add_core_items;
+use ruby_wasm::lexeme::LexemeKind;
+use ruby_wasm::lexer::Lexer;
+use ruby_wasm::parser::Parser;
 use ruby_wasm::unitype::{Unitype, WasmtimeRefEq};
 use ruby_wasm::wasm::module::Module;
+use ruby_wasm::{binary, html};
+use std::fs;
+use wasmtime::{Config, Engine, Instance, Store};
 
 #[derive(clap::Parser)]
 #[command(version, about, long_about = None)]
@@ -146,10 +146,13 @@ fn main() {
             let mut store = Store::new(&engine, ());
             let instance = Instance::new(&mut store, &module, &[]);
 
-            let top_level = instance.unwrap().get_typed_func::<(), WasmtimeRefEq>(&mut store, RUBY_TOP_LEVEL_FUNCTION_NAME).unwrap();
+            let top_level = instance
+                .unwrap()
+                .get_typed_func::<(), WasmtimeRefEq>(&mut store, RUBY_TOP_LEVEL_FUNCTION_NAME)
+                .unwrap();
             let res = top_level.call(&mut store, ()).unwrap();
 
-            let output = Unitype::parse_ref_eq(res, &store).to_pretty();
+            let output = Unitype::parse_ref_eq(res, &mut store).to_pretty();
             println!("{}", output);
         }
     }

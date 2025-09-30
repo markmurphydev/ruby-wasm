@@ -2,10 +2,11 @@
 //! https://github.com/wasm-bindgen/walrus
 //! MIT licensed
 
-use std::ops::{Deref, DerefMut};
-use id_arena::{Arena, Id};
-use crate::CompileCtx;
+use crate::wasm::types::BlockType;
 use crate::wasm::{Block, IfElse, Instr, Loop, UnaryOp, Value};
+use crate::CompileCtx;
+use id_arena::{Arena, Id};
+use std::ops::{Deref, DerefMut};
 
 /// A builder returned by instruction sequence-construction methods to build up
 /// instructions within a block/loop/if-else over time.
@@ -108,6 +109,7 @@ impl InstrSeqBuilder {
     pub fn if_else(
         &self,
         ctx: &mut CompileCtx<'_>,
+        ty: BlockType,
         predicate: impl FnOnce(&mut CompileCtx<'_>, &InstrSeqBuilder),
         consequent: impl FnOnce(&mut CompileCtx<'_>, &InstrSeqBuilder),
         alternative: impl FnOnce(&mut CompileCtx<'_>, &InstrSeqBuilder),
@@ -133,6 +135,7 @@ impl InstrSeqBuilder {
         self.instr(
             ctx,
             IfElse {
+                ty,
                 predicate,
                 consequent,
                 alternative,

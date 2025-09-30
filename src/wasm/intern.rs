@@ -49,5 +49,3 @@ impl IdentifierInterner {
         self.vec[interned_identifier.0 as usize].as_str()
     }
 }
-
-

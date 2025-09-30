@@ -6,13 +6,14 @@
 use crate::unitype::Unitype;
 use crate::wasm::function::ExportStatus;
 use crate::wasm::module::{GlobalBuilder, Module};
-use crate::wasm::types::{ParamType, ResultType};
-use crate::wasm::{BinaryOp, UnaryOp};
+use crate::wasm::types::{Mutability, NumType, ParamType, ResultType};
+use crate::wasm::{BinaryOp, TypeDef, UnaryOp};
 use crate::{CompileCtx, FunctionBuilder};
 
 pub fn add_core_items(module: &mut Module) -> CompileCtx<'_> {
     let mut ctx = CompileCtx { module };
     add_globals(&mut ctx);
+    add_types(&mut ctx);
     add_functions(&mut ctx);
     ctx
 }
@@ -22,16 +23,48 @@ fn add_globals(ctx: &mut CompileCtx<'_>) {
     add_unitype_false(ctx);
 }
 
+/// ```wat
+/// (global $unitype-true (ref i31)
+///     (ref.i31 (i32.const `Unitype::TRUE_BIT_PATTERN`)))
+/// ```
 fn add_unitype_true(ctx: &mut CompileCtx) {
-    let builder = GlobalBuilder::new(ctx.module, "unitype-true".to_string());
-    builder.instr_seq().i31_const(ctx, Unitype::TRUE_BIT_PATTERN).unop(ctx, UnaryOp::RefI31);
+    let builder = GlobalBuilder::new(
+        ctx.module,
+        Unitype::REF_I31.into_global_type(Mutability::Const),
+        "unitype-true".to_string(),
+    );
+    builder
+        .instr_seq()
+        .i31_const(ctx, Unitype::TRUE_BIT_PATTERN);
     builder.finish(ctx);
 }
 
+/// ```wat
+/// (global $unitype-false (ref i31)
+///     (ref.i31 (i32.const `Unitype::FALSE_BIT_PATTERN`)))
+/// ```
 fn add_unitype_false(ctx: &mut CompileCtx) {
-    let builder = GlobalBuilder::new(ctx.module, "unitype-false".to_string());
-    builder.instr_seq().i31_const(ctx, Unitype::FALSE_BIT_PATTERN).unop(ctx, UnaryOp::RefI31);
+    let builder = GlobalBuilder::new(
+        ctx.module,
+        Unitype::REF_I31.into_global_type(Mutability::Const),
+        "unitype-false".to_string(),
+    );
+    builder
+        .instr_seq()
+        .i31_const(ctx, Unitype::FALSE_BIT_PATTERN);
     builder.finish(ctx);
+}
+
+fn add_types(ctx: &mut CompileCtx) {
+    add_unitype_string(ctx);
+}
+
+/// ```wat
+/// (type $unitype-string (ref i8))
+/// ```
+fn add_unitype_string(ctx: &mut CompileCtx) {
+    let ty = TypeDef::new(ctx, Unitype::STRING_TYPE_NAME, Unitype::STRING_TYPE);
+    ctx.module.type_def_arena.alloc(ty);
 }
 
 fn add_functions(ctx: &mut CompileCtx<'_>) {
@@ -77,7 +110,7 @@ fn add_functions(ctx: &mut CompileCtx<'_>) {
 //     todo!()
 // }
 
-/// UNITYPE -> UNITYPE_BOOL
+/// UNITYPE -> bool
 fn add_is_false(ctx: &mut CompileCtx<'_>) {
     let name = "is_false";
     let exported = ExportStatus::NotExported;
@@ -85,10 +118,11 @@ fn add_is_false(ctx: &mut CompileCtx<'_>) {
         name: "b".to_string(),
         ty: Unitype::UNITYPE.into_val_type(),
     }]);
-    let results = Box::new([ResultType(Unitype::UNITYPE.into_val_type())]);
+    let results = Box::new([ResultType(NumType::I32.into_val_type())]);
     let builder = FunctionBuilder::new(ctx, name, exported, params, results);
     builder.func_body().if_else(
         ctx,
+        NumType::I32.into_block_type_result(),
         |ctx, builder| {
             builder
                 .local_get(ctx, "b".to_string())
@@ -113,7 +147,7 @@ fn add_is_false(ctx: &mut CompileCtx<'_>) {
 
 #[cfg(test)]
 mod tests {
-    use crate::wasm::module::{GlobalBuilder, Module};
+    use crate::wasm::module::Module;
     use crate::CompileCtx;
 
     // // TODO -- test `is_string()`
@@ -130,12 +164,13 @@ mod tests {
 
     #[test]
     fn is_false() {
+        // TODO
         let mut module = Module::new();
         let ctx = CompileCtx {
             module: &mut module,
         };
 
-        let test_str_builder = GlobalBuilder::new(ctx.module, "test_str".to_string());
+        // let test_str_builder = GlobalBuilder::new(ctx.module, "test_str".to_string());
         // test_str_builder.instr_seq()
     }
 }

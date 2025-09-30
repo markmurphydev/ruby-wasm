@@ -8,6 +8,7 @@ use crate::wasm::instr_seq::InstrSeqBuilder;
 use crate::wasm::module::{GlobalBuilder, Module};
 use crate::wasm::UnaryOp;
 use crate::{node as R, FunctionBuilder};
+use std::hash::{DefaultHasher, Hash, Hasher};
 
 pub const RUBY_TOP_LEVEL_FUNCTION_NAME: &str = "__ruby_top_level_function";
 
@@ -16,7 +17,6 @@ pub struct CompileCtx<'a> {
 }
 
 pub fn compile(ctx: &mut CompileCtx<'_>, program: &R::Program) {
-
     // Build the top-level function
     let top_level_builder = FunctionBuilder::new(
         ctx,
@@ -58,6 +58,8 @@ fn compile_statements(
 fn compile_expr(ctx: &mut CompileCtx<'_>, builder: &InstrSeqBuilder, expr: &R::Expr) {
     match expr {
         &R::Expr::Integer(n) => compile_integer(ctx, builder, n),
+        R::Expr::SingleQuoteString(s) => compile_single_quote_string(ctx, builder, s),
+
         R::Expr::False => {
             builder.i31_const(ctx, Unitype::FALSE_BIT_PATTERN);
         }
@@ -96,9 +98,10 @@ fn compile_integer(ctx: &mut CompileCtx<'_>, builder: &InstrSeqBuilder, n: i64) 
 
             // TODO -- We need to dedup constant heapnums.
             //  If you have 2 of the same-valued global this probably breaks at validation time.
-            let global_id = format!("$global-i32-{}", heapnum);
+            let global_id = format!("global-i32-{}", heapnum);
 
-            let global_builder = GlobalBuilder::new(ctx.module, global_id.clone());
+            let global_builder =
+                GlobalBuilder::new(ctx.module, Unitype::GLOBAL_CONST_TYPE, global_id.clone());
             global_builder.instr_seq().i64_const(ctx, heapnum);
             global_builder.finish(ctx);
 
@@ -108,11 +111,30 @@ fn compile_integer(ctx: &mut CompileCtx<'_>, builder: &InstrSeqBuilder, n: i64) 
     }
 }
 
+fn compile_single_quote_string(ctx: &mut CompileCtx<'_>, builder: &InstrSeqBuilder, str: &String) {
+    // TODO -- Dedup strings.
+    let mut hasher = DefaultHasher::new();
+    str.hash(&mut hasher);
+    let global_id = format!("single-quote-string-{}", hasher.finish());
+    let global_builder =
+        GlobalBuilder::new(ctx.module, Unitype::GLOBAL_CONST_TYPE, global_id.clone());
+    for byte in str.bytes() {
+        global_builder.instr_seq().i32_const(ctx, byte as i32);
+    }
+    let len_bytes = i32::try_from(str.as_bytes().len()).unwrap();
+    global_builder
+        .instr_seq()
+        .array_new_fixed(ctx, "unitype-string".to_string(), len_bytes);
+    global_builder.finish(ctx);
+
+    builder.global_get(ctx, global_id.clone());
+}
+
 /// Add a global to the Module, setting its value to the write's rhs.
 fn compile_global_variable_write(ctx: &mut CompileCtx<'_>, global_write: &GlobalVariableWrite) {
     let GlobalVariableWrite { name, expr } = global_write;
 
-    let global_builder = GlobalBuilder::new(ctx.module, name.clone());
+    let global_builder = GlobalBuilder::new(ctx.module, Unitype::GLOBAL_MUT_TYPE, name.clone());
     let instr_seq_builder = global_builder.instr_seq();
     compile_expr(ctx, &instr_seq_builder, expr);
     global_builder.finish(ctx);
@@ -136,6 +158,7 @@ fn compile_if_expr(ctx: &mut CompileCtx<'_>, builder: &InstrSeqBuilder, if_expr:
     } = if_expr;
     builder.if_else(
         ctx,
+        Unitype::UNITYPE.into_block_type_result(),
         |ctx, builder| compile_expr_to_wasm_predicate(ctx, builder, predicate),
         |ctx, builder| {
             compile_statements(ctx, builder, statements);
@@ -161,11 +184,12 @@ fn compile_while_expr(ctx: &mut CompileCtx<'_>, builder: &InstrSeqBuilder, while
         statements,
     } = while_expr;
 
-    let label = "$while".to_string();
+    let label = "while".to_string();
 
     builder.loop_(ctx, label.clone(), |ctx, builder| {
         builder.if_else(
             ctx,
+            Unitype::UNITYPE.into_block_type_result(),
             |ctx, builder| {
                 compile_expr_to_wasm_predicate(ctx, builder, predicate);
             },
@@ -187,11 +211,12 @@ fn compile_until_expr(ctx: &mut CompileCtx<'_>, builder: &InstrSeqBuilder, until
         predicate,
         statements,
     } = until_expr;
-    let label = "$until".to_string();
+    let label = "until".to_string();
 
     builder.loop_(ctx, label.clone(), |ctx, builder| {
         builder.if_else(
             ctx,
+            Unitype::UNITYPE.into_block_type_result(),
             |ctx, builder| {
                 compile_expr_to_wasm_predicate(ctx, builder, predicate);
                 // `binary_not ≡ eqz` when result is interpreted as boolean
@@ -215,5 +240,7 @@ fn compile_expr_to_wasm_predicate(
     expr: &R::Expr,
 ) {
     compile_expr(ctx, builder, expr);
-    builder.call(ctx, "is_false".to_string()).unop(ctx, UnaryOp::I32Eqz);
+    builder
+        .call(ctx, "is_false".to_string())
+        .unop(ctx, UnaryOp::I32Eqz);
 }

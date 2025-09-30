@@ -14,10 +14,10 @@ pub mod types;
 pub mod wat;
 
 use crate::wasm::intern::InternedIdentifier;
-use crate::wasm::types::{GlobalType, RefType};
+use crate::wasm::types::{BlockType, CompType, GlobalType, RefType};
+use crate::CompileCtx;
 use instr_seq::InstrSeqId;
 use wasm_macro::wasm_instr;
-
 // #[cfg(test)]
 // pub use test_utils::build_test_program;
 
@@ -89,7 +89,6 @@ pub enum Instr {
     //     /// The table which `func` below is indexing into
     //     table: TableId,
     // },
-
     /// `local.get n`
     LocalGet {
         /// The local being got.
@@ -167,6 +166,8 @@ pub enum Instr {
     /// `if <predicate> then <consequent> else <alternative> end`
     #[wasm(skip_builder)]
     IfElse {
+        /// The type that `consequent`, `alternative` return.
+        ty: BlockType,
         /// The condition to evaluate.
         predicate: InstrSeqId,
         /// The block to execute when the condition is true.
@@ -355,12 +356,15 @@ pub enum Instr {
     //     /// The function that this instruction is referencing
     //     func: FunctionId,
     // },
-
     /// `ref.test`
-    RefTest { ty: RefType },
+    RefTest {
+        ty: RefType,
+    },
 
     /// `ref.cast`
-    RefCast { to_ty: RefType },
+    RefCast {
+        result_ty: RefType,
+    },
 
     // /// `v128.bitselect`
     // V128Bitselect {},
@@ -423,6 +427,10 @@ pub enum Instr {
     //     /// The table which `func` below is indexing into
     //     table: TableId,
     // },
+    ArrayNewFixed {
+        type_name: String,
+        length: i32,
+    },
 }
 
 /// Possible unary operations in wasm
@@ -599,4 +607,25 @@ pub struct Global {
     ///     Id into the module's `instr_seq_arena`
     /// TODO -- actually ambiguous rn.
     pub instr_seq: InstrSeqId,
+}
+
+#[derive(Debug)]
+pub enum Finality {
+    Final,
+    NotFinal,
+}
+
+/// Module-level type definition.
+/// We ignore `sub`, `rec`, and non-`final` until we need them.
+#[derive(Debug)]
+pub struct TypeDef {
+    pub name: InternedIdentifier,
+    pub ty: CompType,
+}
+
+impl TypeDef {
+    pub fn new(ctx: &mut CompileCtx<'_>, name: &str, ty: CompType) -> TypeDef {
+        let name = ctx.module.interner.intern(name);
+        Self { name, ty }
+    }
 }

@@ -1,14 +1,14 @@
+pub mod binary;
+pub mod compiler;
+pub mod core;
+pub mod html;
 pub mod lexeme;
 pub mod lexer;
 pub mod node;
 pub mod parser;
-pub mod wasm;
-pub mod compiler;
-pub mod binary;
-pub mod html;
 pub mod run;
 pub mod unitype;
-pub mod core;
+pub mod wasm;
 
 pub use crate::compiler::CompileCtx;
 pub use crate::wasm::function::FunctionBuilder;
