@@ -600,35 +600,3 @@ pub struct Global {
     /// TODO -- actually ambiguous rn.
     pub instr_seq: InstrSeqId,
 }
-
-// #[cfg(test)]
-// mod test_utils {
-//     use wasmtime::Extern::Global;
-//     use crate::compiler::RUBY_TOP_LEVEL_FUNCTION_NAME;
-//     use crate::unitype::Unitype;
-//     use crate::wasm::function::ExportStatus;
-//     use crate::wasm::module::GlobalBuilder;
-//     use crate::{CompileCtx, FunctionBuilder};
-//
-//     pub fn build_test_program<'a>(
-//         ctx: &'a mut CompileCtx<'_>,
-//         globals: Vec<(String, impl FnOnce(&'_ mut CompileCtx<'_>, &GlobalBuilder))>,
-//         functions: impl FnOnce(&'_ mut CompileCtx<'_>, &FunctionBuilder),
-//     ) {
-//         for (name, initializer) in globals {
-//             let builder = GlobalBuilder::new(ctx.module, name);
-//             initializer(ctx, &builder);
-//             builder.finish(ctx);
-//         }
-//
-//         let top_level_function_builder = FunctionBuilder::new(
-//             ctx,
-//             RUBY_TOP_LEVEL_FUNCTION_NAME,
-//             ExportStatus::Exported,
-//             Box::new([]),
-//             Box::new([Unitype::UNITYPE.into_result_type()]),
-//         );
-//         functions(ctx, &top_level_function_builder);
-//         top_level_function_builder.finish(&mut ctx.module.funcs);
-//     }
-// }
