@@ -18,8 +18,6 @@ use crate::wasm::types::{BlockType, CompType, GlobalType, RefType};
 use crate::CompileCtx;
 use instr_seq::InstrSeqId;
 use wasm_macro::wasm_instr;
-// #[cfg(test)]
-// pub use test_utils::build_test_program;
 
 /// Constant values that can show up in WebAssembly
 #[derive(Debug, Clone, Copy)]
