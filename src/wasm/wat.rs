@@ -13,9 +13,7 @@ use crate::wasm::types::{
     AbsHeapType, BlockType, GlobalType, HeapType, Mutability, Nullability, NumType, ParamType,
     RefType, ResultType, ValType,
 };
-use crate::wasm::{
-    BinaryOp, Binop, Block, Const, Global, IfElse, Instr, Loop, UnaryOp, Unop, Value,
-};
+use crate::wasm::{BinaryOp, Binop, Block, Const, Global, IfElse, Instr, Loop, RefCast, RefTest, UnaryOp, Unop, Value};
 use id_arena::Arena;
 use pretty::RcDoc;
 use std::borrow::Cow;
@@ -96,13 +94,13 @@ fn global_to_doc(interner: &IdentifierInterner, arena: &Arena<InstrSeq>, global:
     } = global;
 
     let name = interner.get(*name);
-    let name = format!("\"{}\"", name);
+    let name = format!("${}", name);
 
     let ty = global_type_to_doc(ty);
     let instr_seq = instr_seq_to_doc(arena, *instr_seq);
 
-    text("(global ")
-        .append(line())
+    text("(global")
+        .append(space())
         .append(name)
         .append(line())
         .append(ty)
@@ -204,9 +202,13 @@ fn instr_to_doc(instr_seq_arena: &Arena<InstrSeq>, instr: &Instr) -> Doc {
         Binop(b) => binop_to_doc(b),
         IfElse(i) => if_else_to_doc(instr_seq_arena, i),
         Drop(_) => text("(drop)"),
-        GlobalGet(global) => text(format!("(global.get {})", global.name.clone())),
+        GlobalGet(global) => text(format!("(global.get ${})", global.name.clone())),
         Br(br) => text(format!("(br {})", br.label.clone())),
-        _ => todo!()
+        Call(call) => text(format!("(call ${}", call.func.clone())),
+        LocalGet(get) => text(format!("(local.get ${})", get.name.clone())),
+        BrIf(br_if) => text(format!("(br_if ${})", br_if.block.clone())),
+        RefTest(r) => ref_test_to_doc(r),
+        RefCast(c) => ref_cast_to_doc(c),
     }
 }
 

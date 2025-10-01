@@ -1,27 +1,42 @@
 //! Functions added to the base module
+//! Strategy: Aiming for MVP functionality.
+//!     Do everything as simply/composably as possible,
+//!     and see if Binaryen can sort out the inlining and obvious optimizations.
 
 use crate::unitype::Unitype;
 use crate::wasm::function::ExportStatus;
-use crate::wasm::module::Module;
+use crate::wasm::module::{GlobalBuilder, Module};
 use crate::wasm::types::{ParamType, ResultType};
 use crate::wasm::{BinaryOp, UnaryOp};
 use crate::{CompileCtx, FunctionBuilder};
 
 pub fn add_core_items(module: &mut Module) -> CompileCtx<'_> {
     let mut ctx = CompileCtx { module };
-    add_is_false(&mut ctx);
+    add_globals(&mut ctx);
+    add_functions(&mut ctx);
     ctx
 }
 
-// fn add_globals(module: Module) {
-//     // TODO -- Name mangling or something...
-//     // let globals = [
-//     //     Global { name:  }
-//     // ];
-//     // for global in globals {
-//     //     module.global_arena.alloc(global);
-//     // }
-// }
+fn add_globals(ctx: &mut CompileCtx<'_>) {
+    add_unitype_true(ctx);
+    add_unitype_false(ctx);
+}
+
+fn add_unitype_true(ctx: &mut CompileCtx) {
+    let builder = GlobalBuilder::new(ctx.module, "unitype-true".to_string());
+    builder.instr_seq().i31_const(ctx, Unitype::TRUE_BIT_PATTERN).unop(ctx, UnaryOp::RefI31);
+    builder.finish(ctx);
+}
+
+fn add_unitype_false(ctx: &mut CompileCtx) {
+    let builder = GlobalBuilder::new(ctx.module, "unitype-false".to_string());
+    builder.instr_seq().i31_const(ctx, Unitype::FALSE_BIT_PATTERN).unop(ctx, UnaryOp::RefI31);
+    builder.finish(ctx);
+}
+
+fn add_functions(ctx: &mut CompileCtx<'_>) {
+    add_is_false(ctx);
+}
 
 // fn is_string(ctx: &mut CompileCtx<'_>) -> Function {
 //     let name = "is_string";
@@ -84,7 +99,7 @@ fn add_is_false(ctx: &mut CompileCtx<'_>) {
                 .local_get(ctx, "b".to_string())
                 .ref_cast(ctx, Unitype::REF_I31)
                 .unop(ctx, UnaryOp::I31GetU)
-                .global_get(ctx, "false".to_string())
+                .global_get(ctx, "unitype-false".to_string())
                 .unop(ctx, UnaryOp::I31GetU)
                 .binop(ctx, BinaryOp::I32Eq);
         },
