@@ -149,6 +149,8 @@ fn add_is_false(ctx: &mut CompileCtx<'_>) {
 mod tests {
     use crate::wasm::module::Module;
     use crate::CompileCtx;
+    // TODO -- How to test this easily?
+    //  Can't use the normal Ruby-program-text input.
 
     // // TODO -- test `is_string()`
     // #[test]
@@ -162,15 +164,15 @@ mod tests {
     //     // test_str_builder.instr_seq()
     // }
 
-    #[test]
-    fn is_false() {
-        // TODO
-        let mut module = Module::new();
-        let ctx = CompileCtx {
-            module: &mut module,
-        };
-
-        // let test_str_builder = GlobalBuilder::new(ctx.module, "test_str".to_string());
-        // test_str_builder.instr_seq()
-    }
+    // #[test]
+    // fn is_false() {
+    //     // TODO
+    //     let mut module = Module::new();
+    //     let ctx = CompileCtx {
+    //         module: &mut module,
+    //     };
+    //
+    //     // let test_str_builder = GlobalBuilder::new(ctx.module, "test_str".to_string());
+    //     // test_str_builder.instr_seq()
+    // }
 }

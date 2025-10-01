@@ -3,8 +3,3 @@
 target/
 notes/.obsidian*
 notes/.obsidian/
-# Ignore test files we make in the outer directory
-/*.wat
-/*.wasm
-/*.html
-/*.rb

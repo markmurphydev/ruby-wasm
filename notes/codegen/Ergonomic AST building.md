@@ -1,0 +1,1 @@
+- Can you have a tower of builders where each is `copy` and they just produce lower ones?
