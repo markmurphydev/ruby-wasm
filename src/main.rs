@@ -138,7 +138,7 @@ fn main() {
         Command::Scratch => {
             let wat = fs::read_to_string("core.wat").unwrap();
             let mut config = Config::new();
-            config.wasm_gc(true);
+            config.wasm_function_references(true).wasm_gc(true);
             let engine = Engine::new(&config).unwrap();
             let module = wasmtime::Module::new(&engine, wat);
             let module = module.unwrap();

@@ -28,3 +28,6 @@ https://webassembly.github.io/spec/core/text/types.html#id2
 ; signed i31 on stack:
 (i31.get_s)
 ```
+
+# Does the `loop` instruction MAKE A LOOP?
+NO! IT DOESN'T! IT MAKES A LABEL THAT YOU CAN JUMP TO WITH `br` TO MAKE A LOOP.
