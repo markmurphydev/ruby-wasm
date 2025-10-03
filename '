@@ -39,21 +39,16 @@
     :initarg :instance-methods
     :accessor instance-methods)))
 
-(defparameter *method-class-new* 
-  (make-instance 'ruby-method-new :name "new" :owner nil))
-
 (defparameter *class-class*
   (make-instance 'ruby-class
                  :parent nil
                  :superclass nil
                  :child-superclass nil ; But should be Object
                  :name "Class"
-                 :instance-methods (list *method-class-new*)))
-(setf (owner *method-class-new*) *class-class*)
+                 :instance-methods (list *method-basic-object-new*)))
 
-
-(defparameter *method-basic-object-new* 
-  (make-instance 'ruby-method-new :name "new"))
+(defparameter *method-class-new* 
+  (make-instance 'ruby-method-new :name "new" :owner *class-class*))
 
 (defparameter *class-basic-object*
   (make-instance 'ruby-class
@@ -61,8 +56,10 @@
                  :superclass nil ; But should be Module.
                  :child-superclass nil
                  :name "BasicObject" 
-                 :instance-methods (list *method-basic-object-new*)))
-(setf (owner *method-basic-object-new*) *class-basic-object*)
+                 :instance-methods (list)))
+
+(defparameter *method-basic-object-new* 
+  (make-instance 'ruby-method-new :name "new" :owner *class-basic-object*))
 
 (defgeneric symbolic-name (item)
   (:method ((method ruby-method))
@@ -200,6 +197,7 @@
     
     ;;;; Functions
     ,@method-defs
+    
     (func $str-eq
           (param $a (ref $str))
           (param $b (ref $str))
@@ -234,7 +232,7 @@
                                               (i32.const 1)))
                      (br $for))))
           (unreachable))
-
+    
     (func $alist-str-method-get
           (param $alist (ref $alist-str-method))
           (param $name (ref $str))
@@ -281,17 +279,17 @@
           (param $args (ref $arr-unitype))
           (result (ref eq))
 
-          (local $parent (ref $class))
+          (local $class (ref $class))
           (local $method (ref $method))
 
-          (local.set $parent (ref.as_non_null (struct.get $obj $parent (local.get $receiver))))
+          (local.set $class (ref.as_non_null (struct.get $obj $parent (local.get $receiver))))
           ;; TODO -- get the method from the class, call
           (local.set $method
                      (ref.cast (ref $method)
                                (call $alist-str-method-get
                                      (struct.get $class
                                                  $instance-methods
-                                                 (local.get $parent))
+                                                 (local.get $class))
                                      (local.get $message))))
           (call_ref $method
                     (local.get $receiver)
@@ -300,10 +298,16 @@
 
     (func $top (export "__ruby_top_level_function")
           (result (ref eq))
-          (call $call
-                (global.get $class-BasicObject)
-                (global.get $STR-NEW)
-                (array.new_fixed $arr-unitype 0)))))
+          (local $new (ref $obj))
+          (local.set $new
+                     (ref.cast (ref $obj)
+                               (call $call
+                                     (global.get $class-BasicObject)
+                                     (global.get $STR-NEW)
+                                     (array.new_fixed $arr-unitype 0))))
+          (struct.get $class $name 
+                      (struct.get $obj $parent
+                                  (local.get $new))))))
 
     
 

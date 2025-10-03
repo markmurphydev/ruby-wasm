@@ -37,18 +37,109 @@
    (global.get $str-Class)
    (array.new_fixed $alist-str-method 2
     (struct.new $alist-str-method-pair (global.get $STR-NEW)
-     (ref.func $method-BasicObject-new))
+     (ref.func $method-Class-new))
     (struct.new $alist-str-method-pair (global.get $STR-NEW)
-     (ref.func $method-Class-new)))))
+     (ref.func $method-BasicObject-new)))))
  (global $class-BasicObject (ref $class)
   (struct.new $class (global.get $class-Class) (ref.null $class)
    (global.get $str-BasicObject)
    (array.new_fixed $alist-str-method 1
     (struct.new $alist-str-method-pair (global.get $STR-NEW)
-     (ref.func $method-Class-new)))))
+     (ref.func $method-BasicObject-new)))))
+ (func $method-Class-new (type $method) (param $self (ref $obj))
+  (param $args (ref $arr-unitype)) (result (ref eq))
+  (struct.new $obj (global.get $class-Class) (ref.null $class)))
  (func $method-BasicObject-new (type $method) (param $self (ref $obj))
   (param $args (ref $arr-unitype)) (result (ref eq))
   (struct.new $obj (global.get $class-BasicObject) (ref.null $class)))
- (func $method-Class-new (type $method) (param $self (ref $obj))
+ (func $str-eq (param $a (ref $str)) (param $b (ref $str)) (result i32)
+  (local $idx i32) (local $a_ch i32) (local $b_ch i32)
+  (local.set $idx (i32.const 0))
+  (if (i32.eqz (i32.eq (array.len (local.get $a)) (array.len (local.get $b))))
+      (then (return (i32.const 0)))
+      (else
+       (loop $for (if (i32.eq (local.get $idx) (array.len (local.get $a)))
+                      (then (return (i32.const 1)))) (local.set $a_ch
+                                                      (array.get_u $str
+                                                       (local.get $a)
+                                                       (local.get
+                                                        $idx))) (local.set
+                                                                 $b_ch
+                                                                 (array.get_u
+                                                                  $str
+                                                                  (local.get
+                                                                   $b)
+                                                                  (local.get
+                                                                   $idx))) (if (i32.eqz
+                                                                                (i32.eq
+                                                                                 (local.get
+                                                                                  $a_ch)
+                                                                                 (local.get
+                                                                                  $b_ch)))
+                                                                               (then
+                                                                                (return
+                                                                                 (i32.const
+                                                                                  0)))) (local.set
+                                                                                         $idx
+                                                                                         (i32.add
+                                                                                          (local.get
+                                                                                           $idx)
+                                                                                          (i32.const
+                                                                                           1))) (br
+                                                                                                 $for))))
+  (unreachable))
+ (func $alist-str-method-get (param $alist (ref $alist-str-method))
+  (param $name (ref $str)) (result (ref $method)) (local $idx i32)
+  (local $pair (ref $alist-str-method-pair)) (local $key (ref $str))
+  (local $val (ref $method)) (local.set $idx (i32.const 0))
+  (loop $for (if (i32.eq (local.get $idx) (array.len (local.get $alist)))
+                 (then (unreachable))) (local.set $pair
+                                        (array.get $alist-str-method
+                                         (local.get $alist)
+                                         (local.get $idx))) (local.set $key
+                                                             (struct.get
+                                                              $alist-str-method-pair
+                                                              $key
+                                                              (local.get
+                                                               $pair))) (local.set
+                                                                         $val
+                                                                         (struct.get
+                                                                          $alist-str-method-pair
+                                                                          $val
+                                                                          (local.get
+                                                                           $pair))) (if (call
+                                                                                         $str-eq
+                                                                                         (local.get
+                                                                                          $key)
+                                                                                         (local.get
+                                                                                          $name))
+                                                                                        (then
+                                                                                         (return
+                                                                                          (local.get
+                                                                                           $val)))
+                                                                                        (else
+                                                                                         (local.set
+                                                                                          $idx
+                                                                                          (i32.add
+                                                                                           (local.get
+                                                                                            $idx)
+                                                                                           (i32.const
+                                                                                            1)))
+                                                                                         (br
+                                                                                          $for))))
+  (unreachable))
+ (func $call (param $receiver (ref $obj)) (param $message (ref $str))
   (param $args (ref $arr-unitype)) (result (ref eq))
-  (struct.new $obj (global.get $class-Class) (ref.null $class))))
+  (local $parent (ref $class)) (local $method (ref $method))
+  (local.set $parent
+   (ref.as_non_null (struct.get $obj $parent (local.get $receiver))))
+  (local.set $method
+   (ref.cast (ref $method)
+    (call $alist-str-method-get
+     (struct.get $class $instance-methods (local.get $parent))
+     (local.get $message))))
+  (call_ref $method (local.get $receiver) (local.get $args)
+   (local.get $method)))
+ (func $top (export "__ruby_top_level_function") (result (ref eq))
+  (call $call (global.get $class-BasicObject) (global.get $STR-NEW)
+   (array.new_fixed $arr-unitype 0))))
