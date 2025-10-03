@@ -9,8 +9,10 @@
                 (field $instance_methods (ref $alist-str-method))))
 
   (type $method (func (param $self (ref $obj))
-                      (param $args (ref $alist-str-unitype))
+                      (param $args (ref $arr-unitype))
                       (result (ref eq))))
+
+  (type $arr-unitype (array (ref eq)))
 
   (type $alist-str-unitype-pair (struct (field $key (ref $str)) (field $val (ref eq))))
   (type $alist-str-unitype (array (ref $alist-str-unitype-pair)))
@@ -27,24 +29,46 @@
 (global $true (ref i31)
         (ref.i31 (i32.const 3)))
 
+;; FIXNUM_BIT_WIDTH = 30
+(global $fixnum-mask (ref i31))
+
+;; "new"
+(global $const-str-new (ref $str)
+        (array.new_fixed $str 3
+                         (i32.const 110)
+                         (i32.const 101)
+                         (i32.const 119)))
+
 ;; "!"
 (global $const-str-! (ref $str)
         (array.new_fixed $str 1 (i32.const 33)))
 
-;; class BasicObject < BasicObject {
-;;     def !:
-;;        False
-;;     end
-;; }
+;; "=="
+(global $const-str-== (ref $str)
+        (array.new_fixed $str 2
+                         (i32.const 61)
+                         (i32.const 61)))
+
+(global $class-Class (ref $obj)
+        (struct.new $obj
+                    (ref.null $obj)
+                    (array.new_fixed $alist-str-method 1
+                                     (struct.new $alist-str-method-pair
+                                                 (global.get $const-str-new)
+                                                 (ref.func $method-Class-new)))))
+
 (global $class-BasicObject (ref $obj)
         (struct.new $obj
                     ;; $class
                     (ref.null $obj)
                     ;; $instance_methods
-                    (array.new_fixed $alist-str-method 1
+                    (array.new_fixed $alist-str-method 2
                                      (struct.new $alist-str-method-pair
                                                  (global.get $const-str-!)
-                                                 (ref.func $method-BasicObject-!)))))
+                                                 (ref.func $method-BasicObject-!))
+                                     (struct.new $alist-str-method-pair
+                                                 (global.get $const-str-==)
+                                                 (ref.func $method-BasicObject-==)))))
 
 ;; test instance of BasicObject
 (global $instance-BasicObject (ref $obj)
@@ -54,11 +78,42 @@
                     ;; $instance_methods
                     (array.new_fixed $alist-str-method 0)))
 
+(global $second-instance-BasicObject (ref $obj)
+        (struct.new $obj
+                    (global.get $class-BasicObject)
+                    (array.new_fixed $alist-str-method 0)))
+
 
 ;; ==== funcs ====
 
+(func $method-Class-new (type $method)
+      (param $self (ref $obj))
+      (param $args (ref $arr-unitype))
+      (result (ref eq))
+      (ref.i31 (i32.const 0)))
+
 (func $method-BasicObject-! (type $method)
       (global.get $false))
+
+(func $method-BasicObject-== (type $method)
+      (param $self (ref $obj))
+      (param $args (ref $arr-unitype))
+      (result (ref eq))
+
+      (if (result (ref eq))
+        (ref.eq (local.get $self)
+                (array.get $arr-unitype
+                           (local.get $args)
+                           (i32.const 0)))
+        (then (global.get $true))
+        (else (global.get $false))))
+
+;; Remove the fixnum-indicator bit
+(func $unwrap-fixnum
+      (param $a (ref i32))
+      (result (ref i32))
+      (i32.and (local.get $a)
+               (
 
 (func $str-eq
       (param $a (ref $str))
@@ -144,7 +199,7 @@
 (func $call
       (param $receiver (ref $obj))
       (param $message (ref $str))
-      (param $args (ref $alist-str-unitype))
+      (param $args (ref $arr-unitype))
       (result (ref eq))
 
       (local $class (ref $obj))
@@ -191,7 +246,9 @@
 
 (func $top (export "__ruby_top_level_function")
       (result (ref eq))
-      (call $call (global.get $instance-BasicObject)
-            (global.get $const-str-!)
-            (array.new_fixed $alist-str-unitype 0)))
+      (call $call
+            (global.get $instance-BasicObject)
+            (global.get $const-str-==)
+            (array.new_fixed $arr-unitype 1
+                             (global.get $second-instance-BasicObject))))
 
