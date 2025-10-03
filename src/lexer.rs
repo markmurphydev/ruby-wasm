@@ -253,6 +253,8 @@ impl<'text> Lexer<'text> {
                     }
                     _ => Lexeme::new(Minus, start_idx, CharDifference(1)),
                 },
+                '(' => Lexeme::new(LeftParen, start_idx, CharDifference(1)),
+                ')' => Lexeme::new(RightParen, start_idx, CharDifference(1)),
                 '%' => match self.iter.peek() {
                     Some((_, '=')) => {
                         self.iter.next();
@@ -704,11 +706,15 @@ impl<'text> Lexer<'text> {
                     self.iter.next();
                 }
                 Some((idx, _)) => {
-                    return Lexeme::new(Identifier, start_idx, len_exclusive(start_idx, idx));
+                    let len = len_exclusive(start_idx, idx);
+                    let lexeme_text = lexeme::text_in_range(self.text, start_idx, len);
+                    return Lexeme::new(Identifier { text: lexeme_text }, start_idx, len);
                 }
                 None => {
                     let idx = self.iter.eof_idx();
-                    return Lexeme::new(Identifier, start_idx, len_exclusive(start_idx, idx));
+                    let len = len_exclusive(start_idx, idx);
+                    let lexeme_text = lexeme::text_in_range(self.text, start_idx, len);
+                    return Lexeme::new(Identifier { text: lexeme_text }, start_idx, len);
                 }
             }
         }
@@ -1019,6 +1025,21 @@ mod tests {
             (((kind SingleQuoteStringLiteral (text . "'22'")) (start . 0)
               (len . 4))
              ((kind . Eof) (start . 4) (len . 0)))
+        "#]];
+        let actual = lex_to_sexpr(text);
+        expected.assert_eq(&actual);
+    }
+
+    #[test]
+    fn object_new() {
+        let text = "Object.new()";
+        let expected = expect![[r#"
+            (((kind Constant (text . "Object")) (start . 0) (len . 6))
+             ((kind . Dot) (start . 6) (len . 1))
+             ((kind Identifier (text . "new")) (start . 7) (len . 3))
+             ((kind . LeftParen) (start . 10) (len . 1))
+             ((kind . RightParen) (start . 11) (len . 1))
+             ((kind . Eof) (start . 12) (len . 0)))
         "#]];
         let actual = lex_to_sexpr(text);
         expected.assert_eq(&actual);

@@ -6,7 +6,6 @@ use std::str::FromStr;
 use std::vec;
 
 use crate::lexeme::{Lexeme, LexemeKind as LK, LexemeKind};
-use crate::node::GlobalVariableRead;
 
 /// Strategy:
 /// - Lex on-demand
@@ -69,7 +68,7 @@ impl<'text> Parser<'text> {
         );
 
         let lexeme = self.lexer.peek();
-        match lexeme.kind {
+        let mut lhs = match lexeme.kind {
             LK::IntegerLiteral { .. } => self.integer_literal(),
             LK::SingleQuoteStringLiteral { .. } => self.single_quote_string_literal(),
 
@@ -87,6 +86,18 @@ impl<'text> Parser<'text> {
             LK::While => box_expr_variant!(self.while_expr(), N::Expr::While),
             LK::Until => box_expr_variant!(self.until_expr(), N::Expr::Until),
             _ => None,
+        };
+
+        let Some(mut lhs) = lhs else { return None };
+
+        loop {
+            let lexeme = self.lexer.peek().kind;
+            match lexeme {
+                LK::Dot => {
+                    lhs = self.call_expr(lhs);
+                }
+                _ => return Some(lhs),
+            };
         }
     }
 
@@ -153,7 +164,7 @@ impl<'text> Parser<'text> {
                 let rhs = self.expr().expect("Assignment with no RHS");
                 N::Expr::GlobalVariableWrite(Box::new(N::GlobalVariableWrite { name, expr: rhs }))
             }
-            _ => N::Expr::GlobalVariableRead(Box::new(GlobalVariableRead { name })),
+            _ => N::Expr::GlobalVariableRead(Box::new(N::GlobalVariableRead { name })),
         }
     }
 
@@ -231,6 +242,26 @@ impl<'text> Parser<'text> {
             }
             _ => unreachable!(),
         }
+    }
+
+    /// Pre: `self.lexer.next().kind == LexemeKind::Dot`
+    fn call_expr(&mut self, receiver: N::Expr) -> N::Expr {
+        self.debug_expect(&[LK::Dot]);
+        let rhs = self.lexer.next();
+        // TODO -- `Class` is a contextual keyword.
+        let text = match rhs.kind {
+            LK::Identifier { text } => text,
+            LK::Class => "class".to_string(),
+            _ => panic!("Illegal kind: {:?}", rhs.kind)
+        };
+
+        self.expect(&[LK::LeftParen]);
+        self.expect(&[LK::RightParen]);
+
+        N::Expr::Call(Box::new(N::Call {
+            receiver,
+            name: text,
+        }))
     }
 
     /// Peek the next token. If it's of kind `expected`, consume it.

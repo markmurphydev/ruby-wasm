@@ -1,13 +1,12 @@
 //! Compiles a Ruby AST to a Wasm module
 
 // W for Wasm
-use crate::node::{GlobalVariableRead, GlobalVariableWrite, Subsequent};
 use crate::unitype::Unitype;
+use crate::wasm::UnaryOp;
 use crate::wasm::function::ExportStatus;
 use crate::wasm::instr_seq::InstrSeqBuilder;
 use crate::wasm::module::{GlobalBuilder, Module};
-use crate::wasm::UnaryOp;
-use crate::{node as R, FunctionBuilder};
+use crate::{FunctionBuilder, node as R};
 use std::hash::{DefaultHasher, Hash, Hasher};
 
 pub const RUBY_TOP_LEVEL_FUNCTION_NAME: &str = "__ruby_top_level_function";
@@ -77,11 +76,14 @@ fn compile_expr(ctx: &mut CompileCtx<'_>, builder: &InstrSeqBuilder, expr: &R::E
             compile_global_variable_read(ctx, builder, global_read)
         }
         R::Expr::ConstantWrite(_constant_write) => todo!(),
-        R::Expr::ConstantRead(_constant_read) => todo!(),
+        R::Expr::ConstantRead(constant_read_expr) => {
+            compile_constant_read_expr(ctx, builder, &*constant_read_expr)
+        }
 
         R::Expr::If(if_expr) => compile_if_expr(ctx, builder, &*if_expr),
         R::Expr::While(while_expr) => compile_while_expr(ctx, builder, &*while_expr),
         R::Expr::Until(until_expr) => compile_until_expr(ctx, builder, &*until_expr),
+        R::Expr::Call(call_expr) => compile_call_expr(ctx, builder, &*call_expr),
     }
 }
 
@@ -131,8 +133,8 @@ fn compile_single_quote_string(ctx: &mut CompileCtx<'_>, builder: &InstrSeqBuild
 }
 
 /// Add a global to the Module, setting its value to the write's rhs.
-fn compile_global_variable_write(ctx: &mut CompileCtx<'_>, global_write: &GlobalVariableWrite) {
-    let GlobalVariableWrite { name, expr } = global_write;
+fn compile_global_variable_write(ctx: &mut CompileCtx<'_>, global_write: &R::GlobalVariableWrite) {
+    let R::GlobalVariableWrite { name, expr } = global_write;
 
     let global_builder = GlobalBuilder::new(ctx.module, Unitype::GLOBAL_MUT_TYPE, name.clone());
     let instr_seq_builder = global_builder.instr_seq();
@@ -143,11 +145,21 @@ fn compile_global_variable_write(ctx: &mut CompileCtx<'_>, global_write: &Global
 fn compile_global_variable_read(
     ctx: &mut CompileCtx<'_>,
     builder: &InstrSeqBuilder,
-    global_read: &GlobalVariableRead,
+    global_read: &R::GlobalVariableRead,
 ) {
-    let GlobalVariableRead { name } = global_read;
+    let R::GlobalVariableRead { name } = global_read;
 
     builder.global_get(ctx, name.clone());
+}
+
+fn compile_constant_read_expr(
+    ctx: &mut CompileCtx<'_>,
+    builder: &InstrSeqBuilder,
+    constant_read_expr: &R::ConstantRead,
+) {
+    // TODO -- Assuming all constants are classes.
+    let R::ConstantRead { name } = constant_read_expr;
+    builder.global_get(ctx, class_symbolic_identifier(name));
 }
 
 fn compile_if_expr(ctx: &mut CompileCtx<'_>, builder: &InstrSeqBuilder, if_expr: &R::If) {
@@ -164,11 +176,13 @@ fn compile_if_expr(ctx: &mut CompileCtx<'_>, builder: &InstrSeqBuilder, if_expr:
             compile_statements(ctx, builder, statements);
         },
         |ctx, builder| match subsequent {
-            Subsequent::None => {
+            R::Subsequent::None => {
                 builder.i31_const(ctx, Unitype::NIL_BIT_PATTERN);
             }
-            Subsequent::Elsif(if_expr) => compile_if_expr(ctx, builder, &if_expr),
-            Subsequent::Else(else_expr) => compile_statements(ctx, builder, &else_expr.statements),
+            R::Subsequent::Elsif(if_expr) => compile_if_expr(ctx, builder, &if_expr),
+            R::Subsequent::Else(else_expr) => {
+                compile_statements(ctx, builder, &else_expr.statements)
+            }
         },
     );
 }
@@ -230,6 +244,15 @@ fn compile_until_expr(ctx: &mut CompileCtx<'_>, builder: &InstrSeqBuilder, until
     });
 }
 
+fn compile_call_expr(ctx: &mut CompileCtx<'_>, builder: &InstrSeqBuilder, call_expr: &R::Call) {
+    let R::Call { receiver, name } = call_expr;
+    compile_expr(ctx, builder, receiver);
+    builder
+        .global_get(ctx, string_symbolic_identifier(name))
+        .global_get(ctx, "empty-args".to_string())
+        .call(ctx, "call".to_string());
+}
+
 /// Turns a Ruby Expr into a Wasm predicate.
 /// A ruby Expr evaluates to a ruby-value (True, False, Nil, ...)
 /// To use as a Wasm predicate, we need to test whether the result is truthy or not.
@@ -243,4 +266,26 @@ fn compile_expr_to_wasm_predicate(
     builder
         .call(ctx, "is_false".to_string())
         .unop(ctx, UnaryOp::I32Eqz);
+}
+
+fn class_symbolic_identifier(class_name: &str) -> String {
+    // Right now, if the whole identifier is lowercase, the lisp reader makes the name uppercase...
+    // TODO -- Fix the lisp reader.
+    if class_name.chars().all(|c| c.is_lowercase()) {
+        let str_upper_case: String = class_name.chars().flat_map(|c| c.to_uppercase()).collect();
+        format!("CLASS-{}", str_upper_case)
+    } else {
+        format!("class-{}", class_name)
+    }
+}
+
+fn string_symbolic_identifier(str: &str) -> String {
+    // Right now, if the whole identifier is lowercase, the lisp reader makes the name uppercase...
+    // TODO -- Fix the lisp reader.
+    if str.chars().all(|c| c.is_lowercase()) {
+        let str_upper_case: String = str.chars().flat_map(|c| c.to_uppercase()).collect();
+        format!("STR-{}", str_upper_case)
+    } else {
+        format!("str-{}", str)
+    }
 }

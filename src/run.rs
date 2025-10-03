@@ -6,7 +6,7 @@ use wasmtime::{Config, Engine, Instance, Module, Store};
 pub fn run(module: wasm::module::Module) -> String {
     let wat = module.to_pretty();
     let mut config = Config::new();
-    config.wasm_gc(true);
+    config.wasm_function_references(true).wasm_gc(true);
     let engine = Engine::new(&config).unwrap();
     let module = Module::new(&engine, wat);
     let module = module.unwrap();

@@ -26,6 +26,7 @@ pub enum Expr {
     If(Box<If>),
     While(Box<While>),
     Until(Box<Until>),
+    Call(Box<Call>),
 }
 
 #[derive(Debug, Clone, PartialEq, Eq, Serialize)]
@@ -67,6 +68,12 @@ pub struct While {
 pub struct Until {
     pub predicate: Expr,
     pub statements: Statements,
+}
+
+#[derive(Debug, Clone, PartialEq, Eq, Serialize)]
+pub struct Call {
+    pub receiver: Expr,
+    pub name: String
 }
 
 #[derive(Debug, Clone, PartialEq, Eq, Serialize)]

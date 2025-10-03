@@ -26,11 +26,14 @@ type Doc = RcDoc<'static>;
 
 const INDENT: isize = 2;
 
+const WAT_CORE: &str = include_str!("../../core_generated.wat");
+
 impl Module {
     pub fn to_pretty(&self) -> String {
         let mut w = Vec::new();
         module_to_doc(self).render(80, &mut w).unwrap();
-        String::from_utf8(w).unwrap()
+        let program = String::from_utf8(w).unwrap();
+        format!("{}\n{}", WAT_CORE, program)
     }
 }
 
@@ -63,14 +66,7 @@ fn module_to_doc(module: &Module) -> Doc {
     .into_iter()
     .filter_map(|doc| doc);
 
-    text("(module")
-        .append(
-            hardline()
-                .append(intersperse(module_fields, hardline()))
-                .nest(INDENT),
-        )
-        .append(")")
-        .group()
+    intersperse(module_fields, hardline())
 }
 
 /// ```wat
@@ -241,7 +237,7 @@ fn instr_to_doc(instr_seq_arena: &Arena<InstrSeq>, instr: &Instr) -> Doc {
         Drop(_) => text("(drop)"),
         GlobalGet(global) => text(format!("(global.get ${})", global.name.clone())),
         Br(br) => text(format!("(br {})", br.label.clone())),
-        Call(call) => text(format!("(call ${}", call.func.clone())),
+        Call(call) => text(format!("(call ${})", call.func.clone())),
         LocalGet(get) => text(format!("(local.get ${})", get.name.clone())),
         BrIf(br_if) => text(format!("(br_if ${})", br_if.block.clone())),
         RefTest(r) => ref_test_to_doc(r),

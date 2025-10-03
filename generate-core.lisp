@@ -51,7 +51,6 @@
                  :instance-methods (list *method-class-new*)))
 (setf (owner *method-class-new*) *class-class*)
 
-
 (defparameter *method-basic-object-new* 
   (make-instance 'ruby-method-new :name "new"))
 
@@ -63,6 +62,19 @@
                  :name "BasicObject" 
                  :instance-methods (list *method-basic-object-new*)))
 (setf (owner *method-basic-object-new*) *class-basic-object*)
+
+(defparameter *method-object-new* 
+  (make-instance 'ruby-method-new :name "new"))
+
+(defparameter *class-object*
+  (make-instance 'ruby-class
+                 :parent *class-class*
+                 :superclass *class-basic-object*
+                 :child-superclass *class-basic-object*
+                 :name "Object" 
+                 :instance-methods (list *method-object-new*)))
+(setf (owner *method-object-new*) *class-object*)
+
 
 (defgeneric symbolic-name (item)
   (:method ((method ruby-method))
@@ -86,7 +98,7 @@
            (child-superclass (child-superclass owner))
            (child-superclass-symbol
              (if child-superclass
-                 (symbolic-name child-superclass)
+                 `(global.get ,(symbolic-name child-superclass))
                  '(ref.null $class))))
       `(func ,symbol (type $method)
              (param $self (ref $obj))
@@ -132,7 +144,7 @@
     `(global ,(symbolic-name str) (ref $str) (array.new_fixed $str ,(length str) ,@consts))))
 
 ;; Have to get all the named objects together and make _one_ (global $str) definition for each.
-(defparameter classes (list *class-class* *class-basic-object*))
+(defparameter classes (list *class-class* *class-basic-object* *class-object*))
 (defparameter methods (mapcan (lambda (class) (instance-methods class)) classes))
 
 (defparameter string-defs
@@ -154,8 +166,7 @@
   (mapcar 'compile-ruby-method methods))
   
 (defparameter *module*
-  `(module
-    ;;;; Types
+  `(;;;; Types
     (rec
      (type $str (array i8))
      (type $obj (sub (struct (field $parent (ref null $class))
@@ -190,6 +201,9 @@
     
     (global $nil (ref i31)
             (ref.i31 (i32.const ,nil-bit-pattern)))
+
+    (global $empty-args (ref $arr-unitype)
+            (array.new_fixed $arr-unitype 0))
     
     
     ;;; Strings
@@ -298,12 +312,24 @@
                     (local.get $args)
                     (local.get $method)))
 
-    (func $top (export "__ruby_top_level_function")
-          (result (ref eq))
-          (call $call
-                (global.get $class-BasicObject)
-                (global.get $STR-NEW)
-                (array.new_fixed $arr-unitype 0)))))
+    ;; (func $top (export "__ruby_top_level_function")
+          ;; (result (ref eq))
+          ;; (call $call
+                ;; (global.get $class-BasicObject)
+                ;; (global.get $STR-NEW)
+                ;; (array.new_fixed $arr-unitype 0)))
+    (func
+     $__ruby_top_level_function
+     (export "__ruby_top_level_function")
+     (result (ref eq))
+     (global.get $class-Object)
+     (global.get $STR-NEW)
+     (global.get $empty-args)
+     (call $call)
+     (global.get $STR-CLASS)
+     (global.get $empty-args)
+     (call $call)
+     (ref.cast (ref $class)))))
 
     
 
@@ -311,7 +337,8 @@
                    :direction :output
                    :if-exists :supersede
                    :if-does-not-exist :create)
-  (pprint *module* f))
+  (dolist (item *module*)
+    (pprint item f)))
 
 (uiop:run-program "wasmtime -W gc=y -W function-references=y core_generated.wat"
                   :output t

@@ -22,7 +22,8 @@
 (global $false (ref i31) (ref.i31 (i32.const 1)))
 (global $true (ref i31) (ref.i31 (i32.const 3)))
 (global $nil (ref i31) (ref.i31 (i32.const 5)))
-(global $empty-args (ref $arr-unitype) (array.new_fixed $arr-unitype 0))
+(global $empty-args (ref $alist-str-unitype)
+ (array.new_fixed $alist-str-unitype 0))
 (global $STR-NEW (ref $str)
  (array.new_fixed $str 3 (i32.const 110) (i32.const 101) (i32.const 119)))
 (global $str-Object (ref $str)
@@ -152,7 +153,13 @@
     (struct.get $class $instance-methods (local.get $parent))
     (local.get $message))))
  (call_ref $method (local.get $receiver) (local.get $args) (local.get $method)))
-;; (func $__ruby_top_level_function (export "__ruby_top_level_function")
-;;  (result (ref eq)) (global.get $class-Object) (global.get $STR-NEW)
-;;  (global.get $empty-args) (call $call) (global.get $STR-CLASS)
-;;  (global.get $empty-args) (call $call) (ref.cast (ref $class)))
+
+
+(func
+  $__ruby_top_level_function
+  (export "__ruby_top_level_function")
+  (result (ref eq))
+  (global.get $class-Object)
+  (global.get $STR-NEW)
+  (global.get $empty-args)
+  (call $call))

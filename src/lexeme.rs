@@ -106,7 +106,9 @@ pub enum LexemeKind {
     Constant {
         text: String,
     },
-    Identifier,
+    Identifier {
+        text: String,
+    },
 
     // Punctuation
     Ampersand,
@@ -186,6 +188,10 @@ pub enum LexemeKind {
     MinusEqual,
     /// '->'
     MinusGreater,
+    /// '('
+    LeftParen,
+    /// ')'
+    RightParen,
     /// '%'
     Percent,
     /// '%='
