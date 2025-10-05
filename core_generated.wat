@@ -1,21 +1,21 @@
 
 (rec (type $str (array i8))
- (type $obj (sub (struct (field $parent (ref null $class)))))
+ (type $obj (sub (struct (field $parent (mut (ref null $class))))))
  (type $class
   (sub $obj
-   (struct (field $parent (ref null $class))
-    (field $superclass (ref null $class)) (field $name (ref $str))
-    (field $instance-methods (ref $alist-str-method)))))
+   (struct (field $parent (mut (ref null $class)))
+    (field $superclass (mut (ref null $class))) (field $name (ref $str))
+    (field $instance-methods (ref $ALIST-STR-METHOD)))))
  (type $method
   (func (param $self (ref $obj)) (param $args (ref $arr-unitype))
    (result (ref eq))))
  (type $arr-unitype (array (ref eq)))
- (type $alist-str-unitype-pair
+ (type $ALIST-STR-UNITYPE (array (ref $ALIST-PAIR-STR-UNITYPE)))
+ (type $ALIST-PAIR-STR-UNITYPE
   (struct (field $key (ref $str)) (field $val (ref eq))))
- (type $alist-str-unitype (array (ref $alist-str-unitype-pair)))
- (type $alist-str-method-pair
-  (struct (field $key (ref $str)) (field $val (ref $method))))
- (type $alist-str-method (array (ref $alist-str-method-pair))))
+ (type $ALIST-STR-METHOD (array (ref $ALIST-PAIR-STR-METHOD)))
+ (type $ALIST-PAIR-STR-METHOD
+  (struct (field $key (ref $str)) (field $val (ref eq)))))
 (global $false (ref i31) (ref.i31 (i32.const 1)))
 (global $true (ref i31) (ref.i31 (i32.const 3)))
 (global $nil (ref i31) (ref.i31 (i32.const 5)))
@@ -39,23 +39,22 @@
  (array.new_fixed $str 5 (i32.const 67) (i32.const 108) (i32.const 97)
   (i32.const 115) (i32.const 115)))
 (global $class-Class (ref $class)
- (struct.new $class (global.get $class-Class) (global.get $class-Module)
-  (global.get $class-Class)
-  (array.new_fixed $alist-str-method 1
-   (struct.new $alist-str-method-pair (global.get $STR-NEW)
+ (struct.new $class (ref.null $class) (ref.null $class) (global.get $str-Class)
+  (array.new_fixed $ALIST-STR-METHOD 1
+   (struct.new $ALIST-PAIR-STR-METHOD (global.get $STR-NEW)
     (ref.func $method-Class-new)))))
 (global $class-Module (ref $class)
- (struct.new $class (global.get $class-Class) (global.get $class-Object)
-  (global.get $class-Module) (array.new_fixed $alist-str-method 0)))
+ (struct.new $class (ref.null $class) (ref.null $class)
+  (global.get $str-Module) (array.new_fixed $ALIST-STR-METHOD 0)))
 (global $class-BasicObject (ref $class)
- (struct.new $class (global.get $class-Class) (ref.null $class)
-  (global.get $class-BasicObject) (array.new_fixed $alist-str-method 0)))
+ (struct.new $class (ref.null $class) (ref.null $class)
+  (global.get $str-BasicObject) (array.new_fixed $ALIST-STR-METHOD 0)))
 (global $class-Object (ref $class)
- (struct.new $class (global.get $class-Class) (global.get $class-BasicObject)
-  (global.get $class-Object) (array.new_fixed $alist-str-method 0)))
+ (struct.new $class (ref.null $class) (ref.null $class)
+  (global.get $str-Object) (array.new_fixed $ALIST-STR-METHOD 0)))
 (func $method-Class-new (type $method) (param $self (ref $obj))
  (param $args (ref $arr-unitype)) (result (ref eq))
- (struct.new $obj (local.get $self)))
+ (struct.new $obj (ref.cast (ref $class) (local.get $self))))
 (func $str-eq (param $a (ref $str)) (param $b (ref $str)) (result i32)
  (local $idx i32) (local $a_ch i32) (local $b_ch i32)
  (local.set $idx (i32.const 0))
@@ -90,23 +89,24 @@
                                                                                           1))) (br
                                                                                                 $for))))
  (unreachable))
-(func $alist-str-method-get (param $alist (ref $alist-str-method))
+(func $alist-str-method-get (param $alist (ref $ALIST-STR-METHOD))
  (param $name (ref $str)) (result (ref $method)) (local $idx i32)
- (local $pair (ref $alist-str-method-pair)) (local $key (ref $str))
+ (local $pair (ref $ALIST-PAIR-STR-METHOD)) (local $key (ref $str))
  (local $val (ref $method)) (local.set $idx (i32.const 0))
+ (local.set $idx (i32.const 0))
  (loop $for (if (i32.eq (local.get $idx) (array.len (local.get $alist)))
                 (then (unreachable))) (local.set $pair
-                                       (array.get $alist-str-method
+                                       (array.get $ALIST-STR-METHOD
                                         (local.get $alist)
                                         (local.get $idx))) (local.set $key
                                                             (struct.get
-                                                             $alist-str-method-pair
+                                                             $ALIST-PAIR-STR-METHOD
                                                              $key
                                                              (local.get
                                                               $pair))) (local.set
                                                                         $val
                                                                         (struct.get
-                                                                         $alist-str-method-pair
+                                                                         $ALIST-PAIR-STR-METHOD
                                                                          $val
                                                                          (local.get
                                                                           $pair))) (if (call
@@ -118,17 +118,14 @@
                                                                                        (then
                                                                                         (return
                                                                                          (local.get
-                                                                                          $val)))
-                                                                                       (else
-                                                                                        (local.set
-                                                                                         $idx
-                                                                                         (i32.add
-                                                                                          (local.get
-                                                                                           $idx)
-                                                                                          (i32.const
-                                                                                           1)))
-                                                                                        (br
-                                                                                         $for))))
+                                                                                          $val)))) (local.set
+                                                                                                    $idx
+                                                                                                    (i32.add
+                                                                                                     (local.get
+                                                                                                      $idx)
+                                                                                                     (i32.const
+                                                                                                      1))) (br
+                                                                                                            $for))
  (unreachable))
 (func $call (param $receiver (ref $obj)) (param $message (ref $str))
  (param $args (ref $arr-unitype)) (result (ref eq))
@@ -141,7 +138,19 @@
     (struct.get $class $instance-methods (local.get $parent))
     (local.get $message))))
  (call_ref $method (local.get $receiver) (local.get $args) (local.get $method)))
-(func $__ruby_top_level_function (export "__ruby_top_level_function")
- (result (ref eq)) (global.get $class-Object) (global.get $STR-NEW)
- (global.get $empty-args) (call $call) (global.get $STR-CLASS)
- (global.get $empty-args) (call $call) (ref.cast (ref $class)))
+(func $start
+ (struct.set $class $parent (global.get $class-Class)
+  (global.get $class-Class))
+ (struct.set $class $parent (global.get $class-Module)
+  (global.get $class-Class))
+ (struct.set $class $parent (global.get $class-BasicObject)
+  (global.get $class-Class))
+ (struct.set $class $parent (global.get $class-Object)
+  (global.get $class-Class))
+ (struct.set $class $superclass (global.get $class-Class)
+  (global.get $class-Module))
+ (struct.set $class $superclass (global.get $class-Module)
+  (global.get $class-Object))
+ (struct.set $class $superclass (global.get $class-Object)
+  (global.get $class-BasicObject)))
+(start $start)

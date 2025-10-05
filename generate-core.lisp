@@ -32,9 +32,9 @@
    (name
     :initarg :name
     :accessor name)
-   (instance-methods
-    :initarg :instance-methods
-    :accessor instance-methods)))
+   (fn-instance-methods
+    :initarg :fn-instance-methods
+    :accessor fn-instance-methods)))
 
 ;; Classes need to mutually reference each other.
 ;; But if they were all functions, they'd infinitely recurse generating new classes.
@@ -46,11 +46,9 @@
 (defparameter *class-object* nil)
 (defun classes () 
   (list *class-class*  *class-module* *class-basic-object* *class-object*))
-(classes)
 
 (defun methods ()
   (list (method-new) (method-class)))
-(methods)
 
 ;;;; ruby-class definitions
 (defparameter *class-class*
@@ -59,8 +57,8 @@
                      :fn-superclass (lambda () *class-module*)
                      :child-superclass nil
                      :name "Class"
-                     :instance-methods 
-                     (list (method-new))))
+                     :fn-instance-methods 
+                     (lambda () (list (method-new)))))
 
 (setf *class-module*
       (make-instance 'ruby-class
@@ -68,8 +66,7 @@
                      :fn-superclass (lambda () *class-object*)
                      :child-superclass nil
                      :name "Module"
-                     :instance-methods 
-                     (list)))
+                     :fn-instance-methods (lambda () (list))))
 
 (setf *class-basic-object*
       (make-instance 'ruby-class
@@ -78,7 +75,7 @@
                      :child-superclass nil
                      :name "BasicObject"
                      ;; equal?, !, __send__, ==, __id__, instance_eval, instance_exec
-                     :instance-methods (list)))
+                     :fn-instance-methods (lambda () (list))))
 
 (setf *class-object* 
       (make-instance 'ruby-class
@@ -86,7 +83,7 @@
                      :fn-superclass (lambda () *class-basic-object*)
                      :child-superclass nil
                      :name "Object" 
-                     :instance-methods (list)))
+                     :fn-instance-methods (lambda () (list))))
 
 ;;;; Ruby method definitions
 (defun compile-method-name (method-name class-name)
@@ -104,7 +101,7 @@
   (compile-method "new" class-name
                   `(struct.new $obj
                                ;; $parent
-                               (local.get $self))))
+                               (ref.cast (ref $class) (local.get $self)))))
 
 (defun method-new ()
   (make-instance 'ruby-method
@@ -134,35 +131,61 @@
   (intern (format nil "$class-~a" name)))
 
 (defun compile-ruby-class (class)
+  ;; You can't define mutually-referential globals.
+  ;; But you can initialize to nil then set everything in _start.
   (let* ((compiled-class-name (compile-class-name (name class)))
-         (parent (funcall (fn-parent class)))
-         (parent-expr (if parent
-                          `(global.get ,(compile-class-name (name parent)))
-                          '(ref.null $class)))
-         (superclass (funcall (fn-superclass class)))
-         (superclass-expr (if superclass
-                              `(global.get ,(compile-class-name (name superclass)))
-                              '(ref.null $class)))
-         (name-expr `(global.get ,compiled-class-name))
-         (methods (instance-methods class))
+         (name-expr `(global.get ,(compile-string-name (name class))))
+         (methods (funcall (fn-instance-methods class)))
          (methods-arr-elems (mapcar (lambda (method)
                                       (let ((compiled-method-name (compile-method-name (name method) (name class))))
-                                        `(struct.new $alist-str-method-pair
+                                        `(struct.new ,(alist-pair-type (alist-str-method))
                                                      (global.get ,(compile-string-name (name method)))
                                                      (ref.func ,compiled-method-name))))
                                     methods))
          (instance-methods-expr
-           `(array.new_fixed $alist-str-method 
-                             ,(length (instance-methods class))
+           `(array.new_fixed ,(alist-type (alist-str-method)) 
+                             ,(length methods)
                              ,@methods-arr-elems)))
     `(global ,compiled-class-name (ref $class)
              (struct.new $class
-                         ,parent-expr
-                         ,superclass-expr
+                         ;; $parent
+                         (ref.null $class)
+                         ;; $superclass
+                         (ref.null $class)
                          ,name-expr
                          ,instance-methods-expr))))
+(compile-ruby-class *class-class*)
 
-;;;; Collect 
+(defun set-class-parents ()
+  "The section of code in _start that initializes classes' parents"
+  (flet ((set-parents (class)
+           (let* ((parent (funcall (fn-parent class)))
+                  (compiled-class-name (compile-class-name (name class)))
+                  (compiled-parent-name (compile-class-name (name parent))))
+             `(struct.set $class $parent
+                          (global.get ,compiled-class-name)
+                          (global.get ,compiled-parent-name)))))
+    (mapcar #'set-parents (classes))))
+(set-class-parents)
+
+(defun set-class-superclasses ()
+  ;; (superclass (funcall (fn-superclass class)))
+  ;; (superclass-expr (if superclass
+  ;; `(global.get ,(compile-class-name (name superclass)))
+  ;; '(ref.null $class)))
+  (flet ((set-superclass (class)
+           (let ((superclass (funcall (fn-superclass class))))
+             (when superclass 
+               (let ((compiled-class-name (compile-class-name (name class)))
+                     (compiled-superclass-name (compile-class-name (name superclass))))
+                 `(struct.set $class $superclass
+                              (global.get ,compiled-class-name)
+                              (global.get ,compiled-superclass-name)))))))
+    (remove-if-not (lambda (x) x)
+                   (mapcar #'set-superclass (classes)))))
+(set-class-superclasses)
+
+;;;; Collect item definitions
 
 (defun string-defs ()
   (let* ((strings-set (list))
@@ -187,34 +210,82 @@
      (mapcar 
       (lambda (method) 
         (funcall (fn-compile method) (name class)))
-      (instance-methods class)))
+      (funcall (fn-instance-methods class))))
    (classes)))
 (method-defs)
-  
+
+;;;; Alists
+
+(defstruct wasm-alist key val)
+
+(defun alist-type (alist)
+  (intern (format nil "$alist-~a-~a" (wasm-alist-key alist) (wasm-alist-val alist))))
+(defun alist-pair-type (alist)
+  (intern (format nil "$alist-pair-~a-~a" (wasm-alist-key alist) (wasm-alist-val alist))))
+(defun alist-type-def (alist)
+  `(type ,(alist-type alist) (array (ref ,(alist-pair-type alist)))))
+(defun alist-pair-type-def (alist)
+  (let ((val (if (string= (wasm-alist-val) "unitype")
+  `(type ,(alist-pair-type alist) (struct (field $key (ref $str)) (field $val (ref eq)))))
+    
+(defun alist-str-unitype () (make-wasm-alist :key "str" :val "unitype"))
+(defun alist-str-method () (make-wasm-alist :key "str" :val "method"))
+
+(defun for-in (&key (idx '$idx)
+                    (pair '$pair)
+                    (key '$key)
+                    (val '$val)
+                    (alist '$alist)
+                    alist-type
+                    body)
+  (let ((alist-type (alist-type alist-type))
+        (alist-pair-type (alist-pair-type alist-type)))
+    `((local.set ,idx (i32.const 0))
+      (loop $for
+               (if (i32.eq (local.get ,idx)
+                           (array.len (local.get ,alist)))
+                   (then (unreachable)))
+               (local.set ,pair
+                          (array.get ,alist-type
+                                     (local.get ,alist)
+                                     (local.get ,idx)))
+               (local.set ,key
+                          (struct.get ,alist-pair-type $key
+                                      (local.get ,pair)))
+               (local.set ,val
+                          (struct.get ,alist-pair-type $val
+                                      (local.get ,pair)))
+               ,body
+               (local.set $idx (i32.add (local.get $idx)
+                                        (i32.const 1)))
+               (br $for))
+      (unreachable))))
+    
+
 (defun module ()
   `(;;;; Types
     (rec
      (type $str (array i8))
-     (type $obj (sub (struct (field $parent (ref null $class)))))
+     (type $obj (sub (struct (field $parent (mut (ref null $class))))))
      (type $class (sub $obj 
                        (struct (field $parent 
-                                      (ref null $class))
-                               (field $superclass 
-                                      (ref null $class))
+                                      (mut (ref null $class)))
+                               (field $superclass
+                                      (mut (ref null $class)))
                                (field $name 
                                       (ref $str))
                                (field $instance-methods 
-                                      (ref $alist-str-method)))))
+                                      (ref ,(alist-type (alist-str-method)))))))
      (type $method (func (param $self (ref $obj))
                          (param $args (ref $arr-unitype))
                          (result (ref eq))))
      (type $arr-unitype (array (ref eq)))
 
-     (type $alist-str-unitype-pair (struct (field $key (ref $str)) (field $val (ref eq))))
-     (type $alist-str-unitype (array (ref $alist-str-unitype-pair)))
+     ,(alist-type-def (alist-str-unitype))
+     ,(alist-pair-type-def (alist-str-unitype))
 
-     (type $alist-str-method-pair (struct (field $key (ref $str)) (field $val (ref $method))))
-     (type $alist-str-method (array (ref $alist-str-method-pair))))
+     ,(alist-type-def (alist-str-method))
+     ,(alist-pair-type-def (alist-str-method)))
 
     ;;;; Globals
     ;;; Consts
@@ -275,12 +346,12 @@
           (unreachable))
 
     (func $alist-str-method-get
-          (param $alist (ref $alist-str-method))
+          (param $alist (ref ,(alist-type (alist-str-method))))
           (param $name (ref $str))
           (result (ref $method))
 
           (local $idx i32)
-          (local $pair (ref $alist-str-method-pair))
+          (local $pair (ref ,(alist-pair-type (alist-str-method))))
           (local $key (ref $str))
           (local $val (ref $method))
 
@@ -289,30 +360,12 @@
           ;; }
           ;; (error)
           (local.set $idx (i32.const 0))
-          (loop $for
-                   (if (i32.eq (local.get $idx)
-                               (array.len (local.get $alist)))
-                       (then (unreachable)))
-                   (local.set $pair
-                              (array.get $alist-str-method
-                                         (local.get $alist)
-                                         (local.get $idx)))
-                   (local.set $key
-                              (struct.get $alist-str-method-pair $key
-                                          (local.get $pair)))
-                   (local.set $val
-                              (struct.get $alist-str-method-pair $val
-                                          (local.get $pair)))
-                   (if
-                    (call $str-eq (local.get $key)
-                          (local.get $name))
-                    (then (return (local.get $val)))
-                    (else
-                     (local.set $idx (i32.add (local.get $idx)
-                                              (i32.const 1)))
-                     (br $for))))
-          (unreachable))
-
+          ,@(for-in :alist-type (alist-str-method)
+                    :body
+                    `(if
+                      (call $str-eq (local.get $key)
+                            (local.get $name))
+                      (then (return (local.get $val))))))
     
     (func $call
           (param $receiver (ref $obj))
@@ -336,25 +389,25 @@
                     (local.get $receiver)
                     (local.get $args)
                     (local.get $method)))
-
-    ;; (func $top (export "__ruby_top_level_function")
-          ;; (result (ref eq))
-          ;; (call $call
-                ;; (global.get $class-BasicObject)
-                ;; (global.get $STR-NEW)
-                ;; (array.new_fixed $arr-unitype 0)))
-    (func
-     $__ruby_top_level_function
-     (export "__ruby_top_level_function")
-     (result (ref eq))
-     (global.get $class-Object)
-     (global.get $STR-NEW)
-     (global.get $empty-args)
-     (call $call)
-     (global.get $STR-CLASS)
-     (global.get $empty-args)
-     (call $call)
-     (ref.cast (ref $class)))))
+    
+    (func $start
+          ,@(set-class-parents)
+          ,@(set-class-superclasses))
+    (start $start)
+    ;; (func
+     ;; $__ruby_top_level_function
+     ;; (export "__ruby_top_level_function")
+     ;; (result (ref eq))
+     ;; (global.get $class-Object)
+     ;; (global.get $STR-NEW)
+     ;; (global.get $empty-args)
+     ;; (call $call)
+     ;; (global.get $STR-CLASS)
+     ;; (globstartal.get $str-Class-name)
+     ;; (global.get $empty-args)
+     ;; (call $call)
+     ;; (ref.cast (ref $class)))))
+    ))
 
     
 
