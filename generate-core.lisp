@@ -15,12 +15,10 @@
 (defconstant fixnum-bit-width 30)
 (defconstant fixnum-mask (- (expt 2 31) 1))
 
-
 (defclass ruby-method ()
   ((name :initarg :name :accessor name)
-   (owner :initarg :owner :accessor owner)))
-
-(defclass ruby-method-new (ruby-method) ())
+   (owner :initarg :owner :accessor owner)
+   (fn-compile :initarg :fn-compile :accessor fn-compile)))
 
 (defclass ruby-class ()
   ((parent
@@ -39,17 +37,47 @@
     :initarg :instance-methods
     :accessor instance-methods)))
 
-(defparameter *method-class-new* 
-  (make-instance 'ruby-method-new :name "new" :owner nil))
+(defparameter *class-class* nil)
+(defparameter *class-module* nil)
+(defparameter *class-basic-object* nil)
+(defparameter *class-object* nil)
 
-(defparameter *class-class*
-  (make-instance 'ruby-class
-                 :parent nil
-                 :superclass nil
-                 :child-superclass nil ; But should be Object
-                 :name "Class"
-                 :instance-methods (list *method-class-new*)))
-(setf (owner *method-class-new*) *class-class*)
+(defparameter *method-class-new* nil)
+(defparameter *method-object-new* nil)
+
+;;;; ruby-class definitions
+(setf *class-class*
+      (make-instance 'ruby-class
+                     :parent *class-object*
+                     :superclass *class-module*
+                     :child-superclass nil ; But should be Object
+                     :name "Class"
+                     :instance-methods 
+                     (list ))
+
+(setf *class-basic-object*
+      (make-instance 'ruby-class
+                     :parent *class*
+                     :superclass nil
+                     :child-superclass nil ; But should be Object
+                     :name "BasicObject"
+                     :instance-methods (list *method-class-new*
+                                             ;; equal?, !, __send__, ==, __id__, instance_eval, instance_exec
+                                             )))
+
+(setf *class-object* 
+      (make-instance 'ruby-class
+                     :parent *class-class*
+                     :superclass *class-basic-object*
+                     :child-superclass nil
+                     :name "Object" 
+                     :instance-methods (list *method-object-new*)))
+
+(setf *method-class-new* (make-instance 'ruby-method-new :name "new" :owner nil))
+(let ()
+  (progn
+    (setf (owner method-class-new) *class-class*)
+    (setf *method-class-new* method-class-new)))
 
 (defparameter *method-basic-object-new* 
   (make-instance 'ruby-method-new :name "new"))
