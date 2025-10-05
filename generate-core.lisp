@@ -20,12 +20,12 @@
    (fn-compile :initarg :fn-compile :accessor fn-compile)))
 
 (defclass ruby-class ()
-  ((parent
-    :initarg :parent
-    :accessor parent)
-   (superclass
-    :initarg :superclass
-    :accessor superclass)
+  ((fn-parent
+    :initarg :fn-parent
+    :accessor fn-parent)
+   (fn-superclass
+    :initarg :fn-superclass
+    :accessor fn-superclass)
    (child-superclass
     :initarg :child-superclass
     :accessor child-superclass)
@@ -36,30 +36,36 @@
     :initarg :instance-methods
     :accessor instance-methods)))
 
+;; Classes need to mutually reference each other.
+;; But if they were all functions, they'd infinitely recurse generating new classes.
+;; We use parameter definitions and a lambda for late binding.
+
 (defparameter *class-class* nil)
 (defparameter *class-module* nil)
 (defparameter *class-basic-object* nil)
 (defparameter *class-object* nil)
-(defparameter *classes* 
-  (list *class-class* *class-module* *class-basic-object* *class-object*))
+(defun classes () 
+  (list *class-class*  *class-module* *class-basic-object* *class-object*))
+(classes)
 
-(defparameter *method-new* nil)
-(defparameter *methods* (list *method-new*))
+(defun methods ()
+  (list (method-new) (method-class)))
+(methods)
 
 ;;;; ruby-class definitions
-(setf *class-class*
+(defparameter *class-class*
       (make-instance 'ruby-class
-                     :parent *class-object*
-                     :superclass *class-module*
+                     :fn-parent (lambda () *class-class*)
+                     :fn-superclass (lambda () *class-module*)
                      :child-superclass nil
                      :name "Class"
                      :instance-methods 
-                     (list *method-new*)))
+                     (list (method-new))))
 
 (setf *class-module*
       (make-instance 'ruby-class
-                     :parent *class-class*
-                     :superclass *class-object*
+                     :fn-parent (lambda () *class-class*)
+                     :fn-superclass (lambda () *class-object*)
                      :child-superclass nil
                      :name "Module"
                      :instance-methods 
@@ -67,8 +73,8 @@
 
 (setf *class-basic-object*
       (make-instance 'ruby-class
-                     :parent *class-class*
-                     :superclass nil
+                     :fn-parent (lambda () *class-class*)
+                     :fn-superclass (lambda () nil)
                      :child-superclass nil
                      :name "BasicObject"
                      ;; equal?, !, __send__, ==, __id__, instance_eval, instance_exec
@@ -76,8 +82,8 @@
 
 (setf *class-object* 
       (make-instance 'ruby-class
-                     :parent *class-class*
-                     :superclass *class-basic-object*
+                     :fn-parent (lambda () *class-class*)
+                     :fn-superclass (lambda () *class-basic-object*)
                      :child-superclass nil
                      :name "Object" 
                      :instance-methods (list)))
@@ -100,10 +106,19 @@
                                ;; $parent
                                (local.get $self))))
 
-(setf *method-new*
-      (make-instance 'ruby-method
-                     :name "new"
-                     :fn-compile 'compile-method-new))
+(defun method-new ()
+  (make-instance 'ruby-method
+                 :name "new"
+                 :fn-compile 'compile-method-new))
+
+(defun compile-method-class (class-name)
+  (compile-method "class" class-name
+                  `(struct.get $obj $parent (local.get $self))))
+
+(defun method-class ()
+  (make-instance 'ruby-method
+                 :name "class"
+                 :fn-compile 'compile-method-class))
 
 ;;;; Compilation functions
 
@@ -120,18 +135,20 @@
 
 (defun compile-ruby-class (class)
   (let* ((compiled-class-name (compile-class-name (name class)))
-         (parent-expr (if (parent class)
-                          `(global.get ,(compile-class-name (name (parent class))))
+         (parent (funcall (fn-parent class)))
+         (parent-expr (if parent
+                          `(global.get ,(compile-class-name (name parent)))
                           '(ref.null $class)))
-         (superclass-expr (if (superclass class)
-                              `(global.get ,(compile-class-name (name (superclass class))))
+         (superclass (funcall (fn-superclass class)))
+         (superclass-expr (if superclass
+                              `(global.get ,(compile-class-name (name superclass)))
                               '(ref.null $class)))
          (name-expr `(global.get ,compiled-class-name))
          (methods (instance-methods class))
          (methods-arr-elems (mapcar (lambda (method)
                                       (let ((compiled-method-name (compile-method-name (name method) (name class))))
                                         `(struct.new $alist-str-method-pair
-                                                     (global.get ,(name method))
+                                                     (global.get ,(compile-string-name (name method)))
                                                      (ref.func ,compiled-method-name))))
                                     methods))
          (instance-methods-expr
@@ -147,38 +164,38 @@
 
 ;;;; Collect 
 
-(defparameter *string-defs*
+(defun string-defs ()
   (let* ((strings-set (list))
          (class-names
            (mapcar (lambda (class) (name class))
-                   *classes*))
+                   (classes)))
          (method-names
-           (mapcar (lambda (method) (name method)) *methods*))
+           (mapcar (lambda (method) (name method)) (methods)))
          (names (append class-names method-names)))
     (dolist (name names)
       (pushnew name strings-set :test 'equal))
     (mapcar 'compile-string strings-set)))
+(string-defs)
 
-(defparameter *class-defs*
-  (mapcar 'compile-ruby-class *classes*))
+(defun class-defs ()
+  (mapcar 'compile-ruby-class (classes)))
+(class-defs)
 
-(defparameter *method-defs*
+(defun method-defs ()
   (mapcan 
    (lambda (class)
      (mapcar 
       (lambda (method) 
         (funcall (fn-compile method) (name class)))
       (instance-methods class)))
-   *classes*))
-            
-                                          
+   (classes)))
+(method-defs)
   
-(defparameter *module*
+(defun module ()
   `(;;;; Types
     (rec
      (type $str (array i8))
-     (type $obj (sub (struct (field $parent (ref null $class))
-                             (field $superclass (ref null $class)))))
+     (type $obj (sub (struct (field $parent (ref null $class)))))
      (type $class (sub $obj 
                        (struct (field $parent 
                                       (ref null $class))
@@ -215,13 +232,13 @@
     
     
     ;;; Strings
-    ,@string-defs
+    ,@(string-defs)
 
     ;;; Class instances
-    ,@class-defs
+    ,@(class-defs)
     
     ;;;; Functions
-    ,@method-defs
+    ,@(method-defs)
     (func $str-eq
           (param $a (ref $str))
           (param $b (ref $str))
@@ -345,7 +362,7 @@
                    :direction :output
                    :if-exists :supersede
                    :if-does-not-exist :create)
-  (dolist (item *module*)
+  (dolist (item (module))
     (pprint item f)))
 
 (uiop:run-program "wasmtime -W gc=y -W function-references=y core_generated.wat"
