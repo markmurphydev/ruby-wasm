@@ -44,6 +44,7 @@
   (list *class-class* *class-module* *class-basic-object* *class-object*))
 
 (defparameter *method-new* nil)
+(defparameter *methods* (list *method-new*))
 
 ;;;; ruby-class definitions
 (setf *class-class*
@@ -82,15 +83,19 @@
                      :instance-methods (list)))
 
 ;;;; Ruby method definitions
-(defun compile-method (name body)
-  `(func ,name (type $method)
-         (param $self (ref $obj))
-         (param $args (ref $arr-unitype))
-         (result (ref eq))
-         ,body))
+(defun compile-method-name (method-name class-name)
+  (intern (format nil "$method-~a-~a" class-name method-name)))
 
-(defun compile-method-new ()
-  (compile-method '$method-new
+(defun compile-method (method-name class-name body)
+  (let ((name (compile-method-name method-name class-name)))
+    `(func ,name (type $method)
+           (param $self (ref $obj))
+           (param $args (ref $arr-unitype))
+           (result (ref eq))
+           ,body)))
+
+(defun compile-method-new (class-name)
+  (compile-method "new" class-name
                   `(struct.new $obj
                                ;; $parent
                                (local.get $self))))
@@ -102,62 +107,71 @@
 
 ;;;; Compilation functions
 
+(defun compile-string-name (str)
+  (intern (format nil "$str-~a" str)))
+
+(defun compile-string (str)
+  (let* ((consts (mapcar (lambda (c) `(i32.const ,(char-int c)))
+                         (coerce str 'list))))
+    `(global ,(compile-string-name str) (ref $str) (array.new_fixed $str ,(length str) ,@consts))))
+
 (defun compile-class-name (name)
-  
+  (intern (format nil "$class-~a" name)))
 
 (defun compile-ruby-class (class)
-  (let* ((class-name (symbolic-name class))
+  (let* ((compiled-class-name (compile-class-name (name class)))
          (parent-expr (if (parent class)
-                          `(global.get ,(symbolic-name (parent class)))
+                          `(global.get ,(compile-class-name (name (parent class))))
                           '(ref.null $class)))
          (superclass-expr (if (superclass class)
-                              `(global.get ,(symbolic-name (superclass class)))
+                              `(global.get ,(compile-class-name (name (superclass class))))
                               '(ref.null $class)))
-         (name-expr `(global.get ,(symbolic-name (name class))))
+         (name-expr `(global.get ,compiled-class-name))
          (methods (instance-methods class))
          (methods-arr-elems (mapcar (lambda (method)
-                                      `(struct.new $alist-str-method-pair
-                                                   (global.get ,(symbolic-name (name method)))
-                                                   (ref.func ,(symbolic-name method))))
+                                      (let ((compiled-method-name (compile-method-name (name method) (name class))))
+                                        `(struct.new $alist-str-method-pair
+                                                     (global.get ,(name method))
+                                                     (ref.func ,compiled-method-name))))
                                     methods))
          (instance-methods-expr
            `(array.new_fixed $alist-str-method 
                              ,(length (instance-methods class))
                              ,@methods-arr-elems)))
-    `(global ,class-name (ref $class)
+    `(global ,compiled-class-name (ref $class)
              (struct.new $class
                          ,parent-expr
                          ,superclass-expr
                          ,name-expr
                          ,instance-methods-expr))))
-(compile-ruby-class *class-class*)
 
+;;;; Collect 
 
-(defun compile-string (str)
-  (let* ((consts (mapcar (lambda (c) `(i32.const ,(char-int c)))
-                         (coerce str 'list))))
-    `(global ,(symbolic-name str) (ref $str) (array.new_fixed $str ,(length str) ,@consts))))
-
-;; Have to get all the named objects together and make _one_ (global $str) definition for each.
-(defparameter methods (mapcan (lambda (class) (instance-methods class)) classes))
-
-(defparameter string-defs
+(defparameter *string-defs*
   (let* ((strings-set (list))
          (class-names
            (mapcar (lambda (class) (name class))
-                   classes))
+                   *classes*))
          (method-names
-           (mapcar (lambda (method) (name method)) methods))
+           (mapcar (lambda (method) (name method)) *methods*))
          (names (append class-names method-names)))
     (dolist (name names)
       (pushnew name strings-set :test 'equal))
     (mapcar 'compile-string strings-set)))
 
-(defparameter class-defs
-  (mapcar 'compile-ruby-class classes))
+(defparameter *class-defs*
+  (mapcar 'compile-ruby-class *classes*))
 
-(defparameter method-defs
-  (mapcar 'compile-ruby-method methods))
+(defparameter *method-defs*
+  (mapcan 
+   (lambda (class)
+     (mapcar 
+      (lambda (method) 
+        (funcall (fn-compile method) (name class)))
+      (instance-methods class)))
+   *classes*))
+            
+                                          
   
 (defparameter *module*
   `(;;;; Types
