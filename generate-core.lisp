@@ -17,7 +17,6 @@
 
 (defclass ruby-method ()
   ((name :initarg :name :accessor name)
-   (owner :initarg :owner :accessor owner)
    (fn-compile :initarg :fn-compile :accessor fn-compile)))
 
 (defclass ruby-class ()
@@ -41,29 +40,38 @@
 (defparameter *class-module* nil)
 (defparameter *class-basic-object* nil)
 (defparameter *class-object* nil)
+(defparameter *classes* 
+  (list *class-class* *class-module* *class-basic-object* *class-object*))
 
-(defparameter *method-class-new* nil)
-(defparameter *method-object-new* nil)
+(defparameter *method-new* nil)
 
 ;;;; ruby-class definitions
 (setf *class-class*
       (make-instance 'ruby-class
                      :parent *class-object*
                      :superclass *class-module*
-                     :child-superclass nil ; But should be Object
+                     :child-superclass nil
                      :name "Class"
                      :instance-methods 
-                     (list ))
+                     (list *method-new*)))
+
+(setf *class-module*
+      (make-instance 'ruby-class
+                     :parent *class-class*
+                     :superclass *class-object*
+                     :child-superclass nil
+                     :name "Module"
+                     :instance-methods 
+                     (list)))
 
 (setf *class-basic-object*
       (make-instance 'ruby-class
-                     :parent *class*
+                     :parent *class-class*
                      :superclass nil
-                     :child-superclass nil ; But should be Object
+                     :child-superclass nil
                      :name "BasicObject"
-                     :instance-methods (list *method-class-new*
-                                             ;; equal?, !, __send__, ==, __id__, instance_eval, instance_exec
-                                             )))
+                     ;; equal?, !, __send__, ==, __id__, instance_eval, instance_exec
+                     :instance-methods (list)))
 
 (setf *class-object* 
       (make-instance 'ruby-class
@@ -71,98 +79,57 @@
                      :superclass *class-basic-object*
                      :child-superclass nil
                      :name "Object" 
-                     :instance-methods (list *method-object-new*)))
+                     :instance-methods (list)))
 
-(setf *method-class-new* (make-instance 'ruby-method-new :name "new" :owner nil))
-(let ()
-  (progn
-    (setf (owner method-class-new) *class-class*)
-    (setf *method-class-new* method-class-new)))
+;;;; Ruby method definitions
+(defun compile-method (name body)
+  `(func ,name (type $method)
+         (param $self (ref $obj))
+         (param $args (ref $arr-unitype))
+         (result (ref eq))
+         ,body))
 
-(defparameter *method-basic-object-new* 
-  (make-instance 'ruby-method-new :name "new"))
+(defun compile-method-new ()
+  (compile-method '$method-new
+                  `(struct.new $obj
+                               ;; $parent
+                               (local.get $self))))
 
-(defparameter *class-basic-object*
-  (make-instance 'ruby-class
-                 :parent *class-class*
-                 :superclass nil ; But should be Module.
-                 :child-superclass nil
-                 :name "BasicObject" 
-                 :instance-methods (list *method-basic-object-new*)))
-(setf (owner *method-basic-object-new*) *class-basic-object*)
+(setf *method-new*
+      (make-instance 'ruby-method
+                     :name "new"
+                     :fn-compile 'compile-method-new))
 
-(defparameter *method-object-new* 
-  (make-instance 'ruby-method-new :name "new"))
+;;;; Compilation functions
 
-(defparameter *class-object*
-  (make-instance 'ruby-class
-                 :parent *class-class*
-                 :superclass *class-basic-object*
-                 :child-superclass *class-basic-object*
-                 :name "Object" 
-                 :instance-methods (list *method-object-new*)))
-(setf (owner *method-object-new*) *class-object*)
+(defun compile-class-name (name)
+  
 
-
-(defgeneric symbolic-name (item)
-  (:method ((method ruby-method))
-    (intern (format nil "$method-~a-~a" (name (owner method)) (name method))))
-  (:method ((class ruby-class))
-    (intern (format nil "$class-~a" (name class))))
-  (:method ((str string))
-    (intern (format nil "$str-~a" str)))
-  (:method ((item null))
-    '(ref null)))
-(symbolic-name *method-class-new*)
-(symbolic-name *class-class*)
-(symbolic-name "==")
-(symbolic-name nil)
-
-(defgeneric compile-ruby-method (method)
-  (:method ((method ruby-method-new))
-    (let* ((symbol (symbolic-name method))
-           (owner (owner method))
-           (owner-symbol (symbolic-name owner))
-           (child-superclass (child-superclass owner))
-           (child-superclass-symbol
-             (if child-superclass
-                 `(global.get ,(symbolic-name child-superclass))
-                 '(ref.null $class))))
-      `(func ,symbol (type $method)
-             (param $self (ref $obj))
-             (param $args (ref $arr-unitype))
-             (result (ref eq))
-             (struct.new $obj
-                         (global.get ,owner-symbol)
-                         ,child-superclass-symbol)))) )
-(compile-ruby-method *method-class-new*)
-
-(defgeneric compile-ruby-class (class)
-  (:method ((class ruby-class))
-    (let* ((class-name (symbolic-name class))
-           (parent-expr (if (parent class)
-                            `(global.get ,(symbolic-name (parent class)))
-                            '(ref.null $class)))
-           (superclass-expr (if (superclass class)
-                                `(global.get ,(symbolic-name (superclass class)))
-                                '(ref.null $class)))
-           (name-expr `(global.get ,(symbolic-name (name class))))
-           (methods (instance-methods class))
-           (methods-arr-elems (mapcar (lambda (method)
-                                        `(struct.new $alist-str-method-pair
-                                                     (global.get ,(symbolic-name (name method)))
-                                                     (ref.func ,(symbolic-name method))))
-                                      methods))
-           (instance-methods-expr
-             `(array.new_fixed $alist-str-method 
-                               ,(length (instance-methods class))
-                               ,@methods-arr-elems)))
-      `(global ,class-name (ref $class)
-               (struct.new $class
-                           ,parent-expr
-                           ,superclass-expr
-                           ,name-expr
-                           ,instance-methods-expr)))))
+(defun compile-ruby-class (class)
+  (let* ((class-name (symbolic-name class))
+         (parent-expr (if (parent class)
+                          `(global.get ,(symbolic-name (parent class)))
+                          '(ref.null $class)))
+         (superclass-expr (if (superclass class)
+                              `(global.get ,(symbolic-name (superclass class)))
+                              '(ref.null $class)))
+         (name-expr `(global.get ,(symbolic-name (name class))))
+         (methods (instance-methods class))
+         (methods-arr-elems (mapcar (lambda (method)
+                                      `(struct.new $alist-str-method-pair
+                                                   (global.get ,(symbolic-name (name method)))
+                                                   (ref.func ,(symbolic-name method))))
+                                    methods))
+         (instance-methods-expr
+           `(array.new_fixed $alist-str-method 
+                             ,(length (instance-methods class))
+                             ,@methods-arr-elems)))
+    `(global ,class-name (ref $class)
+             (struct.new $class
+                         ,parent-expr
+                         ,superclass-expr
+                         ,name-expr
+                         ,instance-methods-expr))))
 (compile-ruby-class *class-class*)
 
 
@@ -172,7 +139,6 @@
     `(global ,(symbolic-name str) (ref $str) (array.new_fixed $str ,(length str) ,@consts))))
 
 ;; Have to get all the named objects together and make _one_ (global $str) definition for each.
-(defparameter classes (list *class-class* *class-basic-object* *class-object*))
 (defparameter methods (mapcan (lambda (class) (instance-methods class)) classes))
 
 (defparameter string-defs
