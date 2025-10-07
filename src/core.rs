@@ -11,7 +11,7 @@ use crate::wasm::{BinaryOp, TypeDef, UnaryOp};
 use crate::{CompileCtx, FunctionBuilder};
 
 pub fn add_core_items(module: &mut Module) -> CompileCtx<'_> {
-    let mut ctx = CompileCtx { module };
+    let ctx = CompileCtx { module };
     // add_globals(&mut ctx);
     // add_types(&mut ctx);
     // add_functions(&mut ctx);

@@ -19,11 +19,12 @@ use crate::core::add_core_items;
 use crate::lexer::Lexer;
 use crate::parser::Parser;
 
-pub fn run_text(text: String) -> String {
+pub fn run_ruby_program(text: String) -> String {
     let parser = Parser::new(Lexer::new(&text));
     let program = parser.parse();
     let mut module = wasm::module::Module::new();
     let mut ctx = add_core_items(&mut module);
     compiler::compile(&mut ctx, &program);
-    run::run(module)
+    let res = run::run_module(module);
+    res.to_pretty()
 }

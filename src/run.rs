@@ -1,10 +1,20 @@
+use std::fs;
 use crate::compiler::RUBY_TOP_LEVEL_FUNCTION_NAME;
 use crate::unitype::{Unitype, WasmtimeRefEq};
 use crate::wasm;
 use wasmtime::{Config, Engine, Instance, Module, Store};
 
-pub fn run(module: wasm::module::Module) -> String {
+/// Writes out `module` as a .wat file, includes the corelib definitions,
+/// and runs it.
+pub fn run_module(module: wasm::module::Module) -> Unitype {
     let wat = module.to_pretty();
+    run_wat(wat)
+}
+
+/// Includes corelib definitions into `wat`, and runs it.
+pub fn run_wat(wat: String) -> Unitype {
+    let wat = include_corelib_definitions(&wat);
+
     let mut config = Config::new();
     config.wasm_function_references(true).wasm_gc(true);
     let engine = Engine::new(&config).unwrap();
@@ -20,6 +30,13 @@ pub fn run(module: wasm::module::Module) -> String {
         .unwrap();
     let res = top_level.call(&mut store, ()).unwrap();
 
-    let output = Unitype::parse_ref_eq(res, &mut store).to_pretty();
-    output
+    Unitype::parse_ref_eq(res, &mut store)
+}
+
+/// Takes a .wat file, and produces a version with corelib definitions included.
+fn include_corelib_definitions(wat: &str) -> String {
+    let corelib = include_str!(concat!(env!("CARGO_MANIFEST_DIR"), "/core_generated.wat"));
+    let mut wat = wat.to_string();
+    wat.push_str(corelib);
+    wat
 }

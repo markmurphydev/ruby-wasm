@@ -121,7 +121,7 @@ fn main() {
         }
 
         Command::Run { text } => {
-            println!("{}", ruby_wasm::run_text(text))
+            println!("{}", ruby_wasm::run_ruby_program(text))
         }
 
         Command::Html { text } => {
