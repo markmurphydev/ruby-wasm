@@ -2,7 +2,6 @@ use clap::Parser as ParserTrait;
 use clap::Subcommand;
 use ruby_wasm::compiler;
 use ruby_wasm::compiler::RUBY_TOP_LEVEL_FUNCTION_NAME;
-use ruby_wasm::core::add_core_items;
 use ruby_wasm::lexeme::LexemeKind;
 use ruby_wasm::lexer::Lexer;
 use ruby_wasm::parser::Parser;
@@ -11,6 +10,7 @@ use ruby_wasm::wasm::module::Module;
 use ruby_wasm::{binary, html};
 use std::fs;
 use wasmtime::{Config, Engine, Instance, Store};
+use ruby_wasm::node::Program;
 
 #[derive(clap::Parser)]
 #[command(version, about, long_about = None)]
@@ -95,7 +95,7 @@ fn main() {
             let parser = Parser::new(Lexer::new(&text));
             let program = parser.parse();
             let mut module = Module::new();
-            let mut ctx = add_core_items(&mut module);
+            let mut ctx = ruby_wasm::core::add_core_items(&mut module);
             compiler::compile(&mut ctx, &program);
             println!("{:?}", module);
         }
@@ -104,7 +104,7 @@ fn main() {
             let parser = Parser::new(Lexer::new(&text));
             let program = parser.parse();
             let mut module = Module::new();
-            let mut ctx = add_core_items(&mut module);
+            let mut ctx = ruby_wasm::core::add_core_items(&mut module);
             compiler::compile(&mut ctx, &program);
             let wat = module.to_pretty();
             println!("{}", wat);
@@ -114,7 +114,7 @@ fn main() {
             let parser = Parser::new(Lexer::new(&text));
             let program = parser.parse();
             let mut module = Module::new();
-            let mut ctx = add_core_items(&mut module);
+            let mut ctx = ruby_wasm::core::add_core_items(&mut module);
             compiler::compile(&mut ctx, &program);
             let bytes = binary::module_to_binary(&module);
             binary::print_bytes(&bytes);
@@ -128,7 +128,7 @@ fn main() {
             let parser = Parser::new(Lexer::new(&text));
             let program = parser.parse();
             let mut module = Module::new();
-            let mut ctx = add_core_items(&mut module);
+            let mut ctx = ruby_wasm::core::add_core_items(&mut module);
             compiler::compile(&mut ctx, &program);
             let bytes = binary::module_to_binary(&module);
             let html = html::make_html_wrapper(&bytes);

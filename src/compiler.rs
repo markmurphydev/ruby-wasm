@@ -44,14 +44,18 @@ fn compile_statements(
     let R::Statements { body } = statements;
 
     // In Ruby, every expression returns a value or nil.
+    // If there are no statements, return nil.
     // Suppress all values except the last.
-    let last_statement_idx = body.len() - 1;
-    for expr in (&body[0..last_statement_idx]).into_iter() {
-        compile_expr(ctx, builder, expr);
-        builder.drop(ctx);
+    if body.is_empty() {
+        builder.i31_const(ctx, Unitype::NIL_BIT_PATTERN);
+    } else {
+        let last_statement_idx = body.len() - 1;
+        for expr in (&body[0..last_statement_idx]).into_iter() {
+            compile_expr(ctx, builder, expr);
+            builder.drop(ctx);
+        }
+        compile_expr(ctx, builder, &body[last_statement_idx]);
     }
-
-    compile_expr(ctx, builder, &body[last_statement_idx])
 }
 
 fn compile_expr(ctx: &mut CompileCtx<'_>, builder: &InstrSeqBuilder, expr: &R::Expr) {

@@ -25,6 +25,6 @@ pub fn run_ruby_program(text: String) -> String {
     let mut module = wasm::module::Module::new();
     let mut ctx = add_core_items(&mut module);
     compiler::compile(&mut ctx, &program);
-    let res = run::run_module(module);
+    let res = run::run_module(&mut ctx);
     res.to_pretty()
 }

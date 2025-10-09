@@ -13,9 +13,9 @@ pub mod module;
 pub mod types;
 pub mod wat;
 
-use crate::wasm::intern::InternedIdentifier;
-use crate::wasm::types::{BlockType, CompType, GlobalType, RefType};
 use crate::CompileCtx;
+use crate::wasm::intern::InternedIdentifier;
+use crate::wasm::types::{BlockType, CompType, GlobalType, RefType, SubType};
 use instr_seq::InstrSeqId;
 use wasm_macro::wasm_instr;
 
@@ -607,7 +607,7 @@ pub struct Global {
     pub instr_seq: InstrSeqId,
 }
 
-#[derive(Debug)]
+#[derive(Clone, Debug, PartialEq, Eq, Hash)]
 pub enum Finality {
     Final,
     NotFinal,
@@ -618,11 +618,11 @@ pub enum Finality {
 #[derive(Debug)]
 pub struct TypeDef {
     pub name: InternedIdentifier,
-    pub ty: CompType,
+    pub ty: SubType,
 }
 
 impl TypeDef {
-    pub fn new(ctx: &mut CompileCtx<'_>, name: &str, ty: CompType) -> TypeDef {
+    pub fn new(ctx: &mut CompileCtx<'_>, name: &str, ty: SubType) -> TypeDef {
         let name = ctx.module.interner.intern(name);
         Self { name, ty }
     }

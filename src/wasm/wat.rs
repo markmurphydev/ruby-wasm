@@ -9,15 +9,8 @@ use crate::wasm::function::{ExportStatus, Function};
 use crate::wasm::instr_seq::{InstrSeq, InstrSeqId};
 use crate::wasm::intern::IdentifierInterner;
 use crate::wasm::module::{Module, ModuleFunctions};
-use crate::wasm::types::{
-    AbsHeapType, ArrayType, BlockType, CompType, FieldType, FuncType, GlobalType, HeapType,
-    Mutability, Nullability, NumType, PackType, ParamType, RefType, ResultType, StorageType,
-    StructType, ValType,
-};
-use crate::wasm::{
-    BinaryOp, Binop, Block, Const, Global, IfElse, Instr, Loop, RefCast, RefTest, TypeDef, UnaryOp,
-    Unop, Value,
-};
+use crate::wasm::types::{AbsHeapType, ArrayType, BlockType, CompType, FieldType, FuncType, GlobalType, HeapType, Mutability, Nullability, NumType, PackType, ParamType, RefType, ResultType, StorageType, StructType, SubType, ValType};
+use crate::wasm::{BinaryOp, Binop, Block, Const, Finality, Global, IfElse, Instr, Loop, RefCast, RefTest, TypeDef, UnaryOp, Unop, Value};
 use id_arena::Arena;
 use pretty::RcDoc;
 use std::borrow::Cow;
@@ -32,8 +25,7 @@ impl Module {
     pub fn to_pretty(&self) -> String {
         let mut w = Vec::new();
         module_to_doc(self).render(80, &mut w).unwrap();
-        let program = String::from_utf8(w).unwrap();
-        format!("{}\n{}", WAT_CORE, program)
+        String::from_utf8(w).unwrap()
     }
 }
 
@@ -117,11 +109,16 @@ fn global_to_doc(interner: &IdentifierInterner, arena: &Arena<InstrSeq>, global:
 /// <type>*
 /// ```
 fn module_type_defs_to_doc(interner: &IdentifierInterner, types: &Arena<TypeDef>) -> Doc {
-    let globals: Box<[Doc]> = types
+    let type_defs: Box<[Doc]> = types
         .iter()
         .map(|(_, td)| type_def_to_doc(interner, td))
         .collect();
-    intersperse(globals, hardline())
+    text("(rec")
+        .append(line())
+        .append(intersperse(type_defs, hardline()))
+        .append(")")
+        .nest(INDENT)
+        .group()
 }
 
 /// ```wat
@@ -132,7 +129,7 @@ fn type_def_to_doc(interner: &IdentifierInterner, type_def: &TypeDef) -> Doc {
     let name = interner.get(*name);
     let name = format!("${}", name);
 
-    let ty = comp_type_to_doc(ty);
+    let ty = sub_type_to_doc(ty);
 
     text("(type")
         .append(space())
@@ -511,7 +508,7 @@ fn ref_type_to_doc(ty: &RefType) -> Doc {
 fn heap_type_to_doc(ty: &HeapType) -> Doc {
     match ty {
         HeapType::Abstract(ty) => abs_heap_type_to_doc(ty),
-        HeapType::Identifier(ident) => text(ident.to_owned()),
+        HeapType::Identifier(ident) => text(format!("${}", ident)),
     }
 }
 
@@ -530,6 +527,31 @@ fn abs_heap_type_to_doc(ty: &AbsHeapType) -> Doc {
         AbsHeapType::Exn => "exn",
         AbsHeapType::NoExn => "noexn",
     })
+}
+
+/// `(sub final? <supertype>* <comp_type>
+fn sub_type_to_doc(ty: &SubType) -> Doc {
+    let SubType { is_final, supertypes, comp_type } = ty;
+    let is_final = match is_final {
+        Finality::Final => line().append(text("final")),
+        Finality::NotFinal => nil(),
+    };
+    let supertypes: Vec<Doc> = supertypes.into_iter().map(|s| format!("${}", s)).map(text).collect();
+    let supertypes = if supertypes.is_empty() {
+        nil()
+    } else {
+        line().append(intersperse(supertypes, line()))
+    };
+    let comp_type = comp_type_to_doc(comp_type);
+
+    text("(sub")
+        .append(is_final)
+        .append(supertypes)
+        .append(line())
+        .append(comp_type)
+        .append(text(")"))
+        .nest(INDENT)
+        .group()
 }
 
 fn comp_type_to_doc(ty: &CompType) -> Doc {
@@ -553,7 +575,7 @@ fn struct_type_to_doc(ty: &StructType) -> Doc {
         .map(|(name, ty)| {
             text("(field")
                 .append(space())
-                .append(text(name.clone()))
+                .append(text(format!("${}", name)))
                 .append(line())
                 .append(field_type_to_doc(ty))
                 .append(")")

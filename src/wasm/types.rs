@@ -1,3 +1,5 @@
+use crate::wasm::Finality;
+
 #[derive(Clone, Debug, PartialEq, Eq, Hash)]
 pub enum ValType {
     Num(NumType),
@@ -43,8 +45,8 @@ pub enum Mutability {
 
 #[derive(Copy, Clone, Debug, PartialEq, Eq, Hash)]
 pub enum Nullability {
-    Nullable,
     NonNullable,
+    Nullable,
 }
 
 #[derive(Clone, Debug, PartialEq, Eq, Hash)]
@@ -99,6 +101,11 @@ impl RefType {
         heap_type: HeapType::Abstract(AbsHeapType::Exn),
     };
 
+    pub const NULLREF: RefType = RefType {
+        nullable: Nullability::Nullable,
+        heap_type: HeapType::Abstract(AbsHeapType::None),
+    };
+
     /// Create a new abstract reference type.
     pub const fn new_abstract(ty: AbsHeapType, nullable: Nullability) -> Self {
         Self {
@@ -107,10 +114,11 @@ impl RefType {
         }
     }
 
-    /// Set the nullability of this reference type.
-    pub fn nullable(mut self, nullable: Nullability) -> Self {
-        self.nullable = nullable;
-        self
+    pub fn new_identifier(ident: String) -> Self {
+        Self {
+            nullable: Nullability::NonNullable,
+            heap_type: HeapType::Identifier(ident)
+        }
     }
 
     pub const fn into_val_type(self) -> ValType {
@@ -131,6 +139,17 @@ impl RefType {
     pub const fn into_block_type_result(self) -> BlockType {
         BlockType::Result(self.into_result_type())
     }
+
+    pub const fn into_storage_type(self) -> StorageType {
+        StorageType::Val(self.into_val_type())
+    }
+
+    pub const fn into_field_type(self) -> FieldType {
+        FieldType {
+            mutability: Mutability::Const,
+            ty: self.into_storage_type(),
+        }
+    }
 }
 
 #[derive(Clone, Debug, PartialEq, Eq, Hash)]
@@ -139,43 +158,38 @@ pub enum HeapType {
     Identifier(String),
 }
 
+impl HeapType {
+    pub fn into_ref_type(self) -> RefType {
+        RefType {
+            nullable: Nullability::NonNullable,
+            heap_type: self,
+        }
+    }
+
+    pub fn into_val_type(self) -> ValType {
+        self.into_ref_type().into_val_type()
+    }
+}
+
 /// An abstract heap type.
 /// attribution: Copied from `wasm-encoder` crate `wasm-encoder/src/core/types.rs`
 /// https://github.com/bytecodealliance/wasm-tools/tree/main/crates/wasm-encoder
 /// MIT licensed.
 #[derive(Clone, Copy, Debug, PartialEq, Eq, Hash, Ord, PartialOrd)]
 pub enum AbsHeapType {
-    /// Untyped (any) function.
-    Func,
-
-    /// The abstract external heap type.
-    Extern,
-
     /// The abstract `any` heap type.
     ///
     /// The common supertype (a.k.a. top) of all internal types.
     Any,
-
-    /// The abstract `none` heap type.
-    ///
-    /// The common subtype (a.k.a. bottom) of all internal types.
-    None,
-
-    /// The abstract `noextern` heap type.
-    ///
-    /// The common subtype (a.k.a. bottom) of all external types.
-    NoExtern,
-
-    /// The abstract `nofunc` heap type.
-    ///
-    /// The common subtype (a.k.a. bottom) of all function types.
-    NoFunc,
 
     /// The abstract `eq` heap type.
     ///
     /// The common supertype of all referenceable types on which comparison
     /// (ref.eq) is allowed.
     Eq,
+
+    /// The unboxed `i31` heap type.
+    I31,
 
     /// The abstract `struct` heap type.
     ///
@@ -187,14 +201,32 @@ pub enum AbsHeapType {
     /// The common supertype of all array types.
     Array,
 
-    /// The unboxed `i31` heap type.
-    I31,
+    /// The abstract `none` heap type.
+    ///
+    /// The common subtype (a.k.a. bottom) of all internal types.
+    None,
+
+    /// Untyped (any) function.
+    Func,
+
+    /// The abstract `nofunc` heap type.
+    ///
+    /// The common subtype (a.k.a. bottom) of all function types.
+    NoFunc,
 
     /// The abstract `exception` heap type.
     Exn,
 
-    /// The abstract `noexn` heap type.
+    /// The abstract `no-excepction` heap type.
     NoExn,
+
+    /// The abstract external heap type.
+    Extern,
+
+    /// The abstract `noextern` heap type.
+    ///
+    /// The common subtype (a.k.a. bottom) of all external types.
+    NoExtern,
 }
 
 /// The type of an instruction sequence
@@ -213,16 +245,16 @@ pub enum BlockType {
 /// ```
 #[derive(Clone, Debug, PartialEq, Eq, Hash)]
 pub struct SubType {
-    pub is_final: bool,
-    pub supertypes: Option<Box<[SubType]>>,
+    pub is_final: Finality,
+    pub supertypes: Vec<String>,
     pub comp_type: CompType,
 }
 
 impl SubType {
     pub fn final_no_super(comp_type: CompType) -> Self {
         Self {
-            is_final: true,
-            supertypes: None,
+            is_final: Finality::Final,
+            supertypes: vec![],
             comp_type,
         }
     }
@@ -235,14 +267,26 @@ pub enum CompType {
     Func(FuncType),
 }
 
+impl CompType {
+    /// Wasm's "default" abbreviated subtype is:
+    /// `(type <COMP_TYPE>) == (type (sub final ∅ <COMP_TYPE>))`
+    pub fn into_sub_type(self) -> SubType {
+        SubType::final_no_super(self)
+    }
+}
+
 #[derive(Clone, Debug, PartialEq, Eq, Hash)]
 pub struct StructType {
     pub fields: FieldsType,
 }
 
 impl StructType {
-    pub fn to_comp_type(self) -> CompType {
+    pub fn into_comp_type(self) -> CompType {
         CompType::Struct(self)
+    }
+
+    pub fn into_sub_type(self) -> SubType {
+        self.into_comp_type().into_sub_type()
     }
 }
 
@@ -251,11 +295,31 @@ pub struct ArrayType {
     pub field: FieldType,
 }
 
+impl ArrayType {
+    pub fn into_comp_type(self) -> CompType {
+        CompType::Array(self)
+    }
+
+    pub fn into_sub_type(self) -> SubType {
+        self.into_comp_type().into_sub_type()
+    }
+}
+
 /// Type of a function
 #[derive(Clone, Debug, PartialEq, Eq, Hash)]
 pub struct FuncType {
     pub params: ParamsType,
     pub results: ResultsType,
+}
+
+impl FuncType {
+    pub fn into_comp_type(self) -> CompType {
+        CompType::Func(self)
+    }
+
+    pub fn into_sub_type(self) -> SubType {
+        self.into_comp_type().into_sub_type()
+    }
 }
 
 pub type FieldsType = Box<[(String, FieldType)]>;
@@ -266,6 +330,19 @@ pub type ResultsType = Box<[ResultType]>;
 pub struct FieldType {
     pub mutability: Mutability,
     pub ty: StorageType,
+}
+
+impl FieldType {
+    /// `(ref $<IDENTIFIER>)`
+    pub fn ref_identifier(identifier: String) -> FieldType {
+        Self {
+            mutability: Mutability::Const,
+            ty: StorageType::Val(ValType::Ref(RefType {
+                nullable: Nullability::NonNullable,
+                heap_type: HeapType::Identifier(identifier),
+            })),
+        }
+    }
 }
 
 #[derive(Clone, Debug, PartialEq, Eq, Hash)]
@@ -280,6 +357,15 @@ pub enum StorageType {
     Pack(PackType),
 }
 
+impl StorageType {
+    pub const fn into_field_type(self) -> FieldType {
+        FieldType {
+            mutability: Mutability::Const,
+            ty: self,
+        }
+    }
+}
+
 #[derive(Clone, Debug, PartialEq, Eq, Hash)]
 pub enum PackType {
     I8,
@@ -289,6 +375,10 @@ pub enum PackType {
 impl PackType {
     pub const fn into_storage_type(self) -> StorageType {
         StorageType::Pack(self)
+    }
+
+    pub const fn into_field_type(self) -> FieldType {
+        self.into_storage_type().into_field_type()
     }
 }
 

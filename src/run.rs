@@ -1,25 +1,23 @@
 use std::fs;
 use crate::compiler::RUBY_TOP_LEVEL_FUNCTION_NAME;
 use crate::unitype::{Unitype, WasmtimeRefEq};
-use crate::wasm;
+use crate::{wasm, CompileCtx};
 use wasmtime::{Config, Engine, Instance, Module, Store};
+use crate::core::add_core_items;
 
 /// Writes out `module` as a .wat file, includes the corelib definitions,
 /// and runs it.
-pub fn run_module(module: wasm::module::Module) -> Unitype {
-    let wat = module.to_pretty();
+pub fn run_module(ctx: &mut CompileCtx<'_>) -> Unitype {
+    add_core_items(ctx.module);
+    let wat = ctx.module.to_pretty();
     run_wat(wat)
 }
 
-/// Includes corelib definitions into `wat`, and runs it.
 pub fn run_wat(wat: String) -> Unitype {
-    let wat = include_corelib_definitions(&wat);
-
     let mut config = Config::new();
     config.wasm_function_references(true).wasm_gc(true);
     let engine = Engine::new(&config).unwrap();
-    let module = Module::new(&engine, wat);
-    let module = module.unwrap();
+    let module = Module::new(&engine, wat).unwrap();
     // let mut linker = Linker::new(&engine);
     let mut store = Store::new(&engine, ());
     let instance = Instance::new(&mut store, &module, &[]);

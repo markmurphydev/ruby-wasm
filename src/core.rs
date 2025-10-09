@@ -3,24 +3,37 @@
 //!     Do everything as simply/composably as possible,
 //!     and see if Binaryen can sort out the inlining and obvious optimizations.
 
+mod alist;
+mod array;
+mod type_def;
+mod class;
+mod global;
+
 use crate::unitype::Unitype;
 use crate::wasm::function::ExportStatus;
 use crate::wasm::module::{GlobalBuilder, Module};
-use crate::wasm::types::{Mutability, NumType, ParamType, ResultType};
+use crate::wasm::types::{
+    Mutability, NumType,
+    ParamType, ResultType,
+};
 use crate::wasm::{BinaryOp, TypeDef, UnaryOp};
 use crate::{CompileCtx, FunctionBuilder};
 
+/// A Ruby method. Compiles to:
+/// - Definition of function type `$<METHOD_FUNC_NAME>`
+///     with signature `(self: Object, args: Array Unitype) -> Unitype`
+/// - Definition of global string `$<METHOD_NAME>`
+pub struct Method {
+    name: String,
+}
+
 pub fn add_core_items(module: &mut Module) -> CompileCtx<'_> {
-    let ctx = CompileCtx { module };
+    let mut ctx = CompileCtx { module };
+    type_def::add_type_defs(&mut ctx);
     // add_globals(&mut ctx);
     // add_types(&mut ctx);
     // add_functions(&mut ctx);
     ctx
-}
-
-fn add_globals(ctx: &mut CompileCtx<'_>) {
-    add_unitype_true(ctx);
-    add_unitype_false(ctx);
 }
 
 /// ```wat
@@ -63,7 +76,11 @@ fn add_types(ctx: &mut CompileCtx) {
 /// (type $unitype-string (ref i8))
 /// ```
 fn add_unitype_string(ctx: &mut CompileCtx) {
-    let ty = TypeDef::new(ctx, Unitype::STRING_TYPE_NAME, Unitype::STRING_TYPE);
+    let ty = TypeDef::new(
+        ctx,
+        Unitype::STRING_TYPE_IDENTIFIER,
+        Unitype::STRING_TYPE.into_sub_type(),
+    );
     ctx.module.type_def_arena.alloc(ty);
 }
 
@@ -147,8 +164,6 @@ fn add_is_false(ctx: &mut CompileCtx<'_>) {
 
 #[cfg(test)]
 mod tests {
-    use crate::wasm::module::Module;
-    use crate::CompileCtx;
     // TODO -- How to test this easily?
     //  Can't use the normal Ruby-program-text input.
 
