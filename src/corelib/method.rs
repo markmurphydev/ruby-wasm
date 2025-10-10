@@ -1,5 +1,5 @@
-use crate::core::type_def;
-use crate::core::type_def::{
+use crate::corelib::type_def;
+use crate::corelib::type_def::{
     CLASS_TYPE_IDENTIFIER, METHOD_TYPE_IDENTIFIER, OBJECT_TYPE_IDENTIFIER,
 };
 use crate::unitype::Unitype;
@@ -24,7 +24,7 @@ impl Method {
 
 const NEW_NAME: &str = "new";
 
-fn new() -> Method {
+pub fn new() -> Method {
     Method {
         name: NEW_NAME.to_string(),
         add_method_def: new_add_method_def,
@@ -44,9 +44,31 @@ fn new_add_method_def(ctx: &mut CompileCtx<'_>) {
     method_builder.finish(&mut ctx.module.funcs);
 }
 
+const NAME_NAME: &str = "name";
+
+pub fn name() -> Method {
+    Method {
+        name: NAME_NAME.to_string(),
+        add_method_def: name_add_method_def,
+    }
+}
+
+fn name_add_method_def(ctx: &mut CompileCtx<'_>) {
+    let method_builder = method_builder(ctx, &name().identifier());
+    let instr_seq_builder = method_builder.func_body();
+    instr_seq_builder
+        .local_get(ctx, "self".to_string())
+        .ref_cast(
+            ctx,
+            RefType::new_identifier(CLASS_TYPE_IDENTIFIER.to_string()),
+        )
+        .struct_get(ctx, CLASS_TYPE_IDENTIFIER.to_string(), "name".to_string());
+    method_builder.finish(&mut ctx.module.funcs);
+}
+
 const CLASS_NAME: &str = "class";
 
-fn class() -> Method {
+pub fn class() -> Method {
     Method {
         name: CLASS_NAME.to_string(),
         add_method_def: class_add_method_def,
@@ -82,7 +104,7 @@ fn method_builder(ctx: &mut CompileCtx<'_>, name: &str) -> FunctionBuilder {
 }
 
 pub fn methods() -> Vec<Method> {
-    vec![new(), class()]
+    vec![new(), class(), name()]
 }
 
 pub fn add_method_defs(ctx: &mut CompileCtx<'_>) {

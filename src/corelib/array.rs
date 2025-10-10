@@ -5,7 +5,7 @@ use crate::wasm::types::{ArrayType, FieldType, Mutability};
 
 pub const ARRAY_UNITYPE_TYPE_IDENTIFIER: &str = "arr-unitype";
 
-fn array_unitype(ctx: &mut CompileCtx<'_>) -> TypeDef {
+pub fn array_unitype(ctx: &mut CompileCtx<'_>) -> TypeDef {
     let ty = ArrayType {
         field: Unitype::UNITYPE.into_field_type(),
     }

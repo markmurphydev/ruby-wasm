@@ -5,9 +5,9 @@
 
 mod alist;
 mod array;
-mod type_def;
-mod class;
-mod global;
+pub mod type_def;
+pub mod class;
+pub mod global;
 mod method;
 mod function;
 

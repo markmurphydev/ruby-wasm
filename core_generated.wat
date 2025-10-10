@@ -1,6 +1,13 @@
 (rec
   (type $str (sub final (array i8)))
   (type $obj (sub (struct (field $parent (mut (ref null $class))))))
+  (type $method
+    (sub
+      final
+      (func
+        (param $self (ref $obj))
+        (param $args (ref $arr-unitype))
+        (result (ref eq)))))
   (type $class
     (sub
       final
@@ -10,13 +17,6 @@
         (field $superclass (mut (ref null $class)))
         (field $name (ref $str))
         (field $instance-methods (ref $alist-str-method)))))
-  (type $method
-    (sub
-      final
-      (func
-        (param $self (ref $obj))
-        (param $args (ref $arr-unitype))
-        (result (ref eq)))))
   (type $arr-unitype (sub final (array (ref eq))))
   (type $alist-str-unitype (sub final (array (ref $alist-str-unitype-pair))))
   (type $alist-str-unitype-pair
@@ -78,6 +78,16 @@
   (i32.const 115)
   (i32.const 115)
   (array.new_fixed $str 5))
+(global $str-name
+  (ref $str)
+  (i32.const 110)
+  (i32.const 97)
+  (i32.const 109)
+  (i32.const 101)
+  (array.new_fixed $str 4))
+(global $empty-args
+  (ref $arr-unitype)
+  (array.new_fixed $arr-unitype 0))
 (global $class-Module
   (ref $class)
   (ref.null $class)
@@ -90,7 +100,16 @@
   (ref.null $class)
   (ref.null $class)
   (global.get $str-Class)
-  (array.new_fixed $alist-str-method 0)
+  (global.get $str-class)
+  (ref.func $method-class)
+  (struct.new $alist-str-method-pair)
+  (global.get $str-new)
+  (ref.func $method-new)
+  (struct.new $alist-str-method-pair)
+  (global.get $str-name)
+  (ref.func $method-name)
+  (struct.new $alist-str-method-pair)
+  (array.new_fixed $alist-str-method 3)
   (struct.new $class))
 (global $class-BasicObject
   (ref $class)
@@ -122,6 +141,14 @@
   (local.get $self)
   (struct.get $obj $parent)
   (ref.cast (ref eq)))
+(func
+  $method-name
+  (type $method)
+  (param $self (ref $obj)) (param $args (ref $arr-unitype))
+  (result (ref eq))
+  (local.get $self)
+  (ref.cast (ref $class))
+  (struct.get $class $name))
 (func
   $start
   
@@ -200,6 +227,74 @@
     (local.set $idx)
     (br $for))
   (unreachable))
+(func
+  $alist-str-method-get
+  (param $alist (ref $alist-str-method)) (param $name (ref $str))
+  (result (ref $method))
+  (local $idx i32)
+  (local $pair (ref $alist-str-method-pair))
+  (local $key (ref $str))
+  (local $val (ref $method))
+  (i32.const 0)
+  (local.set $idx)
+  (i32.const 0)
+  (local.set $idx)
+  (loop $for (result (ref eq))
+    (if
+      (local.get $idx)
+      (local.get $alist)
+      (array.len)
+      (i32.eq)
+      (then
+        (unreachable))
+      (else
+        ))
+    (local.get $alist)
+    (local.get $idx)
+    (array.get $alist-str-method)
+    (local.set $pair)
+    (local.get $pair)
+    (struct.get $alist-str-method-pair $key)
+    (local.set $key)
+    (local.get $pair)
+    (struct.get $alist-str-method-pair $val)
+    (local.set $val)
+    (if
+      (local.get $key)
+      (local.get $name)
+      (call $str-eq)
+      (then
+        (local.get $val)
+        (return))
+      (else
+        ))
+    (local.get $idx)
+    (i32.const 1)
+    (i32.add)
+    (local.set $idx)
+    (br $for))
+  (unreachable))
+(func
+  $call
+  (param $receiver (ref $obj))
+  (param $message (ref $str))
+  (param $args (ref $arr-unitype))
+  (result (ref eq))
+  (local $parent (ref $class)) (local $method (ref $method))
+  (local.get $receiver)
+  (struct.get $obj $parent)
+  (ref.as_non_null)
+  (local.set $parent)
+  (local.get $parent)
+  (struct.get $class $instance-methods)
+  (local.get $message)
+  (call $alist-str-method-get)
+  (ref.cast (ref $method))
+  (local.set $method)
+  (local.get $receiver)
+  (local.get $args)
+  (local.get $method)
+  (call_ref $method))
 (func
   $__ruby_top_level_function
   (export "__ruby_top_level_function")

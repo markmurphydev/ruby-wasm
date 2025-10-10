@@ -3,12 +3,11 @@ use crate::compiler::RUBY_TOP_LEVEL_FUNCTION_NAME;
 use crate::unitype::{Unitype, WasmtimeRefEq};
 use crate::{wasm, CompileCtx};
 use wasmtime::{Config, Engine, Instance, Module, Store};
-use crate::core::add_core_items;
+use crate::corelib::add_core_items;
 
 /// Writes out `module` as a .wat file, includes the corelib definitions,
 /// and runs it.
 pub fn run_module(ctx: &mut CompileCtx<'_>) -> Unitype {
-    add_core_items(ctx.module);
     let wat = ctx.module.to_pretty();
     run_wat(wat)
 }

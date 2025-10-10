@@ -1,6 +1,6 @@
 pub mod binary;
 pub mod compiler;
-pub mod core;
+pub mod corelib;
 pub mod html;
 pub mod lexeme;
 pub mod lexer;
@@ -15,7 +15,7 @@ pub use crate::wasm::function::FunctionBuilder;
 pub use crate::wasm::wat;
 pub use wasm::instr_seq::InstrSeqBuilder;
 
-use crate::core::add_core_items;
+use crate::corelib::add_core_items;
 use crate::lexer::Lexer;
 use crate::parser::Parser;
 

@@ -1,10 +1,11 @@
-use crate::{CompileCtx, InstrSeqBuilder};
-use crate::core::alist::alist_str_method;
-use crate::core::global;
-use crate::core::method::Method;
-use crate::core::type_def::CLASS_TYPE_IDENTIFIER;
+use crate::corelib::alist::alist_str_method;
+use crate::corelib::global::string_identifier;
+use crate::corelib::method::Method;
+use crate::corelib::type_def::{CLASS_TYPE_IDENTIFIER, string_type_def};
+use crate::corelib::{global, method};
 use crate::wasm::module::GlobalBuilder;
 use crate::wasm::types::{Mutability, RefType};
+use crate::{CompileCtx, InstrSeqBuilder};
 
 /// A Ruby class. Compiles to:
 /// - Definition of global string `$<CLASS_NAME>`
@@ -29,7 +30,8 @@ impl Class {
     }
 
     pub fn add_def(self, ctx: &mut CompileCtx<'_>) {
-        let ty = RefType::new_identifier(CLASS_TYPE_IDENTIFIER.to_string()).into_global_type(Mutability::Const);
+        let ty = RefType::new_identifier(CLASS_TYPE_IDENTIFIER.to_string())
+            .into_global_type(Mutability::Const);
         let global_builder = GlobalBuilder::new(ctx.module, ty, self.identifier());
         let instr_seq_builder = global_builder.instr_seq();
         // Parent and superclass get ref.null for now.
@@ -46,10 +48,11 @@ impl Class {
     }
 
     fn compile_methods_arr(&self, ctx: &mut CompileCtx<'_>, builder: &InstrSeqBuilder) {
-
         for method in &self.instance_methods {
             let alist_pair_type_identifier = alist_str_method().alist_pair_type_identifier();
-            builder.global_get(ctx, method.name.clone()).ref_func(ctx, method.identifier())
+            builder
+                .global_get(ctx, string_identifier(&method.name))
+                .ref_func(ctx, method.identifier())
                 .struct_new(ctx, alist_pair_type_identifier);
         }
         let alist_type_identifier = alist_str_method().alist_type_identifier();
@@ -74,7 +77,7 @@ fn class() -> Class {
         name: "Class".to_string(),
         parent_name: "Class".to_string(),
         superclass_name: Some("Module".to_string()),
-        instance_methods: vec![],
+        instance_methods: vec![method::class(), method::new(), method::name()],
     }
 }
 
@@ -98,14 +101,9 @@ fn object() -> Class {
     }
 }
 
-/// A Vec of all classes defined in `core`.
+/// A Vec of all classes defined in `corelib`.
 pub fn classes() -> Vec<Class> {
-    vec![
-        module(),
-        class(),
-        basic_object(),
-        object()
-    ]
+    vec![module(), class(), basic_object(), object()]
 }
 
 pub fn add_class_defs(ctx: &mut CompileCtx<'_>) {

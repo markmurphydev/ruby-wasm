@@ -55,7 +55,7 @@ pub struct RefType {
     pub heap_type: HeapType,
 }
 
-// attribution: Impl adapted from `wasm-encoder` crate `wasm-encoder/src/core/types.rs`
+// attribution: Impl adapted from `wasm-encoder` crate `wasm-encoder/src/corelib/types.rs`
 // https://github.com/bytecodealliance/wasm-tools/tree/main/crates/wasm-encoder
 // MIT licensed.
 impl RefType {
@@ -172,7 +172,7 @@ impl HeapType {
 }
 
 /// An abstract heap type.
-/// attribution: Copied from `wasm-encoder` crate `wasm-encoder/src/core/types.rs`
+/// attribution: Copied from `wasm-encoder` crate `wasm-encoder/src/corelib/types.rs`
 /// https://github.com/bytecodealliance/wasm-tools/tree/main/crates/wasm-encoder
 /// MIT licensed.
 #[derive(Clone, Copy, Debug, PartialEq, Eq, Hash, Ord, PartialOrd)]

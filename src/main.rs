@@ -95,7 +95,7 @@ fn main() {
             let parser = Parser::new(Lexer::new(&text));
             let program = parser.parse();
             let mut module = Module::new();
-            let mut ctx = ruby_wasm::core::add_core_items(&mut module);
+            let mut ctx = ruby_wasm::corelib::add_core_items(&mut module);
             compiler::compile(&mut ctx, &program);
             println!("{:?}", module);
         }
@@ -104,7 +104,7 @@ fn main() {
             let parser = Parser::new(Lexer::new(&text));
             let program = parser.parse();
             let mut module = Module::new();
-            let mut ctx = ruby_wasm::core::add_core_items(&mut module);
+            let mut ctx = ruby_wasm::corelib::add_core_items(&mut module);
             compiler::compile(&mut ctx, &program);
             let wat = module.to_pretty();
             println!("{}", wat);
@@ -114,7 +114,7 @@ fn main() {
             let parser = Parser::new(Lexer::new(&text));
             let program = parser.parse();
             let mut module = Module::new();
-            let mut ctx = ruby_wasm::core::add_core_items(&mut module);
+            let mut ctx = ruby_wasm::corelib::add_core_items(&mut module);
             compiler::compile(&mut ctx, &program);
             let bytes = binary::module_to_binary(&module);
             binary::print_bytes(&bytes);
@@ -128,7 +128,7 @@ fn main() {
             let parser = Parser::new(Lexer::new(&text));
             let program = parser.parse();
             let mut module = Module::new();
-            let mut ctx = ruby_wasm::core::add_core_items(&mut module);
+            let mut ctx = ruby_wasm::corelib::add_core_items(&mut module);
             compiler::compile(&mut ctx, &program);
             let bytes = binary::module_to_binary(&module);
             let html = html::make_html_wrapper(&bytes);

@@ -1,4 +1,4 @@
-use crate::core::type_def::METHOD_TYPE_IDENTIFIER;
+use crate::corelib::type_def::METHOD_TYPE_IDENTIFIER;
 use crate::unitype::Unitype;
 use crate::wasm::{Finality, TypeDef};
 use crate::wasm::types::{

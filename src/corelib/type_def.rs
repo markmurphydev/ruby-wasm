@@ -1,5 +1,5 @@
-use crate::core::array::ARRAY_UNITYPE_TYPE_IDENTIFIER;
-use crate::core::{alist, array};
+use crate::corelib::array::ARRAY_UNITYPE_TYPE_IDENTIFIER;
+use crate::corelib::{alist, array};
 use crate::unitype::Unitype;
 use crate::wasm::types::{ArrayType, CompType, FieldType, FuncType, HeapType, Mutability, Nullability, PackType, ParamType, ParamsType, RefType, ResultsType, StorageType, StructType, SubType, ValType};
 use crate::wasm::{Finality, TypeDef};
@@ -13,8 +13,8 @@ pub fn add_type_defs(ctx: &mut CompileCtx<'_>) {
     let mut type_defs = vec![
         string_type_def(ctx),
         object_type_def(ctx),
-        class_type_def(ctx),
         method_type_def(ctx),
+        class_type_def(ctx),
     ];
     type_defs.append(&mut array::array_type_defs(ctx));
     type_defs.append(&mut alist::alist_type_defs(ctx));

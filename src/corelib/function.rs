@@ -1,13 +1,13 @@
-use crate::core::alist::{AListTypeDef, alist_str_method};
-use crate::core::class;
-use crate::core::class::Class;
-use crate::core::type_def::{method_params_type, method_results_type, CLASS_TYPE_IDENTIFIER, METHOD_TYPE_IDENTIFIER, OBJECT_TYPE_IDENTIFIER};
+use crate::corelib::alist::{AListTypeDef, alist_str_method};
+use crate::corelib::class;
+use crate::corelib::class::Class;
+use crate::corelib::type_def::{method_params_type, method_results_type, CLASS_TYPE_IDENTIFIER, METHOD_TYPE_IDENTIFIER, OBJECT_TYPE_IDENTIFIER};
 use crate::unitype::Unitype;
 use crate::wasm::function::{ExportStatus, Local};
 use crate::wasm::types::{NumType, ParamType, ParamsType, RefType};
 use crate::wasm::{BinaryOp, UnaryOp};
 use crate::{CompileCtx, FunctionBuilder, InstrSeqBuilder};
-use crate::core::array::ARRAY_UNITYPE_TYPE_IDENTIFIER;
+use crate::corelib::array::ARRAY_UNITYPE_TYPE_IDENTIFIER;
 
 pub fn add_functions(ctx: &mut CompileCtx<'_>) {
     add_start(ctx);
@@ -245,12 +245,13 @@ fn add_alist_str_method_get(ctx: &mut CompileCtx<'_>) {
                         .call(ctx, STR_EQ_IDENTIFIER.to_string());
                 },
                 |ctx, instr_seq_builder| {
-                    instr_seq_builder.local_get(ctx, "val".to_string());
+                    instr_seq_builder.local_get(ctx, "val".to_string()).return_(ctx);
                 },
                 |_, _| {},
             );
         },
-    )
+    );
+    function_builder.finish(&mut ctx.module.funcs);
 }
 
 const CALL_IDENTIFIER: &str = "call";
@@ -311,6 +312,8 @@ fn add_call(ctx: &mut CompileCtx<'_>) {
         .local_get(ctx, "args".to_string())
         .local_get(ctx, "method".to_string())
         .call_ref(ctx, METHOD_TYPE_IDENTIFIER.to_string());
+
+    function_builder.finish(&mut ctx.module.funcs);
 }
 
 fn helper_add_for_in(
@@ -349,11 +352,18 @@ fn helper_add_for_in(
                 .local_set(ctx, "pair".to_string());
             instr_seq_builder
                 .local_get(ctx, "pair".to_string())
-                .struct_get(ctx, pair_identifier.clone(), "key".to_string());
+                .struct_get(ctx, pair_identifier.clone(), "key".to_string())
+                .local_set(ctx, "key".to_string());
             instr_seq_builder
                 .local_get(ctx, "pair".to_string())
-                .struct_get(ctx, pair_identifier.clone(), "val".to_string());
+                .struct_get(ctx, pair_identifier.clone(), "val".to_string())
+                .local_set(ctx, "val".to_string());
             body(ctx, instr_seq_builder);
+            instr_seq_builder
+                .local_get(ctx, "idx".to_string())
+                .i32_const(ctx, 1)
+                .binop(ctx, BinaryOp::I32Add)
+                .local_set(ctx, "idx".to_string());
             instr_seq_builder.br(ctx, "for".to_string());
         })
         .unreachable(ctx);

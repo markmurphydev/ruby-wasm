@@ -2,11 +2,12 @@
 
 // W for Wasm
 use crate::unitype::Unitype;
-use crate::wasm::UnaryOp;
 use crate::wasm::function::ExportStatus;
 use crate::wasm::instr_seq::InstrSeqBuilder;
 use crate::wasm::module::{GlobalBuilder, Module};
-use crate::{FunctionBuilder, node as R};
+use crate::wasm::UnaryOp;
+use crate::{corelib, node as R, FunctionBuilder};
+use corelib::class::Class;
 use std::hash::{DefaultHasher, Hash, Hasher};
 
 pub const RUBY_TOP_LEVEL_FUNCTION_NAME: &str = "__ruby_top_level_function";
@@ -165,7 +166,7 @@ fn compile_constant_read_expr(
 ) {
     // TODO -- Assuming all constants are classes.
     let R::ConstantRead { name } = constant_read_expr;
-    builder.global_get(ctx, class_symbolic_identifier(name));
+    builder.global_get(ctx, Class::name_to_identifier(name));
 }
 
 fn compile_if_expr(ctx: &mut CompileCtx<'_>, builder: &InstrSeqBuilder, if_expr: &R::If) {
@@ -254,10 +255,11 @@ fn compile_call_expr(ctx: &mut CompileCtx<'_>, builder: &InstrSeqBuilder, call_e
     let R::Call { receiver, name } = call_expr;
     compile_expr(ctx, builder, receiver);
     builder
-        .global_get(ctx, string_symbolic_identifier(name))
+        .global_get(ctx, corelib::global::string_identifier(name))
         .global_get(ctx, "empty-args".to_string())
         .call(ctx, "call".to_string());
 }
+
 
 /// Turns a Ruby Expr into a Wasm predicate.
 /// A ruby Expr evaluates to a ruby-value (True, False, Nil, ...)
@@ -272,26 +274,4 @@ fn compile_expr_to_wasm_predicate(
     builder
         .call(ctx, "is_false".to_string())
         .unop(ctx, UnaryOp::I32Eqz);
-}
-
-fn class_symbolic_identifier(class_name: &str) -> String {
-    // Right now, if the whole identifier is lowercase, the lisp reader makes the name uppercase...
-    // TODO -- Fix the lisp reader.
-    if class_name.chars().all(|c| c.is_lowercase()) {
-        let str_upper_case: String = class_name.chars().flat_map(|c| c.to_uppercase()).collect();
-        format!("CLASS-{}", str_upper_case)
-    } else {
-        format!("class-{}", class_name)
-    }
-}
-
-fn string_symbolic_identifier(str: &str) -> String {
-    // Right now, if the whole identifier is lowercase, the lisp reader makes the name uppercase...
-    // TODO -- Fix the lisp reader.
-    if str.chars().all(|c| c.is_lowercase()) {
-        let str_upper_case: String = str.chars().flat_map(|c| c.to_uppercase()).collect();
-        format!("STR-{}", str_upper_case)
-    } else {
-        format!("str-{}", str)
-    }
 }

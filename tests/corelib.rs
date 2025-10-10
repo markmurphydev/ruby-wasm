@@ -1,4 +1,4 @@
-//! Test that [ruby_wasm::core] (or `./generate-core.lisp` for now)
+//! Test that [ruby_wasm::corelib] (or `./generate-corelib.lisp` for now)
 //! is producing Wasm that:
 //! - Compiles and type-checks
 //! - Runs correctly

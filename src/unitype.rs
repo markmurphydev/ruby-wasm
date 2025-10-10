@@ -133,7 +133,9 @@ impl Unitype {
                     let string = String::from_utf8(bytes).unwrap();
                     Unitype::String(string)
                 }
-                _ => panic!(),
+                ref_eq => {
+                    panic!("Unknown type: {:?}", ref_eq.ty(&store))
+                },
             }
         }
     }
