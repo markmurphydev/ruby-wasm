@@ -1,5 +1,5 @@
 use crate::CompileCtx;
-use crate::core::class;
+use crate::core::{class, method};
 use crate::unitype::Unitype;
 use crate::wasm::module::GlobalBuilder;
 use crate::wasm::types::{Mutability, RefType};
@@ -14,7 +14,7 @@ pub fn add_globals(ctx: &mut CompileCtx<'_>) {
 /// - Method names
 fn add_string_defs(ctx: &mut CompileCtx<'_>) {
     add_class_string_defs(ctx);
-    // add_method_string_defs(ctx);
+    add_method_string_defs(ctx);
 }
 
 fn add_class_string_defs(ctx: &mut CompileCtx<'_>) {
@@ -25,7 +25,9 @@ fn add_class_string_defs(ctx: &mut CompileCtx<'_>) {
 }
 
 fn add_method_string_defs(ctx: &mut CompileCtx<'_>) {
-    todo!()
+    for method in method::methods() {
+        add_string_def(ctx, method.name);
+    }
 }
 
 fn add_string_def(ctx: &mut CompileCtx<'_>, string: String) {

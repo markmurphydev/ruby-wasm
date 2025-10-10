@@ -439,6 +439,11 @@ pub enum Instr {
         type_name: String,
     },
 
+    StructGet {
+        type_name: String,
+        field_name: String,
+    },
+
     RefFunc {
         func_name: String,
     }

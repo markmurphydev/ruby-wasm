@@ -173,6 +173,7 @@ fn function_to_doc(
     let Function {
         name,
         exported,
+        type_use,
         params,
         results,
         entry_point,
@@ -184,6 +185,11 @@ fn function_to_doc(
     let exported = match exported {
         ExportStatus::Exported => line().append(format!("(export \"{}\")", name)),
         ExportStatus::NotExported => nil(),
+    };
+
+    let type_use = match type_use {
+        None => nil(),
+        Some(ident) => line().append(format!("(type ${})", ident))
     };
 
     let params = if params.is_empty() {
@@ -203,6 +209,7 @@ fn function_to_doc(
         .append(line())
         .append(name_doc)
         .append(exported)
+        .append(type_use)
         .append(params)
         .append(results)
         .append(hardline())
@@ -246,7 +253,8 @@ fn instr_to_doc(instr_seq_arena: &Arena<InstrSeq>, instr: &Instr) -> Doc {
         )),
         RefNull(r) => text(format!("(ref.null ${})", r.type_name)),
         StructNew(s)  => text(format!("(struct.new ${})", s.type_name)),
-        RefFunc(r) => text(format!("(ref.func ${})", r.func_name))
+        RefFunc(r) => text(format!("(ref.func ${})", r.func_name)),
+        StructGet(sg) => text(format!("(struct.get ${} ${})", sg.type_name, sg.field_name))
     }
 }
 

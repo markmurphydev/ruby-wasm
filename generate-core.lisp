@@ -86,27 +86,27 @@
                      ;; :fn-instance-methods (lambda () (list))))
 
 ;;;; Ruby method definitions
-(defun compile-method-name (method-name class-name)
-  (intern (format nil "$method-~a-~a" class-name method-name)))
+;; (defun compile-method-name (method-name class-name)
+  ;; (intern (format nil "$method-~a-~a" class-name method-name)))
 
-(defun compile-method (method-name class-name body)
-  (let ((name (compile-method-name method-name class-name)))
-    `(func ,name (type $method)
-           (param $self (ref $obj))
-           (param $args (ref $arr-unitype))
-           (result (ref eq))
-           ,body)))
+;; (defun compile-method (method-name class-name body)
+  ;; (let ((name (compile-method-name method-name class-name)))
+    ;; `(func ,name (type $method)
+           ;; (param $self (ref $obj))
+           ;; (param $args (ref $arr-unitype))
+           ;; (result (ref eq))
+           ;; ,body)))
 
-(defun compile-method-new (class-name)
-  (compile-method "new" class-name
-                  `(struct.new $obj
-                               ;; $parent
-                               (ref.cast (ref $class) (local.get $self)))))
+;; (defun compile-method-new (class-name)
+  ;; (compile-method "new" class-name
+                  ;; `(struct.new $obj
+                               ;; ;; $parent
+                               ;; (ref.cast (ref $class) (local.get $self)))))
 
-(defun method-new ()
-  (make-instance 'ruby-method
-                 :name "new"
-                 :fn-compile 'compile-method-new))
+;; (defun method-new ()
+  ;; (make-instance 'ruby-method
+                 ;; :name "new"
+                 ;; :fn-compile 'compile-method-new))
 
 (defun compile-method-class (class-name)
   (compile-method "class" class-name

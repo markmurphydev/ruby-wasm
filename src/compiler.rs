@@ -21,6 +21,7 @@ pub fn compile(ctx: &mut CompileCtx<'_>, program: &R::Program) {
         ctx,
         RUBY_TOP_LEVEL_FUNCTION_NAME,
         ExportStatus::Exported,
+        None,
         Box::new([]),
         Box::new([Unitype::UNITYPE.into_result_type()]),
     );

@@ -1,10 +1,7 @@
 use crate::core::array::ARRAY_UNITYPE_TYPE_IDENTIFIER;
 use crate::core::{alist, array};
 use crate::unitype::Unitype;
-use crate::wasm::types::{
-    ArrayType, CompType, FieldType, FuncType, HeapType, Mutability, Nullability, PackType,
-    ParamType, RefType, StorageType, StructType, SubType, ValType,
-};
+use crate::wasm::types::{ArrayType, CompType, FieldType, FuncType, HeapType, Mutability, Nullability, PackType, ParamType, ParamsType, RefType, ResultsType, StorageType, StructType, SubType, ValType};
 use crate::wasm::{Finality, TypeDef};
 use crate::CompileCtx;
 
@@ -85,22 +82,30 @@ pub fn class_type_def(ctx: &mut CompileCtx<'_>) -> TypeDef {
     TypeDef::new(ctx, CLASS_TYPE_IDENTIFIER, ty)
 }
 
+pub fn method_params_type() -> ParamsType {
+    Box::new([
+        ParamType {
+            name: "self".to_string(),
+            ty: RefType::new_identifier(OBJECT_TYPE_IDENTIFIER.to_string()).into_val_type(),
+        },
+        ParamType {
+            name: "args".to_string(),
+            ty: RefType::new_identifier(ARRAY_UNITYPE_TYPE_IDENTIFIER.to_string())
+                .into_val_type(),
+        },
+    ])
+}
+
+pub fn method_results_type() -> ResultsType {
+    Box::new([Unitype::UNITYPE.into_result_type()])
+}
+
 /// The wasm type-definition of a Ruby method.
 /// Each method definition is a function subtyping $method.
 pub fn method_type_def(ctx: &mut CompileCtx<'_>) -> TypeDef {
     let ty = FuncType {
-        params: Box::new([
-            ParamType {
-                name: "self".to_string(),
-                ty: RefType::new_identifier(OBJECT_TYPE_IDENTIFIER.to_string()).into_val_type(),
-            },
-            ParamType {
-                name: "args".to_string(),
-                ty: RefType::new_identifier(ARRAY_UNITYPE_TYPE_IDENTIFIER.to_string())
-                    .into_val_type(),
-            },
-        ]),
-        results: Box::new([Unitype::UNITYPE.into_result_type()]),
+        params: method_params_type(),
+        results: method_results_type(),
     };
     TypeDef::new(ctx, METHOD_TYPE_IDENTIFIER, ty.into_sub_type())
 }

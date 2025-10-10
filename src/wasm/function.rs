@@ -8,6 +8,7 @@ use crate::wasm::intern::InternedIdentifier;
 use crate::wasm::module::ModuleFunctions;
 use crate::wasm::types::{ParamsType, ResultsType};
 use id_arena::Id;
+use wasmtime::component::__internal::wasmtime_environ::FunctionType;
 
 pub type FunctionId = Id<Function>;
 
@@ -15,6 +16,7 @@ pub type FunctionId = Id<Function>;
 pub struct Function {
     pub name: InternedIdentifier,
     pub exported: ExportStatus,
+    pub type_use: Option<String>,
     pub params: ParamsType,
     pub results: ResultsType,
     /// The entry-point into this function.
@@ -33,6 +35,7 @@ pub enum ExportStatus {
 pub struct FunctionBuilder {
     name: InternedIdentifier,
     exported: ExportStatus,
+    type_use: Option<String>,
     params: ParamsType,
     results: ResultsType,
     /// The entry-point into this function.
@@ -45,6 +48,7 @@ impl FunctionBuilder {
         ctx: &mut CompileCtx<'_>,
         name: &str,
         exported: ExportStatus,
+        type_use: Option<&str>,
         params: ParamsType,
         results: ResultsType,
     ) -> Self {
@@ -55,6 +59,7 @@ impl FunctionBuilder {
             name,
             exported,
             params,
+            type_use: type_use.map(|t| t.to_string()),
             results,
             entry_point,
         }
@@ -74,6 +79,7 @@ impl FunctionBuilder {
         let FunctionBuilder {
             name,
             exported,
+            type_use,
             params,
             results,
             entry_point,
@@ -81,6 +87,7 @@ impl FunctionBuilder {
         let func = Function {
             name,
             exported,
+            type_use,
             params,
             results,
             entry_point,

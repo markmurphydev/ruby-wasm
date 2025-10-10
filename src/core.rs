@@ -24,6 +24,7 @@ pub fn add_core_items(module: &mut Module) -> CompileCtx<'_> {
     let mut ctx = CompileCtx { module };
     type_def::add_type_defs(&mut ctx);
     global::add_globals(&mut ctx);
+    method::add_method_defs(&mut ctx);
     // add_types(&mut ctx);
     // add_functions(&mut ctx);
     ctx
@@ -129,7 +130,7 @@ fn add_is_false(ctx: &mut CompileCtx<'_>) {
         ty: Unitype::UNITYPE.into_val_type(),
     }]);
     let results = Box::new([ResultType(NumType::I32.into_val_type())]);
-    let builder = FunctionBuilder::new(ctx, name, exported, params, results);
+    let builder = FunctionBuilder::new(ctx, name, exported, None, params, results);
     builder.func_body().if_else(
         ctx,
         NumType::I32.into_block_type_result(),
