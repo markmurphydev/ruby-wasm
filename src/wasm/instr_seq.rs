@@ -109,7 +109,7 @@ impl InstrSeqBuilder {
     pub fn if_else(
         &self,
         ctx: &mut CompileCtx<'_>,
-        ty: BlockType,
+        ty: Option<BlockType>,
         predicate: impl FnOnce(&mut CompileCtx<'_>, &InstrSeqBuilder),
         consequent: impl FnOnce(&mut CompileCtx<'_>, &InstrSeqBuilder),
         alternative: impl FnOnce(&mut CompileCtx<'_>, &InstrSeqBuilder),

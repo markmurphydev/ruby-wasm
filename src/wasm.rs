@@ -18,6 +18,7 @@ use crate::wasm::intern::InternedIdentifier;
 use crate::wasm::types::{BlockType, CompType, GlobalType, RefType, SubType};
 use instr_seq::InstrSeqId;
 use wasm_macro::wasm_instr;
+use crate::unitype::Unitype;
 
 /// Constant values that can show up in WebAssembly
 #[derive(Debug, Clone, Copy)]
@@ -93,6 +94,10 @@ pub enum Instr {
         name: String,
     },
 
+    LocalSet {
+        name: String,
+    },
+
     // /// `local.set n`
     // LocalSet {
     //     /// The local being set.
@@ -146,9 +151,10 @@ pub enum Instr {
     //     #[walrus(skip_visit)]
     //     ty: Option<ValType>,
     // },
-    //
-    // /// `unreachable`
-    // Unreachable {},
+
+    /// `unreachable`
+    Unreachable {},
+
     /// `br`
     Br {
         /// The target block to branch to.
@@ -165,7 +171,7 @@ pub enum Instr {
     #[wasm(skip_builder)]
     IfElse {
         /// The type that `consequent`, `alternative` return.
-        ty: BlockType,
+        ty: Option<BlockType>,
         /// The condition to evaluate.
         predicate: InstrSeqId,
         /// The block to execute when the condition is true.
@@ -187,9 +193,9 @@ pub enum Instr {
     /// `drop`
     Drop {},
 
-    // /// `return`
-    // Return {},
-    //
+    /// `return`
+    Return {},
+
     // /// `memory.size`
     // MemorySize {
     //     /// The memory we're fetching the current size of.
@@ -435,11 +441,20 @@ pub enum Instr {
         length: i32,
     },
 
+    ArrayGetU {
+        type_name: String,
+    },
+
     StructNew {
         type_name: String,
     },
 
     StructGet {
+        type_name: String,
+        field_name: String,
+    },
+
+    StructSet {
         type_name: String,
         field_name: String,
     },
@@ -454,6 +469,7 @@ pub enum Instr {
 #[derive(Copy, Clone, Debug)]
 pub enum UnaryOp {
     I32Eqz,
+    ArrayLen,
     // I32Clz,
     // I32Ctz,
     // I32Popcnt,
@@ -531,6 +547,7 @@ pub enum UnaryOp {
 #[derive(Copy, Clone, Debug)]
 pub enum BinaryOp {
     I32Eq,
+    I32Add,
     // I32Ne,
     // I32LtS,
     // I32LtU,

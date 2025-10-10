@@ -9,6 +9,7 @@ mod type_def;
 mod class;
 mod global;
 mod method;
+mod function;
 
 use crate::unitype::Unitype;
 use crate::wasm::function::ExportStatus;
@@ -25,8 +26,7 @@ pub fn add_core_items(module: &mut Module) -> CompileCtx<'_> {
     type_def::add_type_defs(&mut ctx);
     global::add_globals(&mut ctx);
     method::add_method_defs(&mut ctx);
-    // add_types(&mut ctx);
-    // add_functions(&mut ctx);
+    function::add_functions(&mut ctx);
     ctx
 }
 
@@ -60,26 +60,6 @@ fn add_unitype_false(ctx: &mut CompileCtx) {
         .instr_seq()
         .i31_const(ctx, Unitype::FALSE_BIT_PATTERN);
     builder.finish(ctx);
-}
-
-fn add_types(ctx: &mut CompileCtx) {
-    add_unitype_string(ctx);
-}
-
-/// ```wat
-/// (type $unitype-string (ref i8))
-/// ```
-fn add_unitype_string(ctx: &mut CompileCtx) {
-    let ty = TypeDef::new(
-        ctx,
-        Unitype::STRING_TYPE_IDENTIFIER,
-        Unitype::STRING_TYPE.into_sub_type(),
-    );
-    ctx.module.type_def_arena.alloc(ty);
-}
-
-fn add_functions(ctx: &mut CompileCtx<'_>) {
-    add_is_false(ctx);
 }
 
 // fn is_string(ctx: &mut CompileCtx<'_>) -> Function {
@@ -130,10 +110,10 @@ fn add_is_false(ctx: &mut CompileCtx<'_>) {
         ty: Unitype::UNITYPE.into_val_type(),
     }]);
     let results = Box::new([ResultType(NumType::I32.into_val_type())]);
-    let builder = FunctionBuilder::new(ctx, name, exported, None, params, results);
+    let builder = FunctionBuilder::new(ctx, name, exported, None, params, results, vec![]);
     builder.func_body().if_else(
         ctx,
-        NumType::I32.into_block_type_result(),
+        Some(NumType::I32.into_block_type_result()),
         |ctx, builder| {
             builder
                 .local_get(ctx, "b".to_string())

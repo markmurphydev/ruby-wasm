@@ -119,117 +119,117 @@
 
 ;;;; Compilation functions
 
-(defun compile-string-name (str)
-  (intern (format nil "$str-~a" str)))
+;; (defun compile-string-name (str)
+  ;; (intern (format nil "$str-~a" str)))
 
-(defun compile-string (str)
-  (let* ((consts (mapcar (lambda (c) `(i32.const ,(char-int c)))
-                         (coerce str 'list))))
-    `(global ,(compile-string-name str) (ref $str) (array.new_fixed $str ,(length str) ,@consts))))
+;; (defun compile-string (str)
+  ;; (let* ((consts (mapcar (lambda (c) `(i32.const ,(char-int c)))
+                         ;; (coerce str 'list))))
+    ;; `(global ,(compile-string-name str) (ref $str) (array.new_fixed $str ,(length str) ,@consts))))
 
-(defun compile-class-name (name)
-  (intern (format nil "$class-~a" name)))
+;; (defun compile-class-name (name)
+  ;; (intern (format nil "$class-~a" name)))
 
-(defun compile-ruby-class (class)
-  ;; You can't define mutually-referential globals.
-  ;; But you can initialize to nil then set everything in _start.
-  (let* ((compiled-class-name (compile-class-name (name class)))
-         (name-expr `(global.get ,(compile-string-name (name class))))
-         (methods (funcall (fn-instance-methods class)))
-         (methods-arr-elems (mapcar (lambda (method)
-                                      (let ((compiled-method-name (compile-method-name (name method) (name class))))
-                                        `(struct.new ,(alist-pair-type (alist-str-method))
-                                                     (global.get ,(compile-string-name (name method)))
-                                                     (ref.func ,compiled-method-name))))
-                                    methods))
-         (instance-methods-expr
-           `(array.new_fixed ,(alist-type (alist-str-method)) 
-                             ,(length methods)
-                             ,@methods-arr-elems)))
-    `(global ,compiled-class-name (ref $class)
-             (struct.new $class
-                         ;; $parent
-                         (ref.null $class)
-                         ;; $superclass
-                         (ref.null $class)
-                         ,name-expr
-                         ,instance-methods-expr))))
-(compile-ruby-class *class-class*)
+;; (defun compile-ruby-class (class)
+  ;; ;; You can't define mutually-referential globals.
+  ;; ;; But you can initialize to nil then set everything in _start.
+  ;; (let* ((compiled-class-name (compile-class-name (name class)))
+         ;; (name-expr `(global.get ,(compile-string-name (name class))))
+         ;; (methods (funcall (fn-instance-methods class)))
+         ;; (methods-arr-elems (mapcar (lambda (method)
+                                      ;; (let ((compiled-method-name (compile-method-name (name method) (name class))))
+                                        ;; `(struct.new ,(alist-pair-type (alist-str-method))
+                                                     ;; (global.get ,(compile-string-name (name method)))
+                                                     ;; (ref.func ,compiled-method-name))))
+                                    ;; methods))
+         ;; (instance-methods-expr
+           ;; `(array.new_fixed ,(alist-type (alist-str-method)) 
+                             ;; ,(length methods)
+                             ;; ,@methods-arr-elems)))
+    ;; `(global ,compiled-class-name (ref $class)
+             ;; (struct.new $class
+                         ;; ;; $parent
+                         ;; (ref.null $class)
+                         ;; ;; $superclass
+                         ;; (ref.null $class)
+                         ;; ,name-expr
+                         ;; ,instance-methods-expr))))
+;; (compile-ruby-class *class-class*)
 
-(defun set-class-parents ()
-  "The section of code in _start that initializes classes' parents"
-  (flet ((set-parents (class)
-           (let* ((parent (funcall (fn-parent class)))
-                  (compiled-class-name (compile-class-name (name class)))
-                  (compiled-parent-name (compile-class-name (name parent))))
-             `(struct.set $class $parent
-                          (global.get ,compiled-class-name)
-                          (global.get ,compiled-parent-name)))))
-    (mapcar #'set-parents (classes))))
-(set-class-parents)
+;; (defun set-class-parents ()
+  ;; "The section of code in _start that initializes classes' parents"
+  ;; (flet ((set-parents (class)
+           ;; (let* ((parent (funcall (fn-parent class)))
+                  ;; (compiled-class-name (compile-class-name (name class)))
+                  ;; (compiled-parent-name (compile-class-name (name parent))))
+             ;; `(struct.set $class $parent
+                          ;; (global.get ,compiled-class-name)
+                          ;; (global.get ,compiled-parent-name)))))
+    ;; (mapcar #'set-parents (classes))))
+;; (set-class-parents)
 
-(defun set-class-superclasses ()
-  ;; (superclass (funcall (fn-superclass class)))
-  ;; (superclass-expr (if superclass
-  ;; `(global.get ,(compile-class-name (name superclass)))
-  ;; '(ref.null $class)))
-  (flet ((set-superclass (class)
-           (let ((superclass (funcall (fn-superclass class))))
-             (when superclass 
-               (let ((compiled-class-name (compile-class-name (name class)))
-                     (compiled-superclass-name (compile-class-name (name superclass))))
-                 `(struct.set $class $superclass
-                              (global.get ,compiled-class-name)
-                              (global.get ,compiled-superclass-name)))))))
-    (remove-if-not (lambda (x) x)
-                   (mapcar #'set-superclass (classes)))))
-(set-class-superclasses)
+;; (defun set-class-superclasses ()
+  ;; ;; (superclass (funcall (fn-superclass class)))
+  ;; ;; (superclass-expr (if superclass
+  ;; ;; `(global.get ,(compile-class-name (name superclass)))
+  ;; ;; '(ref.null $class)))
+  ;; (flet ((set-superclass (class)
+           ;; (let ((superclass (funcall (fn-superclass class))))
+             ;; (when superclass 
+               ;; (let ((compiled-class-name (compile-class-name (name class)))
+                     ;; (compiled-superclass-name (compile-class-name (name superclass))))
+                 ;; `(struct.set $class $superclass
+                              ;; (global.get ,compiled-class-name)
+                              ;; (global.get ,compiled-superclass-name)))))))
+    ;; (remove-if-not (lambda (x) x)
+                   ;; (mapcar #'set-superclass (classes)))))
+;; (set-class-superclasses)
 
 ;;;; Collect item definitions
 
-(defun string-defs ()
-  (let* ((strings-set (list))
-         (class-names
-           (mapcar (lambda (class) (name class))
-                   (classes)))
-         (method-names
-           (mapcar (lambda (method) (name method)) (methods)))
-         (names (append class-names method-names)))
-    (dolist (name names)
-      (pushnew name strings-set :test 'equal))
-    (mapcar 'compile-string strings-set)))
-(string-defs)
+;; (defun string-defs ()
+  ;; (let* ((strings-set (list))
+         ;; (class-names
+           ;; (mapcar (lambda (class) (name class))
+                   ;; (classes)))
+         ;; (method-names
+           ;; (mapcar (lambda (method) (name method)) (methods)))
+         ;; (names (append class-names method-names)))
+    ;; (dolist (name names)
+      ;; (pushnew name strings-set :test 'equal))
+    ;; (mapcar 'compile-string strings-set)))
+;; (string-defs)
 
-(defun class-defs ()
-  (mapcar 'compile-ruby-class (classes)))
-(class-defs)
+;; (defun class-defs ()
+  ;; (mapcar 'compile-ruby-class (classes)))
+;; (class-defs)
 
-(defun method-defs ()
-  (mapcan 
-   (lambda (class)
-     (mapcar 
-      (lambda (method) 
-        (funcall (fn-compile method) (name class)))
-      (funcall (fn-instance-methods class))))
-   (classes)))
-(method-defs)
+;; (defun method-defs ()
+  ;; (mapcan 
+   ;; (lambda (class)
+     ;; (mapcar 
+      ;; (lambda (method) 
+        ;; (funcall (fn-compile method) (name class)))
+      ;; (funcall (fn-instance-methods class))))
+   ;; (classes)))
+;; (method-defs)
 
 ;;;; Alists
 
-(defstruct wasm-alist key val)
+;; (defstruct wasm-alist key val)
 
-(defun alist-type (alist)
-  (intern (format nil "$alist-~a-~a" (wasm-alist-key alist) (wasm-alist-val alist))))
-(defun alist-pair-type (alist)
-  (intern (format nil "$alist-pair-~a-~a" (wasm-alist-key alist) (wasm-alist-val alist))))
-(defun alist-type-def (alist)
-  `(type ,(alist-type alist) (array (ref ,(alist-pair-type alist)))))
-(defun alist-pair-type-def (alist)
-  (let ((val (if (string= (wasm-alist-val) "unitype")
-  `(type ,(alist-pair-type alist) (struct (field $key (ref $str)) (field $val (ref eq)))))
+;; (defun alist-type (alist)
+  ;; (intern (format nil "$alist-~a-~a" (wasm-alist-key alist) (wasm-alist-val alist))))
+;; (defun alist-pair-type (alist)
+  ;; (intern (format nil "$alist-pair-~a-~a" (wasm-alist-key alist) (wasm-alist-val alist))))
+;; (defun alist-type-def (alist)
+  ;; `(type ,(alist-type alist) (array (ref ,(alist-pair-type alist)))))
+;; (defun alist-pair-type-def (alist)
+  ;; (let ((val (if (string= (wasm-alist-val) "unitype")
+  ;; `(type ,(alist-pair-type alist) (struct (field $key (ref $str)) (field $val (ref eq)))))
     
-(defun alist-str-unitype () (make-wasm-alist :key "str" :val "unitype"))
-(defun alist-str-method () (make-wasm-alist :key "str" :val "method"))
+;; (defun alist-str-unitype () (make-wasm-alist :key "str" :val "unitype"))
+;; (defun alist-str-method () (make-wasm-alist :key "str" :val "method"))
 
 (defun for-in (&key (idx '$idx)
                     (pair '$pair)
@@ -338,8 +338,6 @@
                      (if (i32.eqz (i32.eq (local.get $a_ch) 
                                           (local.get $b_ch)))
                          (then (return (i32.const 0))))
-                  ;; idx += 1;
-                  ;; if (idx == a.len) { return true }
                      (local.set $idx (i32.add (local.get $idx)
                                               (i32.const 1)))
                      (br $for))))

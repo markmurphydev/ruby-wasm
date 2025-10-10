@@ -24,6 +24,7 @@ pub fn compile(ctx: &mut CompileCtx<'_>, program: &R::Program) {
         None,
         Box::new([]),
         Box::new([Unitype::UNITYPE.into_result_type()]),
+        vec![]
     );
     compile_program(ctx, &top_level_builder, program);
     top_level_builder.finish(&mut ctx.module.funcs);
@@ -175,7 +176,7 @@ fn compile_if_expr(ctx: &mut CompileCtx<'_>, builder: &InstrSeqBuilder, if_expr:
     } = if_expr;
     builder.if_else(
         ctx,
-        Unitype::UNITYPE.into_block_type_result(),
+        Some(Unitype::UNITYPE.into_block_type_result()),
         |ctx, builder| compile_expr_to_wasm_predicate(ctx, builder, predicate),
         |ctx, builder| {
             compile_statements(ctx, builder, statements);
@@ -208,7 +209,7 @@ fn compile_while_expr(ctx: &mut CompileCtx<'_>, builder: &InstrSeqBuilder, while
     builder.loop_(ctx, label.clone(), |ctx, builder| {
         builder.if_else(
             ctx,
-            Unitype::UNITYPE.into_block_type_result(),
+            Some(Unitype::UNITYPE.into_block_type_result()),
             |ctx, builder| {
                 compile_expr_to_wasm_predicate(ctx, builder, predicate);
             },
@@ -235,7 +236,7 @@ fn compile_until_expr(ctx: &mut CompileCtx<'_>, builder: &InstrSeqBuilder, until
     builder.loop_(ctx, label.clone(), |ctx, builder| {
         builder.if_else(
             ctx,
-            Unitype::UNITYPE.into_block_type_result(),
+            Some(Unitype::UNITYPE.into_block_type_result()),
             |ctx, builder| {
                 compile_expr_to_wasm_predicate(ctx, builder, predicate);
                 // `binary_not ≡ eqz` when result is interpreted as boolean

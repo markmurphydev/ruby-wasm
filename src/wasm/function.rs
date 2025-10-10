@@ -6,7 +6,7 @@ use crate::compiler::CompileCtx;
 use crate::wasm::instr_seq::{InstrSeq, InstrSeqBuilder, InstrSeqId};
 use crate::wasm::intern::InternedIdentifier;
 use crate::wasm::module::ModuleFunctions;
-use crate::wasm::types::{ParamsType, ResultsType};
+use crate::wasm::types::{ParamsType, ResultsType, ValType};
 use id_arena::Id;
 use wasmtime::component::__internal::wasmtime_environ::FunctionType;
 
@@ -21,6 +21,7 @@ pub struct Function {
     pub results: ResultsType,
     /// The entry-point into this function.
     pub entry_point: InstrSeqId,
+    pub locals: Vec<Local>,
 }
 
 /// Is this item exported?
@@ -28,6 +29,12 @@ pub struct Function {
 pub enum ExportStatus {
     Exported,
     NotExported,
+}
+
+#[derive(Debug)]
+pub struct Local {
+    pub identifier: String,
+    pub ty: ValType,
 }
 
 /// Build instances of `LocalFunction`.
@@ -38,6 +45,7 @@ pub struct FunctionBuilder {
     type_use: Option<String>,
     params: ParamsType,
     results: ResultsType,
+    locals: Vec<Local>,
     /// The entry-point into this function.
     entry_point: InstrSeqId,
 }
@@ -51,6 +59,7 @@ impl FunctionBuilder {
         type_use: Option<&str>,
         params: ParamsType,
         results: ResultsType,
+        locals: Vec<Local>,
     ) -> Self {
         let name = ctx.module.interner.intern(name);
         let entry_point = ctx.module.instr_seq_arena.alloc(InstrSeq::new());
@@ -62,6 +71,7 @@ impl FunctionBuilder {
             type_use: type_use.map(|t| t.to_string()),
             results,
             entry_point,
+            locals,
         }
     }
 
@@ -83,6 +93,7 @@ impl FunctionBuilder {
             params,
             results,
             entry_point,
+            locals,
         } = self;
         let func = Function {
             name,
@@ -91,6 +102,7 @@ impl FunctionBuilder {
             params,
             results,
             entry_point,
+            locals
         };
         funcs.add(func)
     }

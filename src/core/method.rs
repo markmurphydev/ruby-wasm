@@ -77,6 +77,7 @@ fn method_builder(ctx: &mut CompileCtx<'_>, name: &str) -> FunctionBuilder {
         Some(METHOD_TYPE_IDENTIFIER),
         type_def::method_params_type(),
         type_def::method_results_type(),
+        vec![]
     )
 }
 

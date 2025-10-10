@@ -59,7 +59,7 @@ enum Command {
 
     /// Compiles the given program, printing an `.html` file.
     /// The `.html` file has a button to compile and run the Wasm program.
-    /// When the program is compiled, the `_start` function will be called,
+    /// When the program is compiled, the `start` function will be called,
     /// and its output will be printed to the browser console.
     Html {
         /// Text of program to compile

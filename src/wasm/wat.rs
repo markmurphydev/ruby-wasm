@@ -4,16 +4,23 @@
 //! - To indent the first line of a nested block,
 //!     make sure it's the first element of the nested append.
 
-use std::any::Any;
 use crate::unitype::Unitype;
-use crate::wasm::function::{ExportStatus, Function};
+use crate::wasm::function::{ExportStatus, Function, Local};
 use crate::wasm::instr_seq::{InstrSeq, InstrSeqId};
 use crate::wasm::intern::IdentifierInterner;
 use crate::wasm::module::{Module, ModuleFunctions};
-use crate::wasm::types::{AbsHeapType, ArrayType, BlockType, CompType, FieldType, FuncType, GlobalType, HeapType, Mutability, Nullability, NumType, PackType, ParamType, RefType, ResultType, StorageType, StructType, SubType, ValType};
-use crate::wasm::{BinaryOp, Binop, Block, Const, Finality, Global, IfElse, Instr, Loop, RefCast, RefTest, TypeDef, UnaryOp, Unop, Value};
+use crate::wasm::types::{
+    AbsHeapType, ArrayType, BlockType, CompType, FieldType, FuncType, GlobalType, HeapType,
+    Mutability, Nullability, NumType, PackType, ParamType, RefType, ResultType, StorageType,
+    StructType, SubType, ValType,
+};
+use crate::wasm::{
+    BinaryOp, Binop, Block, Const, Finality, Global, IfElse, Instr, Loop, RefCast, RefTest,
+    TypeDef, UnaryOp, Unop, Value,
+};
 use id_arena::Arena;
 use pretty::RcDoc;
+use std::any::Any;
 use std::borrow::Cow;
 
 type Doc = RcDoc<'static>;
@@ -56,8 +63,8 @@ fn module_to_doc(module: &Module) -> Doc {
         Some(module_functions_to_doc(&interner, &instr_seq_arena, funcs)),
         start.map(|f| function_to_doc(&interner, &instr_seq_arena, f)),
     ]
-        .into_iter()
-        .filter_map(|doc| doc);
+    .into_iter()
+    .filter_map(|doc| doc);
 
     intersperse(module_fields, hardline())
 }
@@ -177,6 +184,7 @@ fn function_to_doc(
         params,
         results,
         entry_point,
+        locals,
     } = function;
 
     let name = interner.get(*name);
@@ -189,18 +197,24 @@ fn function_to_doc(
 
     let type_use = match type_use {
         None => nil(),
-        Some(ident) => line().append(format!("(type ${})", ident))
+        Some(ident) => line().append(format!("(type ${})", ident)),
     };
 
     let params = if params.is_empty() {
         nil()
     } else {
-        let params = params.iter().map(|p| param_type_to_doc(p));
+        let params = params.iter().map(param_type_to_doc);
         line().append(intersperse(params, line()).group())
     };
     let results = {
-        let results = results.iter().map(|r| result_type_to_doc(r));
+        let results = results.iter().map(result_type_to_doc);
         line().append(intersperse(results, line()).group())
+    };
+    let locals = if locals.is_empty() {
+        nil()
+    } else {
+        let locals = locals.iter().map(local_to_doc);
+        line().append(intersperse(locals, line()).group())
     };
 
     let instr_seq_doc = instr_seq_to_doc(instr_seq_arena, *entry_point);
@@ -212,8 +226,20 @@ fn function_to_doc(
         .append(type_use)
         .append(params)
         .append(results)
+        .append(locals)
         .append(hardline())
         .append(instr_seq_doc)
+        .append(")")
+        .nest(INDENT)
+        .group()
+}
+
+fn local_to_doc(local: &Local) -> Doc {
+    let Local { identifier, ty } = local;
+    let ty = val_type_to_doc(&ty);
+    text(format!("(local ${}", identifier))
+        .append(line())
+        .append(ty)
         .append(")")
         .nest(INDENT)
         .group()
@@ -252,9 +278,14 @@ fn instr_to_doc(instr_seq_arena: &Arena<InstrSeq>, instr: &Instr) -> Doc {
             arr.type_name, arr.length
         )),
         RefNull(r) => text(format!("(ref.null ${})", r.type_name)),
-        StructNew(s)  => text(format!("(struct.new ${})", s.type_name)),
+        StructNew(s) => text(format!("(struct.new ${})", s.type_name)),
         RefFunc(r) => text(format!("(ref.func ${})", r.func_name)),
-        StructGet(sg) => text(format!("(struct.get ${} ${})", sg.type_name, sg.field_name))
+        StructGet(sg) => text(format!("(struct.get ${} ${})", sg.type_name, sg.field_name)),
+        StructSet(ss) => text(format!("(struct.set ${} ${})", ss.type_name, ss.field_name)),
+        LocalSet(ls) => text(format!("(local.set ${})", ls.name)),
+        Unreachable(_) => text("(unreachable)"),
+        Return(_) => text("(return)"),
+        ArrayGetU(agu) => text(format!("(array.get_u ${})", agu.type_name)),
     }
 }
 
@@ -331,6 +362,7 @@ fn unop_to_doc(unop: &Unop) -> Doc {
         UnaryOp::RefI31 => "ref.i31",
         UnaryOp::I31GetS => "i31.get_s",
         UnaryOp::I31GetU => "i31.get_u",
+        UnaryOp::ArrayLen => "array.len",
     };
 
     text(format!("({})", op))
@@ -340,6 +372,7 @@ fn binop_to_doc(binop: &Binop) -> Doc {
     let Binop { op } = binop;
     let op = match op {
         BinaryOp::I32Eq => "i32.eq",
+        BinaryOp::I32Add => "i32.add",
     };
 
     text(format!("({})", op))
@@ -359,7 +392,10 @@ fn if_else_to_doc(instr_seq_arena: &Arena<InstrSeq>, if_else: &IfElse) -> Doc {
         alternative,
     } = if_else;
 
-    let ty = block_type_to_doc(ty);
+    let ty = match ty {
+        None => nil(),
+        Some(ty) => line().append(block_type_to_doc(ty))
+    };
     let predicate = instr_seq_to_doc(instr_seq_arena, *predicate);
     let consequent = {
         let seq = instr_seq_to_doc(instr_seq_arena, *consequent);
@@ -379,9 +415,7 @@ fn if_else_to_doc(instr_seq_arena: &Arena<InstrSeq>, if_else: &IfElse) -> Doc {
     };
 
     text("(if")
-        .append(
-            line().append(ty).group(), // insert label here
-        )
+        .append(ty)
         .append(hardline())
         .append(predicate)
         .append(hardline())
@@ -543,12 +577,20 @@ fn abs_heap_type_to_doc(ty: &AbsHeapType) -> Doc {
 
 /// `(sub final? <supertype>* <comp_type>
 fn sub_type_to_doc(ty: &SubType) -> Doc {
-    let SubType { is_final, supertypes, comp_type } = ty;
+    let SubType {
+        is_final,
+        supertypes,
+        comp_type,
+    } = ty;
     let is_final = match is_final {
         Finality::Final => line().append(text("final")),
         Finality::NotFinal => nil(),
     };
-    let supertypes: Vec<Doc> = supertypes.into_iter().map(|s| format!("${}", s)).map(text).collect();
+    let supertypes: Vec<Doc> = supertypes
+        .into_iter()
+        .map(|s| format!("${}", s))
+        .map(text)
+        .collect();
     let supertypes = if supertypes.is_empty() {
         nil()
     } else {

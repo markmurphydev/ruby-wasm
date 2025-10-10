@@ -20,8 +20,12 @@ pub struct Class {
 }
 
 impl Class {
+    pub fn name_to_identifier(name: &str) -> String {
+        format!("class-{}", name)
+    }
+
     pub fn identifier(&self) -> String {
-        format!("class-{}", self.name)
+        Self::name_to_identifier(&self.name)
     }
 
     pub fn add_def(self, ctx: &mut CompileCtx<'_>) {
