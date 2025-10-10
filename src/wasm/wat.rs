@@ -50,13 +50,13 @@ fn module_to_doc(module: &Module) -> Doc {
     };
 
     let module_fields = [
-        Some(module_globals_to_doc(interner, instr_seq_arena, globals)),
         Some(module_type_defs_to_doc(interner, type_defs)),
+        Some(module_globals_to_doc(interner, instr_seq_arena, globals)),
         Some(module_functions_to_doc(&interner, &instr_seq_arena, funcs)),
         start.map(|f| function_to_doc(&interner, &instr_seq_arena, f)),
     ]
-    .into_iter()
-    .filter_map(|doc| doc);
+        .into_iter()
+        .filter_map(|doc| doc);
 
     intersperse(module_fields, hardline())
 }

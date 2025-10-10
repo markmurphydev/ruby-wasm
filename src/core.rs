@@ -30,7 +30,7 @@ pub struct Method {
 pub fn add_core_items(module: &mut Module) -> CompileCtx<'_> {
     let mut ctx = CompileCtx { module };
     type_def::add_type_defs(&mut ctx);
-    // add_globals(&mut ctx);
+    global::add_globals(&mut ctx);
     // add_types(&mut ctx);
     // add_functions(&mut ctx);
     ctx
