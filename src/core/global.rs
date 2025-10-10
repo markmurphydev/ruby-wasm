@@ -6,6 +6,7 @@ use crate::wasm::types::{Mutability, RefType};
 
 pub fn add_globals(ctx: &mut CompileCtx<'_>) {
     add_string_defs(ctx);
+    class::add_class_defs(ctx);
 }
 
 /// Add string definitions from:
@@ -13,6 +14,7 @@ pub fn add_globals(ctx: &mut CompileCtx<'_>) {
 /// - Method names
 fn add_string_defs(ctx: &mut CompileCtx<'_>) {
     add_class_string_defs(ctx);
+    // add_method_string_defs(ctx);
 }
 
 fn add_class_string_defs(ctx: &mut CompileCtx<'_>) {
@@ -22,9 +24,13 @@ fn add_class_string_defs(ctx: &mut CompileCtx<'_>) {
         .for_each(|s| add_string_def(ctx, s));
 }
 
+fn add_method_string_defs(ctx: &mut CompileCtx<'_>) {
+    todo!()
+}
+
 fn add_string_def(ctx: &mut CompileCtx<'_>, string: String) {
     let ref_str = RefType::new_identifier(Unitype::STRING_TYPE_IDENTIFIER.to_string());
-    let identifier = format!("{}-{}", Unitype::STRING_TYPE_IDENTIFIER, &string);
+    let identifier = string_identifier(&string);
     let global_builder = GlobalBuilder::new(
         ctx.module,
         ref_str.into_global_type(Mutability::Const),
@@ -41,4 +47,8 @@ fn add_string_def(ctx: &mut CompileCtx<'_>, string: String) {
         bytes.len().try_into().unwrap(),
     );
     global_builder.finish(ctx);
+}
+
+pub fn string_identifier(string: &str) -> String {
+    format!("{}-{}", Unitype::STRING_TYPE_IDENTIFIER, &string)
 }

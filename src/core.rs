@@ -8,6 +8,7 @@ mod array;
 mod type_def;
 mod class;
 mod global;
+mod method;
 
 use crate::unitype::Unitype;
 use crate::wasm::function::ExportStatus;
@@ -18,14 +19,6 @@ use crate::wasm::types::{
 };
 use crate::wasm::{BinaryOp, TypeDef, UnaryOp};
 use crate::{CompileCtx, FunctionBuilder};
-
-/// A Ruby method. Compiles to:
-/// - Definition of function type `$<METHOD_FUNC_NAME>`
-///     with signature `(self: Object, args: Array Unitype) -> Unitype`
-/// - Definition of global string `$<METHOD_NAME>`
-pub struct Method {
-    name: String,
-}
 
 pub fn add_core_items(module: &mut Module) -> CompileCtx<'_> {
     let mut ctx = CompileCtx { module };

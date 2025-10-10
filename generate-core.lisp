@@ -7,9 +7,9 @@
 (in-package :generate-core)
 
 ;;;; Consts
-(defconstant false-bit-pattern #b0001)
-(defconstant true-bit-pattern #b0011)
-(defconstant nil-bit-pattern #b0101)
+;; (defconstant false-bit-pattern #b0001)
+;; (defconstant true-bit-pattern #b0011)
+;; (defconstant nil-bit-pattern #b0101)
 ;; We give fixnums half an i31, marking MSB 1
 ;; (0b1xx_xxxx...): i31
 (defconstant fixnum-bit-width 30)
@@ -40,50 +40,50 @@
 ;; But if they were all functions, they'd infinitely recurse generating new classes.
 ;; We use parameter definitions and a lambda for late binding.
 
-(defparameter *class-class* nil)
-(defparameter *class-module* nil)
-(defparameter *class-basic-object* nil)
-(defparameter *class-object* nil)
-(defun classes () 
-  (list *class-class*  *class-module* *class-basic-object* *class-object*))
+;; (defparameter *class-class* nil)
+;; (defparameter *class-module* nil)
+;; (defparameter *class-basic-object* nil)
+;; (defparameter *class-object* nil)
+;; (defun classes () 
+  ;; (list *class-class*  *class-module* *class-basic-object* *class-object*))
 
-(defun methods ()
-  (list (method-new) (method-class)))
+;; (defun methods ()
+  ;; (list (method-new) (method-class)))
 
 ;;;; ruby-class definitions
-(defparameter *class-class*
-      (make-instance 'ruby-class
-                     :fn-parent (lambda () *class-class*)
-                     :fn-superclass (lambda () *class-module*)
-                     :child-superclass nil
-                     :name "Class"
-                     :fn-instance-methods 
-                     (lambda () (list (method-new)))))
+;; (defparameter *class-class*
+      ;; (make-instance 'ruby-class
+                     ;; :fn-parent (lambda () *class-class*)
+                     ;; :fn-superclass (lambda () *class-module*)
+                     ;; :child-superclass nil
+                     ;; :name "Class"
+                     ;; :fn-instance-methods 
+                     ;; (lambda () (list (method-new)))))
 
-(setf *class-module*
-      (make-instance 'ruby-class
-                     :fn-parent (lambda () *class-class*)
-                     :fn-superclass (lambda () *class-object*)
-                     :child-superclass nil
-                     :name "Module"
-                     :fn-instance-methods (lambda () (list))))
+;; (setf *class-module*
+      ;; (make-instance 'ruby-class
+                     ;; :fn-parent (lambda () *class-class*)
+                     ;; :fn-superclass (lambda () *class-object*)
+                     ;; :child-superclass nil
+                     ;; :name "Module"
+                     ;; :fn-instance-methods (lambda () (list))))
 
-(setf *class-basic-object*
-      (make-instance 'ruby-class
-                     :fn-parent (lambda () *class-class*)
-                     :fn-superclass (lambda () nil)
-                     :child-superclass nil
-                     :name "BasicObject"
-                     ;; equal?, !, __send__, ==, __id__, instance_eval, instance_exec
-                     :fn-instance-methods (lambda () (list))))
+;; (setf *class-basic-object*
+      ;; (make-instance 'ruby-class
+                     ;; :fn-parent (lambda () *class-class*)
+                     ;; :fn-superclass (lambda () nil)
+                     ;; :child-superclass nil
+                     ;; :name "BasicObject"
+                     ;; ;; equal?, !, __send__, ==, __id__, instance_eval, instance_exec
+                     ;; :fn-instance-methods (lambda () (list))))
 
-(setf *class-object* 
-      (make-instance 'ruby-class
-                     :fn-parent (lambda () *class-class*)
-                     :fn-superclass (lambda () *class-basic-object*)
-                     :child-superclass nil
-                     :name "Object" 
-                     :fn-instance-methods (lambda () (list))))
+;; (setf *class-object* 
+      ;; (make-instance 'ruby-class
+                     ;; :fn-parent (lambda () *class-class*)
+                     ;; :fn-superclass (lambda () *class-basic-object*)
+                     ;; :child-superclass nil
+                     ;; :name "Object" 
+                     ;; :fn-instance-methods (lambda () (list))))
 
 ;;;; Ruby method definitions
 (defun compile-method-name (method-name class-name)

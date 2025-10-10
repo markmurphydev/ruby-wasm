@@ -425,10 +425,23 @@ pub enum Instr {
     //     /// The table which `func` below is indexing into
     //     table: TableId,
     // },
+
+    RefNull {
+        type_name: String,
+    },
+
     ArrayNewFixed {
         type_name: String,
         length: i32,
     },
+
+    StructNew {
+        type_name: String,
+    },
+
+    RefFunc {
+        func_name: String,
+    }
 }
 
 /// Possible unary operations in wasm

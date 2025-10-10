@@ -4,6 +4,7 @@
 //! - To indent the first line of a nested block,
 //!     make sure it's the first element of the nested append.
 
+use std::any::Any;
 use crate::unitype::Unitype;
 use crate::wasm::function::{ExportStatus, Function};
 use crate::wasm::instr_seq::{InstrSeq, InstrSeqId};
@@ -243,6 +244,9 @@ fn instr_to_doc(instr_seq_arena: &Arena<InstrSeq>, instr: &Instr) -> Doc {
             "(array.new_fixed ${} {})",
             arr.type_name, arr.length
         )),
+        RefNull(r) => text(format!("(ref.null ${})", r.type_name)),
+        StructNew(s)  => text(format!("(struct.new ${})", s.type_name)),
+        RefFunc(r) => text(format!("(ref.func ${})", r.func_name))
     }
 }
 

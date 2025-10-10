@@ -1,4 +1,10 @@
-use crate::core::Method;
+use crate::{CompileCtx, InstrSeqBuilder};
+use crate::core::alist::alist_str_method;
+use crate::core::global;
+use crate::core::method::Method;
+use crate::core::type_def::CLASS_TYPE_IDENTIFIER;
+use crate::wasm::module::GlobalBuilder;
+use crate::wasm::types::{Mutability, RefType};
 
 /// A Ruby class. Compiles to:
 /// - Definition of global string `$<CLASS_NAME>`
@@ -11,6 +17,41 @@ pub struct Class {
     pub parent_name: String,
     pub superclass_name: Option<String>,
     pub instance_methods: Vec<Method>,
+}
+
+impl Class {
+    pub fn identifier(&self) -> String {
+        format!("class-{}", self.name)
+    }
+
+    pub fn add_def(self, ctx: &mut CompileCtx<'_>) {
+        let ty = RefType::new_identifier(CLASS_TYPE_IDENTIFIER.to_string()).into_global_type(Mutability::Const);
+        let global_builder = GlobalBuilder::new(ctx.module, ty, self.identifier());
+        let instr_seq_builder = global_builder.instr_seq();
+        // Parent and superclass get ref.null for now.
+        // We build the cyclic references in the _start function
+
+        instr_seq_builder.ref_null(ctx, CLASS_TYPE_IDENTIFIER.to_string()); // parent
+        instr_seq_builder.ref_null(ctx, CLASS_TYPE_IDENTIFIER.to_string()); // superclass
+        instr_seq_builder.global_get(ctx, global::string_identifier(&self.name)); // name
+
+        self.compile_methods_arr(ctx, &instr_seq_builder);
+
+        instr_seq_builder.struct_new(ctx, CLASS_TYPE_IDENTIFIER.to_string());
+        global_builder.finish(ctx);
+    }
+
+    fn compile_methods_arr(&self, ctx: &mut CompileCtx<'_>, builder: &InstrSeqBuilder) {
+
+        for method in &self.instance_methods {
+            let alist_pair_type_identifier = alist_str_method().alist_pair_type_identifier();
+            builder.global_get(ctx, method.name.clone()).ref_func(ctx, method.identifier())
+                .struct_new(ctx, alist_pair_type_identifier);
+        }
+        let alist_type_identifier = alist_str_method().alist_type_identifier();
+        let len = self.instance_methods.len().try_into().unwrap();
+        builder.array_new_fixed(ctx, alist_type_identifier, len);
+    }
 }
 
 /// The `Module` class.
@@ -61,4 +102,10 @@ pub fn classes() -> Vec<Class> {
         basic_object(),
         object()
     ]
+}
+
+pub fn add_class_defs(ctx: &mut CompileCtx<'_>) {
+    for class in classes() {
+        class.add_def(ctx)
+    }
 }
