@@ -52,16 +52,17 @@ fn module_to_doc(module: &Module) -> Doc {
         start,
     } = module;
 
-    let start = match start {
-        None => None,
-        &Some(start) => Some(funcs.get(start)),
-    };
+    let start = start.map(|start| {
+        let start = funcs.get(start);
+        let start_identifier = interner.get(start.name);
+        text(format!("(start ${})", start_identifier))
+    });
 
     let module_fields = [
         Some(module_type_defs_to_doc(interner, type_defs)),
         Some(module_globals_to_doc(interner, instr_seq_arena, globals)),
         Some(module_functions_to_doc(&interner, &instr_seq_arena, funcs)),
-        start.map(|f| function_to_doc(&interner, &instr_seq_arena, f)),
+        start
     ]
     .into_iter()
     .filter_map(|doc| doc);
@@ -267,7 +268,7 @@ fn instr_to_doc(instr_seq_arena: &Arena<InstrSeq>, instr: &Instr) -> Doc {
         IfElse(i) => if_else_to_doc(instr_seq_arena, i),
         Drop(_) => text("(drop)"),
         GlobalGet(global) => text(format!("(global.get ${})", global.name.clone())),
-        Br(br) => text(format!("(br {})", br.label.clone())),
+        Br(br) => text(format!("(br ${})", br.label.clone())),
         Call(call) => text(format!("(call ${})", call.func.clone())),
         LocalGet(get) => text(format!("(local.get ${})", get.name.clone())),
         BrIf(br_if) => text(format!("(br_if ${})", br_if.block.clone())),
@@ -286,6 +287,8 @@ fn instr_to_doc(instr_seq_arena: &Arena<InstrSeq>, instr: &Instr) -> Doc {
         Unreachable(_) => text("(unreachable)"),
         Return(_) => text("(return)"),
         ArrayGetU(agu) => text(format!("(array.get_u ${})", agu.type_name)),
+        ArrayGet(ag) => text(format!("(array.get ${})", ag.type_name)),
+        CallRef(cr) => text(format!("(call_ref ${})", cr.type_name))
     }
 }
 
@@ -314,12 +317,13 @@ fn block_to_doc(instr_seq_arena: &Arena<InstrSeq>, block: &Block) -> Doc {
 /// ```
 fn loop_to_doc(instr_seq_arena: &Arena<InstrSeq>, l: &Loop) -> Doc {
     let Loop { label, seq } = l;
+    let label = text(format!("${}", label));
     let block_type = block_type_to_doc(&Unitype::UNITYPE.into_block_type_result());
     let instr_seq = instr_seq_to_doc(instr_seq_arena, *seq);
     text("(loop")
         .append(
             line()
-                .append(label.clone())
+                .append(label)
                 .append(line())
                 .append(block_type)
                 .group(),
@@ -363,6 +367,7 @@ fn unop_to_doc(unop: &Unop) -> Doc {
         UnaryOp::I31GetS => "i31.get_s",
         UnaryOp::I31GetU => "i31.get_u",
         UnaryOp::ArrayLen => "array.len",
+        UnaryOp::RefAsNonNull => "ref.as_non_null",
     };
 
     text(format!("({})", op))
@@ -394,7 +399,7 @@ fn if_else_to_doc(instr_seq_arena: &Arena<InstrSeq>, if_else: &IfElse) -> Doc {
 
     let ty = match ty {
         None => nil(),
-        Some(ty) => line().append(block_type_to_doc(ty))
+        Some(ty) => line().append(block_type_to_doc(ty)),
     };
     let predicate = instr_seq_to_doc(instr_seq_arena, *predicate);
     let consequent = {

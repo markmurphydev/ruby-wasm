@@ -81,6 +81,10 @@ pub enum Instr {
         func: String,
     },
 
+    CallRef {
+        type_name: String,
+    },
+
     // /// `call_indirect`
     // CallIndirect {
     //     /// The type signature of the function we're calling
@@ -441,6 +445,10 @@ pub enum Instr {
         length: i32,
     },
 
+    ArrayGet {
+        type_name: String,
+    },
+
     ArrayGetU {
         type_name: String,
     },
@@ -470,6 +478,7 @@ pub enum Instr {
 pub enum UnaryOp {
     I32Eqz,
     ArrayLen,
+    RefAsNonNull,
     // I32Clz,
     // I32Ctz,
     // I32Popcnt,

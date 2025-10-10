@@ -123,8 +123,87 @@
   (struct.get $obj $parent)
   (ref.cast (ref eq)))
 (func
+  $start
+  
+  (global.get $class-Module)
+  (global.get $class-Class)
+  (struct.set $class $parent)
+  (global.get $class-Module)
+  (global.get $class-Object)
+  (struct.set $class $superclass)
+  (global.get $class-Class)
+  (global.get $class-Class)
+  (struct.set $class $parent)
+  (global.get $class-Class)
+  (global.get $class-Module)
+  (struct.set $class $superclass)
+  (global.get $class-BasicObject)
+  (global.get $class-Class)
+  (struct.set $class $parent)
+  (global.get $class-Object)
+  (global.get $class-Class)
+  (struct.set $class $parent)
+  (global.get $class-Object)
+  (global.get $class-BasicObject)
+  (struct.set $class $superclass))
+(func
+  $str-eq
+  (param $a (ref $str)) (param $b (ref $str))
+  (result i32)
+  (local $idx i32) (local $a_ch i32) (local $b_ch i32)
+  (i32.const 0)
+  (local.set $idx)
+  (if
+    (local.get $a)
+    (array.len)
+    (local.get $b)
+    (array.len)
+    (i32.eq)
+    (then
+      (i32.const 0)
+      (return))
+    (else
+      ))
+  (loop $for (result (ref eq))
+    (if
+      (local.get $idx)
+      (local.get $a)
+      (array.len)
+      (i32.eq)
+      (i32.eqz)
+      (then
+        (i32.const 1)
+        (return))
+      (else
+        ))
+    (local.get $a)
+    (local.get $idx)
+    (array.get_u $str)
+    (local.set $a_ch)
+    (local.get $b)
+    (local.get $idx)
+    (array.get_u $str)
+    (local.set $b_ch)
+    (if
+      (local.get $a_ch)
+      (local.get $b_ch)
+      (i32.eq)
+      (i32.eqz)
+      (then
+        (i32.const 0)
+        (return))
+      (else
+        ))
+    (local.get $idx)
+    (i32.const 1)
+    (i32.add)
+    (local.set $idx)
+    (br $for))
+  (unreachable))
+(func
   $__ruby_top_level_function
   (export "__ruby_top_level_function")
   (result (ref eq))
   (i32.const 5)
   (ref.i31))
+(start $start)
