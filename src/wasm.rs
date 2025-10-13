@@ -13,12 +13,11 @@ pub mod module;
 pub mod types;
 pub mod wat;
 
-use crate::CompileCtx;
 use crate::wasm::intern::InternedIdentifier;
-use crate::wasm::types::{BlockType, CompType, GlobalType, RefType, SubType};
+use crate::wasm::types::{BlockType, GlobalType, RefType, SubType};
+use crate::CompileCtx;
 use instr_seq::InstrSeqId;
 use wasm_instr::wasm_instr;
-use crate::unitype::Unitype;
 
 /// Constant values that can show up in WebAssembly
 #[derive(Debug, Clone, Copy)]
