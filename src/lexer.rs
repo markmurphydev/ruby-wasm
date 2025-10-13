@@ -114,7 +114,7 @@ impl<'text> Lexer<'text> {
                 },
 
                 // Punctuation
-                // TODO: This can definitely be replaced by a macro that generates the match chain.
+                // TODO: This can definitely be replaced by a wasm_instr that generates the match chain.
                 //  Only problem would be losing error reporting.
                 //  Which is one reason not to use regexes in the first place...
                 //  Ditto keywords tho

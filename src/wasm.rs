@@ -17,7 +17,7 @@ use crate::CompileCtx;
 use crate::wasm::intern::InternedIdentifier;
 use crate::wasm::types::{BlockType, CompType, GlobalType, RefType, SubType};
 use instr_seq::InstrSeqId;
-use wasm_macro::wasm_instr;
+use wasm_instr::wasm_instr;
 use crate::unitype::Unitype;
 
 /// Constant values that can show up in WebAssembly
@@ -35,7 +35,7 @@ pub enum Value {
 
 /// An enum of all the different kinds of wasm instructions.
 ///
-/// Note that the `#[wasm_expr]` macro rewrites this enum's variants from
+/// Note that the `#[wasm_expr]` wasm_instr rewrites this enum's variants from
 ///
 /// ```ignore
 /// enum Instr {

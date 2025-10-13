@@ -1,4 +1,4 @@
-//! attribution: Substantially copied from `walrus-macro` crate from Walrus library.
+//! attribution: Substantially copied from `walrus-wasm_instr` crate from Walrus library.
 //!     I cut out the visitor implementation because we don't use it.
 //! https://github.com/wasm-bindgen/walrus
 //! MIT licensed.

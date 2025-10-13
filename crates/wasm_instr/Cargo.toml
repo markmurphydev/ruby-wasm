@@ -1,5 +1,5 @@
 [package]
-name = "wasm-macro"
+name = "wasm-instr"
 edition = "2024"
 version = "0.1.0"
 description = """
