@@ -1,24 +1,25 @@
+use crate::parse::parse_input::{ParseInput, ParseStream};
 use crate::result::{Error, Result};
-use proc_macro2::{Delimiter, TokenStream, TokenTree};
+use proc_macro2::{Delimiter, Ident, TokenStream, TokenTree};
+use quote::quote;
+use wat_defs::instr::{Instr, UnfoldedInstr};
+use wat_defs::ty::NumType;
 
-type TokenIter = proc_macro2::token_stream::IntoIter;
+/// `(input: ParseInput) -> Result<ParseStream>`
+macro_rules! expect_ident {
+    ($input:expr) => {
+        expect_ident_fn(file!(), line!(), $input)
+    };
+}
+
+/// `(input: ParseInput) -> Result<ParseStream>`
+macro_rules! expect_parens {
+    ($input:expr) => {
+        expect_parens_fn(file!(), line!(), $input)
+    };
+}
 
 //         eprintln!("parse a: input={:?}", input);
-//         // syn::parse::parse_(input, delimiter::parenthesis).map(|(span, content)| parens {
-//         //     token: token::paren(span),
-//         //     content,
-//         // })
-//         // syn::pars
-//         // let body;
-//         let body = match syn::__private::parse_parens(&input) {
-//             ok(parens) => {
-//                 body = parens.content;
-//                 parens.token
-//             }
-//             err(error) => {
-//                 return err(error);
-//             }
-//         }
 //         let body;
 //         parenthesized!(body in input);
 //         eprintln!("parse b: input={:?}", input);
@@ -46,27 +47,94 @@ type TokenIter = proc_macro2::token_stream::IntoIter;
 //             folded_instrs,
 //         })
 
-pub fn parse_instr(input: ParseStream) -> Result<TokenStream> {
-    let mut input = input.into_iter();
-    expect_parens(&mut input);
-    input.next();
+pub fn parse_instr(input: ParseInput) -> Result<TokenStream> {
+    let mut body = expect_parens!(input)?;
+    let name = expect_ident!(&mut body)?;
 
-    todo!()
+    parse_instr_with_name(name, &mut body)
 }
 
-/// Expects a [Delimiter::Parenthesis] group, and returns the inner stream.
-fn expect_parens(input: &mut TokenIter) -> Result<TokenStream> {
-    match input.next() {
-        Some(TokenTree::Group(group)) if group.delimiter() == Delimiter::Parenthesis => {
-            Ok(group.stream())
+fn parse_instr_with_name(name: Ident, input: ParseInput) -> Result<TokenStream> {
+    let instr = parse_unfolded_instr(name, input)?;
+    parse_unfolded_instrs(input);
+
+    Ok(quote! {
+        wat_defs::instr::Instr {
+            instr: #instr
+            folded_instrs: vec![]
         }
-        _ =>
+    })
+}
+
+fn parse_unfolded_instr(name: Ident, input: ParseInput) -> Result<TokenStream> {
+    let name = name.to_string();
+
+    let res = match name.as_str() {
+        "nop" => UnfoldedInstr::Nop,
+        // "const.i32" => parse_const(NumType::I32, input)?,
+        // "loop" => parse_loop(input)?,
+        _ => {
+            return Err(error(
+                input,
+                format!("`{}` is not an instruction name.", name),
+            ));
+        }
+    };
+    Ok(quote! { #res })
+}
+
+fn parse_folded_instrs(input: ParseInput) -> Result<TokenStream> {
+    
+}
+
+/// Parses an unwrapped, undelimited sequence of instructions into `vec![...]`.
+fn parse_instr_seq(input: ParseInput) -> Result<TokenStream> {
+    let mut instrs = Vec::new();
+    loop {
+        match expect_parens!(input) {
+            Ok(mut body) => {
+                let body = &mut body;
+                match expect_ident!(body) {
+                    Ok(ident) if Instr::is_instr(&ident.to_string()) => instrs.push(parse_instr_with_name(ident, body)?),
+                    _ => break
+                }
+            }
+            Err(_) => break
+        }
+    }
+    Ok(quote! { vec![ #(#instrs),* ] })
+}
+
+fn expect_ident_fn(file: &str, line: u32, input: ParseInput) -> Result<Ident> {
+    match input.next() {
+        Some(TokenTree::Ident(ident)) => Ok(ident),
+        _ => Err(error(
+            input,
+            format!("{}:{} -- Expected ident.", file, line),
+        )),
     }
 }
 
-fn error(input: &TokenStream, message: String) -> Error {
+/// Expects a [Delimiter::Parenthesis] group, and returns the inner stream.
+fn expect_parens_fn(file: &str, line: u32, input: ParseInput) -> Result<ParseStream> {
+    match input.next() {
+        Some(TokenTree::Group(group)) if group.delimiter() == Delimiter::Parenthesis => {
+            Ok(ParseStream::new(group.stream()))
+        }
+        _ => Err(error(
+            input,
+            format!("{}:{} -- Expected parens.", file, line),
+        )),
+    }
+}
 
-    Error::new()
+fn error<M>(input: ParseInput, message: M) -> Error
+where
+    M: Clone + Into<String>,
+{
+    eprintln!("error A -- message={}", message.clone().into());
+    let span = input.current_span();
+    Error::new(span, message.into())
 }
 
 // impl Parse for UnfoldedInstr {
