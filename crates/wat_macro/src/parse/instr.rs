@@ -1,57 +1,72 @@
-//! We implement [ToTokens] so the wat defs can be used in `quote!`.
-//! We implement [Parse] to convert from `wat!` syntax to wat structures.
-//! We do both of these here to dodge the orphan rule...
+use crate::result::{Error, Result};
+use proc_macro2::{Delimiter, TokenStream, TokenTree};
 
-use crate::instr::{Instr, UnfoldedInstr};
-use proc_macro2::TokenStream;
-use quote::{quote, ToTokens, TokenStreamExt};
+type TokenIter = proc_macro2::token_stream::IntoIter;
 
-impl ToTokens for UnfoldedInstr {
-    fn to_tokens(&self, tokens: &mut TokenStream) {
-        let this = quote!(wat_defs::instr::UnfoldedInstr);
-        let res = match self {
-            UnfoldedInstr::Nop => quote! { #this::Nop },
-            UnfoldedInstr::Const { ty, val } => quote! {
-                #this::Const {
-                    ty: #ty,
-                    val: #val,
-                }
-            },
-            UnfoldedInstr::Loop { label } => quote! {
-                #this::Loop {
-                    label: #label.to_string(),
-                }
-            },
-            _ => panic!()
-        };
-        res.to_tokens(tokens);
+//         eprintln!("parse a: input={:?}", input);
+//         // syn::parse::parse_(input, delimiter::parenthesis).map(|(span, content)| parens {
+//         //     token: token::paren(span),
+//         //     content,
+//         // })
+//         // syn::pars
+//         // let body;
+//         let body = match syn::__private::parse_parens(&input) {
+//             ok(parens) => {
+//                 body = parens.content;
+//                 parens.token
+//             }
+//             err(error) => {
+//                 return err(error);
+//             }
+//         }
+//         let body;
+//         parenthesized!(body in input);
+//         eprintln!("parse b: input={:?}", input);
+//
+//         // so, for just the `if` instruction, the folded form is:
+//         // ```
+//         // (if <label>? <block_type>? <folded_instr>*
+//         //   (then <instr>*)
+//         //   (else <instr>*)?)
+//         // ```
+//         // so we need to parse folded instructions _first_, peeking 2 for `(then`
+//         // if let ok(name) = input.fork().call(ident::parse_any) {
+//         //     if name == "if" {
+//         //         return parse_if(input);
+//         //     }
+//         // }
+//
+//         let instr: unfoldedinstr = body.parse()?;
+//
+//         // check for folded instrs
+//         let folded_instrs = parse_instrs(input);
+//
+//         ok(self {
+//             instr,
+//             folded_instrs,
+//         })
+
+pub fn parse_instr(input: ParseStream) -> Result<TokenStream> {
+    let mut input = input.into_iter();
+    expect_parens(&mut input);
+    input.next();
+
+    todo!()
+}
+
+/// Expects a [Delimiter::Parenthesis] group, and returns the inner stream.
+fn expect_parens(input: &mut TokenIter) -> Result<TokenStream> {
+    match input.next() {
+        Some(TokenTree::Group(group)) if group.delimiter() == Delimiter::Parenthesis => {
+            Ok(group.stream())
+        }
+        _ =>
     }
 }
 
-impl ToTokens for Instr {
-    fn to_tokens(&self, tokens: &mut TokenStream) {
-        let Instr {
-            instr,
-            folded_instrs,
-        } = self;
-        let this = quote!(wat_defs::instr::Instr);
-        let instr = instr.to_token_stream();
-        let folded_instrs = vec_to_token_stream(folded_instrs);
+fn error(input: &TokenStream, message: String) -> Error {
 
-        let res = quote! {
-            #this {
-                instr: #instr,
-                folded_instrs: vec![ #folded_instrs ],
-            }
-        };
-        res.to_tokens(tokens)
-    }
-}
-
-fn vec_to_token_stream(vec: &Vec<impl ToTokens>) -> TokenStream {
-    let mut stream = TokenStream::new();
-    stream.append_all(vec);
-    stream
+    Error::new()
 }
 
 // impl Parse for UnfoldedInstr {
@@ -89,45 +104,45 @@ fn vec_to_token_stream(vec: &Vec<impl ToTokens>) -> TokenStream {
 //
 // impl Parse for Instr {
 //     fn parse(input: ParseStream) -> Result<Self> {
-//         eprintln!("parse A: input={:?}", input);
-//         // syn::parse::parse_(input, Delimiter::Parenthesis).map(|(span, content)| Parens {
-//         //     token: token::Paren(span),
+//         eprintln!("parse a: input={:?}", input);
+//         // syn::parse::parse_(input, delimiter::parenthesis).map(|(span, content)| parens {
+//         //     token: token::paren(span),
 //         //     content,
 //         // })
 //         // syn::pars
 //         // let body;
 //         let body = match syn::__private::parse_parens(&input) {
-//             Ok(parens) => {
+//             ok(parens) => {
 //                 body = parens.content;
 //                 parens.token
 //             }
-//             Err(error) => {
-//                 return Err(error);
+//             err(error) => {
+//                 return err(error);
 //             }
 //         }
 //         let body;
 //         parenthesized!(body in input);
-//         eprintln!("parse B: input={:?}", input);
+//         eprintln!("parse b: input={:?}", input);
 //
-//         // So, for just the `if` instruction, the folded form is:
+//         // so, for just the `if` instruction, the folded form is:
 //         // ```
 //         // (if <label>? <block_type>? <folded_instr>*
 //         //   (then <instr>*)
 //         //   (else <instr>*)?)
 //         // ```
-//         // So we need to parse folded instructions _first_, peeking 2 for `(then`
-//         // if let Ok(name) = input.fork().call(Ident::parse_any) {
+//         // so we need to parse folded instructions _first_, peeking 2 for `(then`
+//         // if let ok(name) = input.fork().call(ident::parse_any) {
 //         //     if name == "if" {
 //         //         return parse_if(input);
 //         //     }
 //         // }
 //
-//         let instr: UnfoldedInstr = body.parse()?;
+//         let instr: unfoldedinstr = body.parse()?;
 //
-//         // Check for folded instrs
+//         // check for folded instrs
 //         let folded_instrs = parse_instrs(input);
 //
-//         Ok(Self {
+//         ok(self {
 //             instr,
 //             folded_instrs,
 //         })

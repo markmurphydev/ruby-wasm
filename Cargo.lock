@@ -1726,8 +1726,8 @@ name = "wat-macro"
 version = "0.1.0"
 dependencies = [
  "expect-test",
+ "proc-macro2",
  "quote",
- "syn",
  "wat-defs",
 ]
 
