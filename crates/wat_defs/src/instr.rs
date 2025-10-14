@@ -25,45 +25,8 @@ impl UnfoldedInstr {
     }
 }
 
-impl ToTokens for UnfoldedInstr {
-    fn to_tokens(&self, tokens: &mut TokenStream) {
-        let res = match self {
-            UnfoldedInstr::Nop => quote! { UnfoldedInstr::Nop },
-            UnfoldedInstr::Const { ty, val } => quote! {
-                UnfoldedInstr::Const {
-                    ty: #ty,
-                    val: #val,
-                }
-            },
-        };
-        res.to_tokens(tokens);
-    }
-}
-
 #[derive(Debug)]
 pub struct Instr {
     pub instr: UnfoldedInstr,
     pub folded_instrs: Vec<Instr>,
-}
-
-impl ToTokens for Instr {
-    fn to_tokens(&self, tokens: &mut TokenStream) {
-        eprintln!("A {:?}", tokens);
-
-        let mut instr = TokenStream::new();
-        self.instr.to_tokens(&mut instr);
-        eprintln!("B {:?}", instr);
-
-        let mut folded_instrs = TokenStream::new();
-        folded_instrs.append_all(&self.folded_instrs);
-        eprintln!("C {:?}", folded_instrs);
-
-        let res = quote_spanned! { Span::mixed_site() =>
-            $crate::Instr {
-                instr: #instr,
-                folded_instrs: vec![ #folded_instrs ],
-            }
-        };
-        res.to_tokens(tokens)
-    }
 }

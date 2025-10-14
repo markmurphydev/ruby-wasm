@@ -1725,6 +1725,7 @@ dependencies = [
 name = "wat-macro"
 version = "0.1.0"
 dependencies = [
+ "expect-test",
  "quote",
  "syn",
  "wat-defs",

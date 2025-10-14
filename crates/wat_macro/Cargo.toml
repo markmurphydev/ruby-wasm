@@ -4,6 +4,7 @@ version = "0.1.0"
 edition = "2024"
 
 [dependencies]
+expect-test = "1.5.1" # Barebones snapshot testing
 quote = "1.0.41"
 syn = "2.0.106"
 wat-defs = { path = "../wat_defs", version = "0.1.0" }
