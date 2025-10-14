@@ -5,6 +5,13 @@ use quote::quote;
 use wat_defs::instr::{Instr, UnfoldedInstr};
 use wat_defs::ty::NumType;
 
+/// `(input: ParseInput) -> Result<i64>`
+macro_rules! expect_int_literal {
+    ($input:expr) => {
+        expect_int_literal_fn(file!(), line!(), $input)
+    };
+}
+
 /// `(input: ParseInput) -> Result<ParseStream>`
 macro_rules! expect_ident {
     ($input:expr) => {
@@ -19,11 +26,13 @@ macro_rules! expect_parens {
     };
 }
 
-//         eprintln!("parse a: input={:?}", input);
-//         let body;
-//         parenthesized!(body in input);
-//         eprintln!("parse b: input={:?}", input);
-//
+/// `(input: ParseInput) -> Result<()>`
+macro_rules! expect_dollar {
+    ($input:expr) => {
+        expect_dollar_fn(file!(), line!(), $input)
+    };
+}
+
 //         // so, for just the `if` instruction, the folded form is:
 //         // ```
 //         // (if <label>? <block_type>? <folded_instr>*
@@ -56,12 +65,12 @@ pub fn parse_instr(input: ParseInput) -> Result<TokenStream> {
 
 fn parse_instr_with_name(name: Ident, input: ParseInput) -> Result<TokenStream> {
     let instr = parse_unfolded_instr(name, input)?;
-    parse_unfolded_instrs(input);
+    let folded_instrs = parse_instr_seq(input)?;
 
     Ok(quote! {
         wat_defs::instr::Instr {
-            instr: #instr
-            folded_instrs: vec![]
+            instr: #instr,
+            folded_instrs: #folded_instrs,
         }
     })
 }
@@ -71,8 +80,9 @@ fn parse_unfolded_instr(name: Ident, input: ParseInput) -> Result<TokenStream> {
 
     let res = match name.as_str() {
         "nop" => UnfoldedInstr::Nop,
-        // "const.i32" => parse_const(NumType::I32, input)?,
-        // "loop" => parse_loop(input)?,
+        "const.i32" => parse_const(NumType::I32, input)?,
+        "loop" => parse_loop(input)?,
+        "if" => return Err(error(input, "panic!: Can't parse unfolded if.")),
         _ => {
             return Err(error(
                 input,
@@ -83,8 +93,16 @@ fn parse_unfolded_instr(name: Ident, input: ParseInput) -> Result<TokenStream> {
     Ok(quote! { #res })
 }
 
-fn parse_folded_instrs(input: ParseInput) -> Result<TokenStream> {
-    
+fn parse_const(ty: NumType, input: ParseInput) -> Result<UnfoldedInstr> {
+    let val = expect_int_literal!(input)?;
+    Ok(UnfoldedInstr::Const { ty, val })
+}
+
+fn parse_loop(input: ParseInput) -> Result<UnfoldedInstr> {
+    expect_dollar!(input)?;
+    let label: Ident = expect_ident!(input)?;
+    let label = label.to_string();
+    Ok(UnfoldedInstr::Loop { label })
 }
 
 /// Parses an unwrapped, undelimited sequence of instructions into `vec![...]`.
@@ -95,14 +113,30 @@ fn parse_instr_seq(input: ParseInput) -> Result<TokenStream> {
             Ok(mut body) => {
                 let body = &mut body;
                 match expect_ident!(body) {
-                    Ok(ident) if Instr::is_instr(&ident.to_string()) => instrs.push(parse_instr_with_name(ident, body)?),
-                    _ => break
+                    Ok(ident) if Instr::is_instr(&ident.to_string()) => {
+                        instrs.push(parse_instr_with_name(ident, body)?)
+                    }
+                    _ => break,
                 }
             }
-            Err(_) => break
+            Err(_) => break,
         }
     }
     Ok(quote! { vec![ #(#instrs),* ] })
+}
+
+fn expect_int_literal_fn(file: &str, line: u32, input: ParseInput) -> Result<i64> {
+    match input.next() {
+        Some(TokenTree::Literal(lit)) => {
+            lit.to_string().parse::<i64>().map_err(|err| {
+                error(input, format!("{}", err))
+            })
+        }
+        _ => Err(error(
+            input,
+            format!("{}:{} -- Expected int literal.", file, line),
+        )),
+    }
 }
 
 fn expect_ident_fn(file: &str, line: u32, input: ParseInput) -> Result<Ident> {
@@ -124,6 +158,16 @@ fn expect_parens_fn(file: &str, line: u32, input: ParseInput) -> Result<ParseStr
         _ => Err(error(
             input,
             format!("{}:{} -- Expected parens.", file, line),
+        )),
+    }
+}
+
+fn expect_dollar_fn(file: &str, line: u32, input: ParseInput) -> Result<()> {
+    match input.next() {
+        Some(TokenTree::Punct(punct)) if punct.as_char() == '$' => Ok(()),
+        _ => Err(error(
+            input,
+            format!("{}:{} -- Expected `$`.", file, line),
         )),
     }
 }
