@@ -13,6 +13,14 @@ pub enum UnfoldedInstr {
     Loop {
         label: String,
     },
+
+    /// Loop instruction. The test instructions are on the stack (or in `folded_instrs`).
+    If {
+        label: Option<String>,
+        block_type: Option<()>,
+        then_block: Vec<Instr>,
+        else_block: Vec<Instr>,
+    }
 }
 
 #[derive(Debug)]

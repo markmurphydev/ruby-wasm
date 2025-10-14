@@ -8,6 +8,9 @@ Things I really want to do but I'm not going to waste time on.
 		- This would be true if Wasm had decided to use Rust `#[derive(Debug)]` as its .wat format, too...
 			- But they wouldn't.
 
+# Articles
+- "Rust `syn` book"
+	- Parsing tricks
 # .wat syntax highlighting
 - There exist treesitter grammars, editor plugins for .wat format, but they're all outdated
 	- Don't support the current Wasm 3.0 constructs
@@ -19,8 +22,10 @@ Things I really want to do but I'm not going to waste time on.
 	- Transform it into a Treesitter grammar `.js` file
 - In theory, that would keep it up-to-date with future revisions, assuming no breaking SpecTec changes.
 - I looked into this, it was more of a pain than I hoped.
-# Optimization
-
+# Rust features  / fixes
+- Support fully-qualified doc links
+	https://github.com/rust-lang/rust/issues/74563
+	- Would let me link to `<T> <Option<T> as Parse>::parse` in docstring for `wat_defs::parse::instr::parse_option_parser`
 
 # Rust feature requests
 - Nested use aliases
