@@ -933,6 +933,8 @@ dependencies = [
  "wasm-instr",
  "wasmtime",
  "wat",
+ "wat-defs",
+ "wat-macro",
 ]
 
 [[package]]
@@ -1664,6 +1666,17 @@ source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "3e1c941927d34709f255558166f8901a2005f8ab4a9650432e9281b7cc6f3b75"
 dependencies = [
  "wast",
+]
+
+[[package]]
+name = "wat-defs"
+version = "0.1.0"
+
+[[package]]
+name = "wat-macro"
+version = "0.1.0"
+dependencies = [
+ "syn",
 ]
 
 [[package]]
