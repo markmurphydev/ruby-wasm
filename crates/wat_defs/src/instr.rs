@@ -1,8 +1,4 @@
 use crate::ty::NumType;
-use derive_quote_to_tokens::ToTokens;
-use proc_macro2::{Span, TokenStream, TokenTree};
-use quote::{ToTokens, TokenStreamExt, quote, quote_spanned};
-use syn::{parse_quote, Expr};
 
 #[derive(Debug)]
 pub enum UnfoldedInstr {

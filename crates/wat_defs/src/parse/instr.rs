@@ -1,9 +1,9 @@
 use crate::instr::{Instr, UnfoldedInstr};
-use proc_macro2::{Span, TokenStream};
-use quote::{quote, quote_spanned, ToTokens, TokenStreamExt};
-use syn::parse::ParseStream;
-use syn::{parenthesized, Error, Ident, LitInt};
 use crate::ty::NumType;
+use proc_macro2::TokenStream;
+use quote::{quote, ToTokens, TokenStreamExt};
+use syn::parse::ParseStream;
+use syn::{parenthesized, token, Error, Ident, LitInt};
 
 impl ToTokens for UnfoldedInstr {
     fn to_tokens(&self, tokens: &mut TokenStream) {
@@ -68,6 +68,18 @@ impl syn::parse::Parse for Instr {
         let body;
         parenthesized!(body in input);
         let instr: UnfoldedInstr = body.parse()?;
-        Ok(Self { instr, folded_instrs: vec![] })
+
+        // Check for folded instrs
+        let mut folded_instrs = Vec::new();
+        loop {
+            if body.peek(token::Paren) {
+                let instr: Instr = body.parse()?;
+                folded_instrs.push(instr);
+            } else {
+                break;
+            }
+        }
+
+        Ok(Self { instr, folded_instrs })
     }
 }

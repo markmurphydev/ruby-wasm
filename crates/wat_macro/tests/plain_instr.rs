@@ -8,3 +8,11 @@ pub fn nop() {
     let expected = expect!["Instr { instr: Nop, folded_instrs: [] }"];
     expected.assert_eq(actual);
 }
+
+#[test]
+pub fn nop_with_folded_instrs() {
+    let actual = wat!{ (nop (nop)) };
+    let actual = &format!("{:?}", actual);
+    let expected = expect!["Instr { instr: Nop, folded_instrs: [Instr { instr: Nop, folded_instrs: [] }] }"];
+    expected.assert_eq(actual);
+}
