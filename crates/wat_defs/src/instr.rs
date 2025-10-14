@@ -12,17 +12,7 @@ pub enum UnfoldedInstr {
 
     Loop {
         label: String,
-    }
-}
-
-impl UnfoldedInstr {
-    /// Is `name` a "simple instruction" -- an instruction with no immediate args?
-    pub fn is_simple_instr(name: &str) -> bool {
-        match name {
-            "nop" => true,
-            _ => false,
-        }
-    }
+    },
 }
 
 #[derive(Debug)]

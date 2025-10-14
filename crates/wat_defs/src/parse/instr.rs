@@ -86,9 +86,7 @@ fn parse_const(ty: NumType, input: ParseStream) -> syn::Result<UnfoldedInstr> {
 fn parse_loop(input: ParseStream) -> syn::Result<UnfoldedInstr> {
     input.parse::<Token![$]>()?;
     let label: Ident = input.call(Ident::parse_any)?;
-    eprintln!("A");
     let label = label.to_string();
-    eprintln!("B");
     Ok(UnfoldedInstr::Loop { label })
 }
 
