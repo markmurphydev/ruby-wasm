@@ -44,5 +44,4 @@ use wat_defs::instr::Instr;
 pub fn wat(input: proc_macro::TokenStream) -> proc_macro::TokenStream {
     let res: Instr = parse_macro_input!(input as Instr);
     res.to_token_stream().into()
-    // proc_macro::TokenStream::new()
 }

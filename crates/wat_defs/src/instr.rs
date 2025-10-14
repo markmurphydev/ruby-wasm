@@ -9,6 +9,10 @@ pub enum UnfoldedInstr {
         ty: NumType,
         val: i64,
     },
+
+    Loop {
+        label: String,
+    }
 }
 
 impl UnfoldedInstr {
