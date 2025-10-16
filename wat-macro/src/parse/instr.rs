@@ -7,52 +7,31 @@ use wat_defs::ty::{BlockType, HeapType, Nullable, NumType, RefType, ValType};
 use crate::parse::ty;
 use crate::parse::util::*;
 
-// so, for just the `if` instruction, the folded form is:
-// ```
-// (if <label>? <block_type>? <folded_instr>*
-//   (then <instr>*)
-//   (else <instr>*)?)
-// ```
-// so we need to parse folded instructions _first_, peeking 2 for `(then`
-// if let ok(name) = input.fork().call(ident::parse_any) {
-//     if name == "if" {
-//         return parse_if(input);
-//     }
-// }
-//
-//         let instr: unfoldedinstr = body.parse()?;
-//
-//         // check for folded instrs
-//         let folded_instrs = parse_instrs(input);
-//
-//         ok(self {
-//             instr,
-//             folded_instrs,
-//         })
-
 pub fn parse_instr(input: ParseInput) -> Result<TokenStream> {
-    let (mut input, name) = expect_open_paren_ident(input)?;
-    let input = &mut input;
+    check_quasi_quote!(input => {
+        let (mut input, name) = expect_open_paren_ident(input)?;
+        let input = &mut input;
 
-    // so, for just the `if` instruction, the folded form is:
-    // ```
-    // (if <label>? <block_type>? <folded_instr>*
-    //   (then <instr>*)
-    //   (else <instr>*)?)
-    // ```
-    // so we need to parse folded instructions _first_, peeking 2 for `(then`
-    if name == "if" {
-        return parse_if(input);
-    }
-
-    let instr = parse_unfolded_instr(name, input)?;
-    let folded_instrs = parse_instr_seq(input)?;
-
-    Ok(quote! {
-        wat_defs::instr::Instr {
-            instr: #instr,
-            folded_instrs: #folded_instrs,
+        // so, for just the `if` instruction, the folded form is:
+        // ```
+        // (if <label>? <block_type>? <folded_instr>*
+        //   (then <instr>*)
+        //   (else <instr>*)?)
+        // ```
+        // so we need to parse folded instructions _first_, peeking 2 for `(then`
+        if name == "if" {
+            return parse_if(input);
         }
+
+        let instr = parse_unfolded_instr(name, input)?;
+        let folded_instrs = parse_instr_seq(input)?;
+
+        Ok(quote! {
+            wat_defs::instr::Instr {
+                instr: #instr,
+                folded_instrs: #folded_instrs,
+            }
+        })
     })
 }
 
@@ -98,6 +77,7 @@ fn parse_if(input: ParseInput) -> Result<TokenStream> {
     })
 }
 
+/// Pre: `(<name>` has been consumed.
 fn parse_unfolded_instr(name: Ident, input: ParseInput) -> Result<TokenStream> {
     let name = name.to_string();
 
@@ -117,15 +97,14 @@ fn parse_unfolded_instr(name: Ident, input: ParseInput) -> Result<TokenStream> {
     Ok(res)
 }
 
+/// Pre: `input.next()` is an int literal.
 fn parse_const(ty: NumType, input: ParseInput) -> Result<TokenStream> {
     let ty = num_type_to_tokens(ty);
-    eprintln!("TY: {}", ty);
     let val = expect_int_literal(input)?;
     Ok(quote!{ wat_defs::instr::UnfoldedInstr::Const { ty: #ty, val: #val } })
 }
 
 fn parse_loop(input: ParseInput) -> Result<TokenStream> {
-    eprintln!("parse_loop: input={:?}", input);
     let label = expect_sym(input)?.to_string();
     Ok(quote!{ wat_defs::instr::UnfoldedInstr::Loop { label: #label.to_string() } })
 }

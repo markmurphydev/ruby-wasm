@@ -1,6 +1,36 @@
 use crate::parse::parse_stream::{ParseInput, ParseStream};
 use crate::result::{Error, Result};
-use proc_macro2::{Delimiter, Ident, Punct, TokenTree};
+use proc_macro2::{Delimiter, Ident, Punct, TokenTree, TokenStream};
+
+macro_rules! check_quasi_quote {
+    ($input:expr => $exp:expr) => {
+        match crate::parse::util::expect_quasi_quote($input) {
+            Ok(stream) => Ok(stream),
+            Err(_) => $exp
+        }
+    };
+}
+pub(crate) use check_quasi_quote;
+
+pub fn expect_quasi_quote(input: ParseInput) -> Result<TokenStream> {
+    match peek_quasi_quote(input) {
+        Some(stream) => {
+            input.next();
+            input.next();
+            Ok(stream)
+        },
+        None => Err(error(input, "Expected quasi-quote of the form ,(...)"))
+    }
+}
+
+pub fn peek_quasi_quote(input: ParseInput) -> Option<TokenStream> {
+    match input.peek2() {
+        Some((TokenTree::Punct(punct), TokenTree::Group(group))) if punct.as_char() == ',' && group.delimiter() == Delimiter::Parenthesis => {
+            Some(group.stream())
+        }
+        _ => None
+    }
+}
 
 /// Post: On failure, does not mutate `input`.
 pub fn expect_int_literal(input: ParseInput) -> Result<i64> {

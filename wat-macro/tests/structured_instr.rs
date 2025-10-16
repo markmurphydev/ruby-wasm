@@ -5,7 +5,7 @@ use wat_macro::wat;
 pub fn _loop() {
     let actual = wat! { (loop $for (nop)) };
     let actual = &format!("{:?}", actual);
-    let expected = expect!["Instr { instr: Loop { label: \"for\" }, folded_instrs: [Instr { instr: Nop, folded_instrs: [] }] }"];
+    let expected = expect![[r#"Instr { instr: Loop { label: "for" }, folded_instrs: [Instr { instr: Nop, folded_instrs: [] }] }"#]];
     expected.assert_eq(actual);
 }
 
