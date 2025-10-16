@@ -1,4 +1,4 @@
-use crate::ty::NumType;
+use crate::ty::{BlockType, NumType};
 
 #[derive(Debug)]
 pub enum UnfoldedInstr {
@@ -17,7 +17,7 @@ pub enum UnfoldedInstr {
     /// Loop instruction. The test instructions are on the stack (or in `folded_instrs`).
     If {
         label: Option<String>,
-        block_type: Option<()>,
+        block_type: Option<BlockType>,
         then_block: Vec<Instr>,
         else_block: Vec<Instr>,
     },
@@ -31,6 +31,6 @@ pub struct Instr {
 
 impl Instr {
     pub fn is_instr(str: &str) -> bool {
-        str == "nop" || str == "const" || str == "loop" || str == "if"
+        str == "nop" || str == "const" || str == "loop" || str == "if" || str == "const_i32"
     }
 }
