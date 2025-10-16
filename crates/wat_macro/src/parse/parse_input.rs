@@ -30,7 +30,9 @@ impl ParseStream {
         match &self.peeked {
             Some(tt) => Some(tt.clone()),
             None => {
-                self.next()
+                let val = self.next();
+                self.peeked = val.clone();
+                val
             }
         }
     }
@@ -42,3 +44,5 @@ impl ParseStream {
         }
     }
 }
+
+#[cfg(test)]
