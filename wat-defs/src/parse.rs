@@ -1,2 +1,0 @@
-mod instr;
-mod ty;

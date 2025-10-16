@@ -1,4 +1,16 @@
 #[derive(Debug)]
+pub enum Mutable {
+    Immutable,
+    Mutable,
+}
+
+#[derive(Debug)]
+pub struct GlobalType {
+    pub mutable: Mutable,
+    pub val_type: ValType,
+}
+
+#[derive(Debug)]
 pub enum NumType {
     I32,
 }

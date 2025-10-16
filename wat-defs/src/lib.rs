@@ -1,3 +1,3 @@
 pub mod instr;
 pub mod ty;
-mod parse;
+pub mod global;

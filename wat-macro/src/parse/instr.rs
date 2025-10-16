@@ -110,7 +110,7 @@ fn parse_loop(input: ParseInput) -> Result<TokenStream> {
 }
 
 /// Parses an unwrapped, undelimited sequence of instructions into `vec![...]`.
-fn parse_instr_seq(input: ParseInput) -> Result<TokenStream> {
+pub fn parse_instr_seq(input: ParseInput) -> Result<TokenStream> {
     eprintln!("parse_instr_seq");
     let mut instrs = Vec::new();
     loop {

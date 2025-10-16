@@ -4,6 +4,28 @@ use crate::result::Result;
 use proc_macro2::TokenStream;
 use quote::quote;
 
+pub fn parse_global_type(input: ParseInput) -> Result<TokenStream> {
+    let (mutable, val_type) = match expect_open_paren_named(&["mut"], input) {
+        Ok((mut body, _)) => {
+            let mutable = quote![ wat_defs::ty::Mutable::Mutable ];
+            let val_type = parse_val_type(&mut body)?;
+            (mutable, val_type)
+        }
+        Err(_) => {
+            let mutable = quote![ wat_defs::ty::Mutable::Immutable ];
+            let val_type = parse_val_type(input)?;
+            (mutable, val_type)
+        }
+    };
+
+    Ok(quote! {
+        wat_defs::ty::GlobalType {
+            mutable: #mutable,
+            val_type: #val_type,
+        }
+    })
+}
+
 /// Pre: `input` contains the open parens and block type name.
 /// Post: If `input` _is_ valid input, but _cannot_ be parsed as NumType, does not consume any tokens.
 pub fn parse_block_type(input: ParseInput) -> Result<TokenStream> {
