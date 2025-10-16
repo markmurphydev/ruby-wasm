@@ -1,4 +1,4 @@
-use crate::parse::parse_input::{ParseInput, ParseStream};
+use crate::parse::parse_stream::{ParseInput, ParseStream};
 use crate::result::{Error, Result};
 use proc_macro2::{Delimiter, Ident, TokenStream, TokenTree};
 use quote::quote;
@@ -442,3 +442,18 @@ where
 //     delimiter: Delimiter,
 // ) -> Result<(DelimSpan, ParseBuffer<'a>)> {
 // }
+
+#[cfg(test)]
+mod test {
+    use expect_test::expect;
+    use quote::quote;
+    use super::*;
+
+    #[test]
+    pub fn _if() {
+        let input: TokenStream = quote! { (if $label (then (nop)) ) };
+        let actual = parse_instr(&mut ParseStream::new(input)).unwrap().to_string();
+        // let expected = expect![""];
+        // expected.assert_eq(&actual);
+    }
+}

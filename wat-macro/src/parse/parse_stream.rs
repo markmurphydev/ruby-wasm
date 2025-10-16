@@ -44,5 +44,3 @@ impl ParseStream {
         }
     }
 }
-
-#[cfg(test)]

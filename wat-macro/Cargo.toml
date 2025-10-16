@@ -1,0 +1,13 @@
+[package]
+name = "wat-macro"
+version.workspace = true
+edition.workspace = true
+
+[dependencies]
+expect-test.workspace = true
+proc-macro2.workspace = true
+quote.workspace = true
+wat-defs.workspace = true
+
+[lib]
+proc-macro = true
