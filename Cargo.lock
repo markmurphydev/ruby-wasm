@@ -930,8 +930,11 @@ dependencies = [
  "pretty",
  "serde",
  "serde-lexpr",
+ "wasm-instr",
  "wasmtime",
  "wat",
+ "wat-defs",
+ "wat-macro",
 ]
 
 [[package]]

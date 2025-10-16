@@ -3,42 +3,9 @@ use crate::result::{Error, Result};
 use proc_macro2::{Delimiter, Ident, TokenStream, TokenTree};
 use quote::quote;
 use wat_defs::instr::{Instr, UnfoldedInstr};
-use wat_defs::ty::NumType;
-
-/// `(input: ParseInput) -> Result<i64>`
-macro_rules! expect_int_literal {
-    ($input:expr) => {
-        expect_int_literal_fn(file!(), line!(), $input)
-    };
-}
-
-/// `(input: ParseInput) -> Result<ParseStream>`
-macro_rules! expect_ident {
-    ($input:expr) => {
-        expect_ident_fn(file!(), line!(), $input)
-    };
-}
-
-/// `(name: &str, input: ParseInput) -> Result<i64>`
-macro_rules! expect_ident_named {
-    ($name:expr, $input:expr) => {
-        expect_ident_named_fn(file!(), line!(), $name, $input)
-    };
-}
-
-/// `(input: ParseInput) -> Result<ParseStream>`
-macro_rules! expect_parens {
-    ($input:expr) => {
-        expect_parens_fn(file!(), line!(), $input)
-    };
-}
-
-/// `(input: ParseInput) -> Result<()>`
-macro_rules! expect_dollar {
-    ($input:expr) => {
-        expect_dollar_fn(file!(), line!(), $input)
-    };
-}
+use wat_defs::ty::{BlockType, HeapType, Nullable, NumType, RefType, ValType};
+use crate::parse::ty;
+use crate::parse::util::*;
 
 // so, for just the `if` instruction, the folded form is:
 // ```
@@ -71,6 +38,7 @@ pub fn parse_instr(input: ParseInput) -> Result<TokenStream> {
     parse_instr_with_name(name, &mut body)
 }
 
+/// Pre:
 fn parse_instr_with_name(name: Ident, input: ParseInput) -> Result<TokenStream> {
     eprintln!("parse_instr_with_name, name={}", name);
 
@@ -82,14 +50,8 @@ fn parse_instr_with_name(name: Ident, input: ParseInput) -> Result<TokenStream> 
     //   (else <instr>*)?)
     // ```
     // so we need to parse folded instructions _first_, peeking 2 for `(then`
-    if let Some(mut body) = peek_parens(input) {
-        eprintln!("PEEK");
-        if let Some(name) = peek_ident(&mut body) {
-            eprintln!("IDENT");
-            if name == "if" {
-                return parse_if(input);
-            }
-        }
+    if name == "if" {
+        return parse_if(input);
     }
 
     eprintln!("parse_instr_with_name B -- {:?}", input);
@@ -104,22 +66,23 @@ fn parse_instr_with_name(name: Ident, input: ParseInput) -> Result<TokenStream> 
     })
 }
 
+/// Pre: Parens and `if` have been read.
 fn parse_if(input: ParseInput) -> Result<TokenStream> {
-    let input = &mut expect_parens!(input)?;
-    expect_ident_named!("if", input)?;
-
     let label = if peek_dollar(input) {
         expect_dollar!(input)?;
         let ident = expect_ident!(input)?.to_string();
-        Some(ident)
+        quote![ Some(#ident.to_string()) ]
     } else {
-        None
+        quote![ None ]
     };
 
 
-    // if peek_open_paren_named(&["result", "type"], input) {
-    //     let block_type = parse_block_type(input);
-    // }
+    let block_type = if peek_open_paren_named(&["result", "type"], input) {
+        let block_type = ty::parse_block_type(input);
+        quote![ ]
+    } else {
+        quote![ None ]
+    };
 
     let folded_instrs = parse_instr_seq(input)?;
 
@@ -129,13 +92,21 @@ fn parse_if(input: ParseInput) -> Result<TokenStream> {
         parse_instr_seq(input)?
     };
 
+    let else_block = if peek_open_paren_named(&["else"], input) {
+        let input = &mut expect_parens!(input)?;
+        expect_ident_named!("else", input)?;
+        parse_instr_seq(input)?
+    } else {
+        quote![ Vec::new() ]
+    };
+
     Ok(quote! {
-        Instr {
+        wat_defs::instr::Instr {
             instr: wat_defs::instr::UnfoldedInstr::If {
                 label: #label,
                 block_type: None,
                 then_block: #then_block,
-                else_block: vec![],
+                else_block: #else_block,
             },
             folded_instrs: #folded_instrs,
         }
@@ -198,251 +169,6 @@ fn parse_instr_seq(input: ParseInput) -> Result<TokenStream> {
     Ok(quote! { vec![ #(#instrs),* ] })
 }
 
-fn expect_int_literal_fn(file: &str, line: u32, input: ParseInput) -> Result<i64> {
-    match input.next() {
-        Some(TokenTree::Literal(lit)) => lit
-            .to_string()
-            .parse::<i64>()
-            .map_err(|err| error(input, format!("{}", err))),
-        _ => Err(error(
-            input,
-            format!("{}:{} -- Expected int literal.", file, line),
-        )),
-    }
-}
-
-fn expect_ident_fn(file: &str, line: u32, input: ParseInput) -> Result<Ident> {
-    match input.next() {
-        Some(TokenTree::Ident(ident)) => Ok(ident),
-        _ => Err(error(
-            input,
-            format!("{}:{} -- Expected ident.", file, line),
-        )),
-    }
-}
-
-fn expect_ident_named_fn(file: &str, line: u32, name: &str, input: ParseInput) -> Result<Ident> {
-    match input.next() {
-        Some(TokenTree::Ident(ident)) if ident == name => Ok(ident),
-        _ => Err(error(
-            input,
-            format!("{}:{} -- Expected ident named {}.", file, line, name),
-        )),
-    }
-}
-
-/// Expects a [Delimiter::Parenthesis] group, and returns the inner stream.
-fn expect_parens_fn(file: &str, line: u32, input: ParseInput) -> Result<ParseStream> {
-    match input.next() {
-        Some(TokenTree::Group(group)) if group.delimiter() == Delimiter::Parenthesis => {
-            Ok(ParseStream::new(group.stream()))
-        }
-        _ => Err(error(
-            input,
-            format!("{}:{} -- Expected parens.", file, line),
-        )),
-    }
-}
-
-fn peek_parens(input: ParseInput) -> Option<ParseStream> {
-    match input.peek() {
-        Some(TokenTree::Group(group)) if group.delimiter() == Delimiter::Parenthesis => {
-            Some(ParseStream::new(group.stream()))
-        }
-        _ => None,
-    }
-}
-
-fn peek_ident(input: ParseInput) -> Option<Ident> {
-    match input.peek() {
-        Some(TokenTree::Ident(ident)) => Some(ident),
-        _ => None,
-    }
-}
-
-fn peek_dollar(input: ParseInput) -> bool {
-    match input.peek() {
-        Some(TokenTree::Punct(punct)) => punct.as_char() == '$',
-        _ => false,
-    }
-}
-
-fn peek_open_paren_named(names: &[&str], input: ParseInput) -> bool {
-    if let Some(mut body) = peek_parens(input) {
-        if let Some(ident) = peek_ident(&mut body) {
-            return names.iter().any(|name| ident == name)
-        }
-    }
-    false
-}
-
-fn expect_dollar_fn(file: &str, line: u32, input: ParseInput) -> Result<()> {
-    match input.next() {
-        Some(TokenTree::Punct(punct)) if punct.as_char() == '$' => Ok(()),
-        _ => Err(error(input, format!("{}:{} -- Expected `$`.", file, line))),
-    }
-}
-
-fn error<M>(input: ParseInput, message: M) -> Error
-where
-    M: Clone + Into<String>,
-{
-    let span = input.current_span();
-    Error::new(span, message.into())
-}
-
-// impl Parse for UnfoldedInstr {
-//     fn parse(input: ParseStream) -> Result<Self> {
-//         // name_ident can be a keyword like `loop`.
-//         // Parse it as described in `syn` docs:
-//         // https://docs.rs/syn/latest/syn/struct.Ident.html
-//         let name_ident: Ident = input.call(Ident::parse_any)?;
-//         let name = name_ident.to_string();
-//
-//         match name.as_str() {
-//             "nop" => Ok(UnfoldedInstr::Nop),
-//             "const.i32" => parse_const(NumType::I32, input),
-//             "loop" => parse_loop(input),
-//             _ => Err(Error::new(
-//                 name_ident.span(),
-//                 format!("`{}` is not an instruction name.", name),
-//             )),
-//         }
-//     }
-// }
-//
-// fn parse_const(ty: NumType, input: ParseStream) -> Result<UnfoldedInstr> {
-//     let val: LitInt = input.parse()?;
-//     let val = val.base10_parse()?;
-//     Ok(UnfoldedInstr::Const { ty, val })
-// }
-//
-// fn parse_loop(input: ParseStream) -> Result<UnfoldedInstr> {
-//     input.parse::<Token![$]>()?;
-//     let label: Ident = input.call(Ident::parse_any)?;
-//     let label = label.to_string();
-//     Ok(UnfoldedInstr::Loop { label })
-// }
-//
-// impl Parse for Instr {
-//     fn parse(input: ParseStream) -> Result<Self> {
-//         eprintln!("parse a: input={:?}", input);
-//         // syn::parse::parse_(input, delimiter::parenthesis).map(|(span, content)| parens {
-//         //     token: token::paren(span),
-//         //     content,
-//         // })
-//         // syn::pars
-//         // let body;
-//         let body = match syn::__private::parse_parens(&input) {
-//             ok(parens) => {
-//                 body = parens.content;
-//                 parens.token
-//             }
-//             err(error) => {
-//                 return err(error);
-//             }
-//         }
-//         let body;
-//         parenthesized!(body in input);
-//         eprintln!("parse b: input={:?}", input);
-//
-//         // so, for just the `if` instruction, the folded form is:
-//         // ```
-//         // (if <label>? <block_type>? <folded_instr>*
-//         //   (then <instr>*)
-//         //   (else <instr>*)?)
-//         // ```
-//         // so we need to parse folded instructions _first_, peeking 2 for `(then`
-//         // if let ok(name) = input.fork().call(ident::parse_any) {
-//         //     if name == "if" {
-//         //         return parse_if(input);
-//         //     }
-//         // }
-//
-//         let instr: unfoldedinstr = body.parse()?;
-//
-//         // check for folded instrs
-//         let folded_instrs = parse_instrs(input);
-//
-//         ok(self {
-//             instr,
-//             folded_instrs,
-//         })
-//     }
-// }
-//
-// /// pre: `input.next() == "if"`
-// fn parse_if(input: ParseStream) -> Result<Instr> {
-//     let name = input.call(Ident::parse_any)?;
-//     if name != "if" {
-//         unreachable!("parse_if: `name` != \"if\"")
-//     }
-//
-//     let label = if input.peek(Token![$]) {
-//         input.parse::<Token![$]>()?;
-//         let ident = input.call(Ident::parse_any)?;
-//         Some(ident.to_string())
-//     } else {
-//         None
-//     };
-//
-//     let block_type: Option<BlockType> = input.parse().ok();
-//
-//     let folded_instrs = parse_instrs(input);
-//
-//     let then_block = {
-//         let body;
-//         braced!(body in input);
-//         let name = body.call(Ident::parse_any)?;
-//         if name != "then" {
-//             return Err(Error::new(
-//                 name.span(),
-//                 format!(
-//                     "{} {}: Expected \"then\", found {} .",
-//                     file!(),
-//                     line!(),
-//                     name
-//                 ),
-//             ));
-//         };
-//
-//         parse_instrs(&body)
-//     };
-//
-//     Ok(Instr {
-//         instr: UnfoldedInstr::If {
-//             label,
-//             block_type: None,
-//             then_block,
-//             else_block: vec![],
-//         },
-//         folded_instrs,
-//     })
-// }
-//
-// /// Parses an unwrapped, undelimited sequence of instructions.
-// fn parse_instrs(input: ParseStream) -> Vec<Instr> {
-//     let mut instrs = Vec::new();
-//     loop {
-//         eprintln!("parse_instrs A: instrs={:?} input={:?}", instrs, input);
-//         let fork = input.fork();
-//         let instr = fork.parse::<Instr>();
-//         if let Ok(instr) = instr {
-//             input.advance_to(&fork);
-//             instrs.push(instr)
-//         } else {
-//             break;
-//         }
-//     }
-//     instrs
-// }
-//
-// fn parse_delimited<'a>(
-//     input: &ParseBuffer<'a>,
-//     delimiter: Delimiter,
-// ) -> Result<(DelimSpan, ParseBuffer<'a>)> {
-// }
-
 #[cfg(test)]
 mod test {
     use expect_test::expect;
@@ -450,10 +176,10 @@ mod test {
     use super::*;
 
     #[test]
-    pub fn _if() {
+    pub fn the_if() {
         let input: TokenStream = quote! { (if $label (then (nop)) ) };
         let actual = parse_instr(&mut ParseStream::new(input)).unwrap().to_string();
-        // let expected = expect![""];
-        // expected.assert_eq(&actual);
+        let expected = expect![[r#"wat_defs :: instr :: Instr { instr : wat_defs :: instr :: UnfoldedInstr :: If { label : Some ("label" . to_string ()) , block_type : None , then_block : vec ! [wat_defs :: instr :: Instr { instr : wat_defs :: instr :: UnfoldedInstr :: Nop , folded_instrs : vec ! [] , }] , else_block : Vec :: new () , } , folded_instrs : vec ! [] , }"#]];
+        expected.assert_eq(&actual);
     }
 }

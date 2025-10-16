@@ -15,15 +15,15 @@ pub enum HeapType {
 }
 
 #[derive(Debug)]
-pub enum Null {
-    NotNull,
-    Null,
+pub enum Nullable {
+    NonNullable,
+    Nullable,
 }
 
 #[derive(Debug)]
 pub struct RefType {
-    null: Null,
-    heap_type: HeapType,
+    pub null: Nullable,
+    pub heap_type: HeapType,
 }
 
 #[derive(Debug)]
@@ -34,9 +34,6 @@ pub enum ValType {
 
 #[derive(Debug)]
 pub enum BlockType {
-    Result(ResultType),
+    Result(ValType),
     TypeUse(String),
 }
-
-#[derive(Debug)]
-pub struct ResultType(ValType);
