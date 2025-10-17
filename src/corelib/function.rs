@@ -63,86 +63,8 @@ fn add_start(ctx: &mut CompileCtx<'_>) {
     ctx.module.start_fn = Some("_start".to_string());
 }
 
-pub const STR_EQ_IDENTIFIER: &str = "str-eq";
 /// `str-eq : (ref $str) (ref $str) -> Bool`
 fn add_str_eq(ctx: &mut CompileCtx<'_>) {
-    // if (a.len != b.len) { return false }
-    // for (a_ch, b_ch) in zip(a, b) {
-    //   if (a_ch != b_ch) { return false }
-    // }
-    // return true
-    // instr_seq_builder
-    //     .i32_const(ctx, 0)
-    //     .local_set(ctx, "idx".to_string())
-    //     .if_else(
-    //         ctx,
-    //         None,
-    //         |ctx, instr_seq_builder| {
-    //             instr_seq_builder
-    //                 .local_get(ctx, "a".to_string())
-    //                 .unop(ctx, UnaryOp::ArrayLen)
-    //                 .local_get(ctx, "b".to_string())
-    //                 .unop(ctx, UnaryOp::ArrayLen)
-    //                 .binop(ctx, BinaryOp::I32Eq);
-    //         },
-    //         |ctx, instr_seq_builder| {
-    //             instr_seq_builder.i32_const(ctx, 0).return_(ctx);
-    //         },
-    //         |ctx, instr_seq_builder| {},
-    //     );
-    // instr_seq_builder
-    //     .loop_(ctx, "for".to_string(), |ctx, instr_seq_builder| {
-    //         instr_seq_builder.if_else(
-    //             ctx,
-    //             None,
-    //             |ctx, instr_seq_builder| {
-    //                 instr_seq_builder
-    //                     .local_get(ctx, "idx".to_string())
-    //                     .local_get(ctx, "a".to_string())
-    //                     .unop(ctx, UnaryOp::ArrayLen)
-    //                     .binop(ctx, BinaryOp::I32Eq)
-    //                     .unop(ctx, UnaryOp::I32Eqz);
-    //             },
-    //             |ctx, instr_seq_builder| {
-    //                 instr_seq_builder.i32_const(ctx, 1).return_(ctx);
-    //             },
-    //             |_, _| {},
-    //         );
-    //         instr_seq_builder
-    //             .local_get(ctx, "a".to_string())
-    //             .local_get(ctx, "idx".to_string())
-    //             .array_get_u(ctx, Unitype::STRING_TYPE_IDENTIFIER.to_string())
-    //             .local_set(ctx, "a_ch".to_string());
-    //         instr_seq_builder
-    //             .local_get(ctx, "b".to_string())
-    //             .local_get(ctx, "idx".to_string())
-    //             .array_get_u(ctx, Unitype::STRING_TYPE_IDENTIFIER.to_string())
-    //             .local_set(ctx, "b_ch".to_string());
-    //         instr_seq_builder.if_else(
-    //             ctx,
-    //             None,
-    //             |ctx, instr_seq_builder| {
-    //                 instr_seq_builder
-    //                     .local_get(ctx, "a_ch".to_string())
-    //                     .local_get(ctx, "b_ch".to_string())
-    //                     .binop(ctx, BinaryOp::I32Eq)
-    //                     .unop(ctx, UnaryOp::I32Eqz);
-    //             },
-    //             |ctx, instr_seq_builder| {
-    //                 instr_seq_builder.i32_const(ctx, 0).return_(ctx);
-    //             },
-    //             |_, _| {},
-    //         );
-    //         instr_seq_builder
-    //             .local_get(ctx, "idx".to_string())
-    //             .i32_const(ctx, 1)
-    //             .binop(ctx, BinaryOp::I32Add)
-    //             .local_set(ctx, "idx".to_string());
-    //         instr_seq_builder.br(ctx, "for".to_string());
-    //     })
-    //     .unreachable(ctx);
-    // function_builder.finish(&mut ctx.module.funcs);
-
     let res = wat! {
         (func $str_eq
             (param $a (ref $str))
