@@ -1,3 +1,4 @@
+use wat_defs::module::TypeDef;
 use crate::parse::util::{parse_name, peek_sym};
 use crate::parse::ty::parse_ref_type;
 use crate::parse::type_def::parse_type_def;

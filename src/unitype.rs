@@ -4,6 +4,8 @@
 use pretty::RcDoc;
 use serde::Serialize;
 use wasmtime::{AnyRef, Rooted};
+use wat_defs::ty::RefType;
+use wat_macro::wat;
 
 /// Fixnums are identified with a 1 in the MSB of the i31
 const FIXNUM_MARKER: i32 = 1 << 30;
@@ -32,7 +34,9 @@ pub struct Fixnum(i32);
 impl Unitype {
     /// Wasm-supertype of all Ruby values
     /// ≡ `(ref eq)`
-    // pub const UNITYPE: RefType = RefType::new_abstract(AbsHeapType::Eq, Nullability::NonNullable);
+    pub fn unitype() -> RefType {
+        wat![ (ref eq) ]
+    }
 
     /// `(ref i31)`
     // pub const REF_I31: RefType = RefType::new_abstract(AbsHeapType::I31, Nullability::NonNullable);

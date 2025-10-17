@@ -1,6 +1,7 @@
 use wat_defs::module::TypeDef;
-use wat_defs::ty::{RefType, StorageType};
+use wat_defs::ty::{AbsHeapType, HeapType, Nullable, RefType, StorageType, ValType};
 use wat_macro::wat;
+use crate::unitype::Unitype;
 
 // use crate::corelib::type_def::METHOD_TYPE_IDENTIFIER;
 // use crate::unitype::Unitype;
@@ -23,7 +24,7 @@ pub enum AListValTypeIdentifier {
 impl AListValTypeIdentifier {
     pub fn ref_type(&self) -> RefType {
         match self {
-            AListValTypeIdentifier::Unitype => wat![ (ref eq) ],
+            AListValTypeIdentifier::Unitype => wat![(ref eq)],
             AListValTypeIdentifier::Identifier(ident) => wat![ (ref ,(ident.to_string())) ],
         }
     }
@@ -93,55 +94,27 @@ impl AListTypeDef {
                            (field $val ,(self.val_type))))
         };
 
-        let alist_pair_type_def = TypeDef::new(
-            ctx,
-            &self.alist_pair_type_identifier(),
-            SubType {
-                is_final: Finality::NotFinal,
-                supertypes: vec![],
-                comp_type: CompType::Struct(StructType {
-                    fields: Box::new([
-                        (
-                            "key".to_string(),
-                            FieldType::ref_identifier(self.key_type_identifier),
-                        ),
-                        (
-                            "val".to_string(),
-                            FieldType {
-                                mutability: Mutability::Const,
-                                ty: StorageType::Val(ValType::Ref(self.val_type)),
-                            },
-                        ),
-                    ]),
-                }),
-            },
-        );
-
         [alist_type_def, alist_pair_type_def]
     }
 
     /// The "name" of `val-type-identifier, to be interpolated into the AList type identifiers.
     /// It is not meaningful independent of the AList type identifier.
-    fn val_name(val_type: &RefType) -> String {
-        if let Nullability::Nullable = val_type.nullable {
-            todo!("No val name for {:?}", val_type)
-        }
-        match &val_type.heap_type {
-            HeapType::Abstract(abs) => match abs {
-                AbsHeapType::Eq => "unitype",
-                abs => todo!("No val name for {:?}", abs),
-            },
-            HeapType::Identifier(ident) => ident,
-        }
-        .to_string()
+    fn val_name(val_type: &StorageType) -> String {
+        match val_type {
+            StorageType::Val(ValType::Ref(RefType {
+                null: Nullable::NonNullable,
+                heap_type: HeapType::Abs(AbsHeapType::Eq),
+            })) => "unitype",
+            _ => todo!("No val name for {:?}", val_type),
+        }.to_string()
     }
 }
 
 /// Alist of pairs `(String, Unitype)`
 pub fn alist_str_unitype() -> AListTypeDef {
     AListTypeDef {
-        key_type_identifier: Unitype::STRING_TYPE_IDENTIFIER.to_string(),
-        val_type: Unitype::UNITYPE,
+        key_type_identifier: "str".to_string(),
+        val_type: Unitype::unitype(),
     }
 }
 
