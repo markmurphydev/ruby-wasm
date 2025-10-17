@@ -3,6 +3,7 @@ use crate::parse::util::*;
 use crate::result::Result;
 use proc_macro2::TokenStream;
 use quote::quote;
+use wat_defs::ty::HeapType;
 
 pub fn parse_global_type(input: ParseInput) -> Result<TokenStream> {
     let (mutable, val_type) = match expect_open_paren_named(&["mut"], input) {
@@ -53,7 +54,8 @@ pub fn parse_block_type(input: ParseInput) -> Result<TokenStream> {
 
 /// Pre: `input` contains entire type.
 /// Post: If `input` _is_ valid input, but _cannot_ be parsed as NumType, does not consume any tokens.
-fn parse_val_type(input: ParseInput) -> Result<TokenStream> {
+pub fn parse_val_type(input: ParseInput) -> Result<TokenStream> {
+    eprintln!("parse_val_type");
     check_quasi_quote!(input => {
         let path = quote![wat_defs::ty::ValType];
         if let Ok(num_type) = parse_num_type(input) {
@@ -98,15 +100,16 @@ fn parse_ref_type(input: ParseInput) -> Result<TokenStream> {
         wat_defs::ty::RefType {
             null: #nullable,
             heap_type: #heap_type,
-        };
+        }
     })
 }
 
 fn parse_heap_type(input: ParseInput) -> Result<TokenStream> {
+    let path = quote![ wat_defs::ty::HeapType ];
     if let Ok(res) = parse_abs_heap_type(input) {
-        Ok(res)
+        Ok(quote![ #path::Abs(#res) ])
     } else if let Ok(res) = parse_type_sym(input) {
-        Ok(res)
+        Ok(quote![ #path::TypeIdx(#res) ])
     } else {
         Err(error(input, "Expected `HeapType`"))
     }
@@ -123,7 +126,7 @@ fn parse_abs_heap_type(input: ParseInput) -> Result<TokenStream> {
 
 fn parse_type_sym(input: ParseInput) -> Result<TokenStream> {
     let name = expect_sym(input)?.to_string();
-    Ok(quote![ #name ])
+    Ok(quote![ #name.to_string() ])
 }
 
 #[cfg(test)]

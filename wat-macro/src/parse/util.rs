@@ -44,6 +44,17 @@ pub fn expect_int_literal(input: ParseInput) -> Result<i64> {
 }
 
 /// Post: On failure, does not mutate `input`.
+pub fn expect_string_literal(input: ParseInput) -> Result<String> {
+    match peek_string_literal(input) {
+        Some(n) => {
+            input.next();
+            Ok(n)
+        }
+        None => Err(error(input, "Expected string literal.")),
+    }
+}
+
+/// Post: On failure, does not mutate `input`.
 pub fn expect_ident(input: ParseInput) -> Result<Ident> {
     match peek_ident(input) {
         Some(ident) => {
@@ -139,6 +150,17 @@ pub fn peek_int_literal(input: ParseInput) -> Option<i64> {
     }
 }
 
+/// Post: On failure, does not mutate `input`.
+pub fn peek_string_literal(input: ParseInput) -> Option<String> {
+    match input.peek() {
+        Some(TokenTree::Literal(lit))
+            if lit.to_string().chars().next() == Some('"') => {
+            Some(lit.to_string().trim_matches('"').to_string())
+        },
+        _ => None,
+    }
+}
+
 pub fn peek_parens(input: ParseInput) -> Option<ParseStream> {
     match input.peek() {
         Some(TokenTree::Group(group)) if group.delimiter() == Delimiter::Parenthesis => {
@@ -205,4 +227,20 @@ where
 {
     let span = input.current_span();
     Error::new(span, message.into())
+}
+
+#[cfg(test)]
+mod test {
+    use super::*;
+    use expect_test::expect;
+    use quote::quote;
+
+    #[test]
+    pub fn test_expect_sym() {
+        let input = quote! { $func_name };
+        let input = &mut ParseStream::new(input);
+        let actual = &format!("{:?}", expect_sym(input));
+        let expected = expect![[r#"Ok(Ident(func_name))"#]];
+        expected.assert_eq(actual);
+    }
 }

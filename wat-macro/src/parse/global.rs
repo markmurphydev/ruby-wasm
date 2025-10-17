@@ -9,8 +9,10 @@ pub fn parse_global(input: ParseInput) -> Result<TokenStream> {
     let (mut input, _) = expect_open_paren_named(&["global"], input)?;
     let input = &mut input;
 
-    let id = expect_sym(input)?;
-    let id = id.to_string();
+    let id = {
+        let id = expect_sym(input)?;
+        id.to_string()
+    };
     let ty = ty::parse_global_type(input)?;
     let instr_seq = instr::parse_instr_seq(input)?;
 

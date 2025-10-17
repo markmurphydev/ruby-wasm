@@ -1,9 +1,9 @@
-use crate::parse::parse_stream::{ParseInput, ParseStream};
-use crate::result::{Error, Result};
-use proc_macro2::{Delimiter, Ident, TokenStream, TokenTree};
+use crate::parse::parse_stream::ParseInput;
+use crate::result::Result;
+use proc_macro2::{Ident, TokenStream};
 use quote::quote;
-use wat_defs::instr::{Instr, UnfoldedInstr};
-use wat_defs::ty::{BlockType, HeapType, Nullable, NumType, RefType, ValType};
+use wat_defs::instr::Instr;
+use wat_defs::ty::NumType;
 use crate::parse::ty;
 use crate::parse::util::*;
 
@@ -134,6 +134,7 @@ fn num_type_to_tokens(ty: NumType) -> TokenStream {
 
 #[cfg(test)]
 mod test {
+    use crate::parse::ParseStream;
     use expect_test::expect;
     use quote::quote;
     use super::*;

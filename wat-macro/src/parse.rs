@@ -1,3 +1,4 @@
+use crate::parse::func::parse_func;
 use crate::parse::global::parse_global;
 use proc_macro2::TokenStream;
 use crate::parse::instr::parse_instr;
