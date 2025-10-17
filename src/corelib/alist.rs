@@ -34,7 +34,7 @@ pub struct AListTypeDef {
 impl AListTypeDef {
     /// The type identifier by which to refer to this AList in .wat code.
     ///
-    /// ```
+    /// ```ignore
     /// assert_eq!(
     ///     alist_str_unitype().alist_type_identifier,
     ///     "alist_str_unitype".to_string()
@@ -58,7 +58,7 @@ impl AListTypeDef {
 
     /// An AList type definition consists of a pair:
     ///
-    /// ```
+    /// ```ignore
     /// (type <ALIST_TYPE_NAME> (array (ref <ALIST_PAIR_TYPE_NAME>)))
     /// (type <ALIST_PAIR_TYPE_NAME>
     ///     (struct (field $key <KEY_TYPE_NAME>)
@@ -67,7 +67,7 @@ impl AListTypeDef {
     ///
     /// where:
     ///
-    /// ```
+    /// ```ignore
     /// VAL_TYPE_EXPR ::= (ref $<VAL_TYPE_NAME>)
     ///                 | (ref eq)
     /// ```

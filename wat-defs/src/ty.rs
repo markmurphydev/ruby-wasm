@@ -15,6 +15,7 @@ pub struct GlobalType {
 #[derive(Debug)]
 pub enum NumType {
     I32,
+    I64,
 }
 
 #[derive(Debug)]

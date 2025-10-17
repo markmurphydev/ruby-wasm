@@ -66,14 +66,16 @@ pub fn expect_int_literal(input: ParseInput) -> Result<TokenStream> {
 }
 
 /// Post: On failure, does not mutate `input`.
-pub fn expect_string_literal(input: ParseInput) -> Result<String> {
-    match peek_string_literal(input) {
-        Some(n) => {
-            input.next();
-            Ok(n)
+pub fn expect_string_literal(input: ParseInput) -> Result<TokenStream> {
+    check_quasi_quote!(input => {
+        match peek_string_literal(input) {
+            Some(str) => {
+                input.next();
+                Ok(quote!(#str))
+            }
+            None => Err(error(input, "Expected string literal.")),
         }
-        None => Err(error(input, "Expected string literal.")),
-    }
+    })
 }
 
 /// Post: On failure, does not mutate `input`.

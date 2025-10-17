@@ -21,9 +21,8 @@ pub fn parse_func(input: ParseInput) -> Result<TokenStream> {
     let exported = {
         match expect_open_paren_named(&["export"], input) {
             Ok((mut input, _)) => {
-                let input = &mut input;
-                let name = expect_string_literal(input)?;
-                quote![ wat_defs::func::Exported::Exported(#name.to_string()) ]
+                let name = expect_string_literal(&mut input)?;
+                quote![ wat_defs::func::Exported::Exported(#name) ]
             }
             Err(_) => quote![ wat_defs::func::Exported::NotExported ],
         }

@@ -87,6 +87,7 @@ fn parse_unfolded_instr(name: Ident, input: ParseInput) -> Result<TokenStream> {
         "i32_eqz" => quote![ #path::I32Eqz ],
         "i32_eq" => quote![ #path::I32Eq ],
         "i32_add" => quote![ #path::I32Add ],
+        "const_i64" => parse_const(NumType::I64, input)?,
         "br" => {
             let label = parse_name(input)?;
             quote![ #path::Br { label: #label } ]
@@ -107,6 +108,7 @@ fn parse_unfolded_instr(name: Ident, input: ParseInput) -> Result<TokenStream> {
             let name = parse_name(input)?;
             quote![ #path::RefFunc { name: #name } ]
         }
+        "ref_i31" => quote![ #path::RefI31 ],
         "ref_as_non_null" => quote![ #path::RefAsNonNull ],
         "ref_cast" => {
             let ty = ty::parse_ref_type(input)?;
@@ -134,7 +136,7 @@ fn parse_unfolded_instr(name: Ident, input: ParseInput) -> Result<TokenStream> {
         }
         "global_set" => {
             let name = parse_name(input)?;
-            quote![ #path::Global_set { name: #name } ]
+            quote![ #path::GlobalSet { name: #name } ]
         }
         "array_new_fixed" => {
             let type_idx = parse_name(input)?;
@@ -232,6 +234,7 @@ fn num_type_to_tokens(ty: NumType) -> TokenStream {
     let path = quote![wat_defs::ty::NumType];
     match ty {
         NumType::I32 => quote![ #path::I32 ],
+        NumType::I64 => quote![ #path::I64 ],
     }
 }
 

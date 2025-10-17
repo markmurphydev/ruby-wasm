@@ -11,7 +11,7 @@ https://stackoverflow.com/questions/52582367/a-single-file-webassembly-html-demo
         const wasm_buffer = Uint8Array.from(atob(wasm_base64), c => c.charCodeAt(0)).buffer;
         WebAssembly.compile(wasm_buffer).then(wasm => {
             const wasm_instance = new WebAssembly.Instance(wasm);
-            const output = wasm_instance.exports["_start"]();
+            const output = wasm_instance.exports["__ruby_top_level_function"]();
             console.log(output);
         });
     }

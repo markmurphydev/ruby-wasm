@@ -155,12 +155,17 @@ fn add_str_eq(ctx: &mut CompileCtx<'_>) {
             // }
             // return true
             (local_set $idx (const_i32 0))
-            (if (i32_eq (array_len (local_get $a))
-                        (array_len (local_get $b)))
+            (if (i32_eqz (i32_eq (array_len (local_get $a))
+                                 (array_len (local_get $b))))
                 (then (return (const_i32 0))))
             (loop $for (result (ref eq))
-                (if (i32_eqz (i32_eq (local_get $idx)
-                                     (array_len (local_get $a))))
+                (if (i32_eq (local_get $idx)
+                            (array_len (local_get $a)))
+                    (then (return (const_i32 1))))
+                (local_set $a_ch (array_get_u $str (local_get $a) (local_get $idx)))
+                (local_set $b_ch (array_get_u $str (local_get $b) (local_get $idx)))
+                (if (i32_eqz (i32_eq (local_get $a_ch)
+                                     (local_get $b_ch)))
                     (then (return (const_i32 0))))
                 (local_set $idx (i32_add (local_get $idx)
                                          (const_i32 1)))
@@ -214,17 +219,19 @@ fn add_alist_str_method_get(ctx: &mut CompileCtx<'_>) {
 fn add_call(ctx: &mut CompileCtx<'_>) {
     let res = wat! {
         (func $call
-            (param $receiver (ref $obj))
+            (param $receiver (ref eq))
             (param $message (ref $str))
             (param $args (ref $arr_unitype))
             (result (ref eq))
+            (local $receiver_obj (ref $obj))
             (local $parent (ref $class))
             (local $method (ref $method))
 
+            (local_set $receiver_obj (ref_cast (ref $obj) (local_get $receiver)))
             (local_set $parent
                 (ref_as_non_null
                     (struct_get $obj $parent
-                        (local_get $receiver))))
+                        (local_get $receiver_obj))))
             (local_set $method
                 (ref_cast (ref $method)
                     (call $alist_str_method_get
@@ -232,7 +239,7 @@ fn add_call(ctx: &mut CompileCtx<'_>) {
                             (local_get $parent))
                         (local_get $message))))
             (call_ref $method
-                (local_get $receiver)
+                (local_get $receiver_obj)
                 (local_get $args)
                 (local_get $method))
         )

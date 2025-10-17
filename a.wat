@@ -181,11 +181,12 @@
   (local.set $idx
     (i32.const 0))
   (if
-    (i32.eq
-      (array.len
-        (local.get $a))
-      (array.len
-        (local.get $b)))
+    (i32.eqz
+      (i32.eq
+        (array.len
+          (local.get $a))
+        (array.len
+          (local.get $b))))
     (then
       (return
         (i32.const 0)))
@@ -193,11 +194,28 @@
       ))
   (loop $for(result (ref eq))
     (if
+      (i32.eq
+        (local.get $idx)
+        (array.len
+          (local.get $a)))
+      (then
+        (return
+          (i32.const 1)))
+      (else
+        ))
+    (local.set $a_ch
+      (array.get_u $str
+        (local.get $a)
+        (local.get $idx)))
+    (local.set $b_ch
+      (array.get_u $str
+        (local.get $b)
+        (local.get $idx)))
+    (if
       (i32.eqz
         (i32.eq
-          (local.get $idx)
-          (array.len
-            (local.get $a))))
+          (local.get $a_ch)
+          (local.get $b_ch)))
       (then
         (return
           (i32.const 0)))
@@ -254,15 +272,20 @@
   (unreachable))
 (func
   $call
-  (param $receiver (ref $obj))
+  (param $receiver (ref eq))
   (param $message (ref $str))
   (param $args (ref $arr_unitype))
   (result (ref eq))
-  (local $parent (ref $class)) (local $method (ref $method))
+  (local $receiver_obj (ref $obj))
+  (local $parent (ref $class))
+  (local $method (ref $method))
+  (local.set $receiver_obj
+    (ref.cast(ref $obj)
+      (local.get $receiver)))
   (local.set $parent
     (ref.as_non_null
       (struct.get $obj $parent
-        (local.get $receiver))))
+        (local.get $receiver_obj))))
   (local.set $method
     (ref.cast(ref $method)
       (call $alist_str_method_get
@@ -270,7 +293,15 @@
           (local.get $parent))
         (local.get $message))))
   (call_ref $method
-    (local.get $receiver)
+    (local.get $receiver_obj)
     (local.get $args)
     (local.get $method)))
+(func
+  $__ruby_top_level_function
+  (export "__ruby_top_level_function")
+  (result (ref eq))
+  (call $call
+    (global.get $class_BasicObject)
+    (global.get $str_name)
+    (global.get $empty_args)))
 (start $_start)

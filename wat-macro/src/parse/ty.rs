@@ -216,10 +216,11 @@ fn parse_num_type(input: ParseInput) -> Result<TokenStream> {
     check_quasi_quote!(input => {
         let path = quote![wat_defs::ty::NumType];
 
-        let name = expect_ident_named(&["i32"], input)?;
+        let name = expect_ident_named(&["i32", "i64"], input)?;
         let name = name.to_string();
         match name.as_str() {
             "i32" => Ok(quote![ #path::I32 ]),
+            "i64" => Ok(quote![ #path::I64 ]),
             _ => Err(error(input, format!("Invalid `NumType`: {}", name))),
         }
     })

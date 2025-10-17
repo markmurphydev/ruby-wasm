@@ -50,6 +50,8 @@ pub enum UnfoldedInstr {
         name: String,
     },
 
+    RefI31,
+
     RefAsNonNull,
 
     RefCast {
@@ -122,6 +124,7 @@ impl Instr {
     pub fn is_instr(str: &str) -> bool {
         str == "nop"
             || str == "const_i32"
+            || str == "const_i64"
             || str == "i32_eqz"
             || str == "i32_eq"
             || str == "i32_add"
@@ -133,6 +136,7 @@ impl Instr {
             || str == "if"
             || str == "ref_null"
             || str == "ref_func"
+            || str == "ref_i31"
             || str == "ref_as_non_null"
             || str == "ref_cast"
             || str == "call"

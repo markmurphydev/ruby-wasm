@@ -1,0 +1,20 @@
+<!--
+Template for single-page Wasm load & run.
+Template format is `%{var_name}`
+
+Strategy from:
+https://stackoverflow.com/questions/52582367/a-single-file-webassembly-html-demo
+-->
+<script>
+    function compile_run_wasm() {
+        const wasm_base64 = "AGFzbQEAAAABZwZOCV54AFAAXwFjAwFgAmQBZAQBZG1PAQFfBGMDAWMDAWQAAGQHAF5kbQBeZAYAXwJkAABkbQBeZAgAXwJkAABkAgBgAABgAmQAZAABf2ACZAdkAAFkAmADZAFkAGQEAWRtYAABZG0DCQgCAgIJCgsMDQaSAgxkBAD7CAQAC2QAAEHNAEHvAEHkAEH1AEHsAEHlAPsIAAYLZAAAQcMAQewAQeEAQfMAQfMA+wgABQtkAABBwgBB4QBB8wBB6QBB4wBBzwBB4gBB6gBB5QBB4wBB9AD7CAALC2QAAEHPAEHiAEHqAEHlAEHjAEH0APsIAAYLZAAAQe4AQeUAQfcA+wgAAwtkAABB4wBB7ABB4QBB8wBB8wD7CAAFC2QAAEHuAEHhAEHtAEHlAPsIAAQLZAMA0APQAyMB+wgHAPsAAwtkAwDQA9ADIwIjBtIB+wAIIwXSAPsACCMH0gL7AAj7CAcD+wADC2QDANAD0AMjA/sIBwD7AAMLZAMA0APQAyME+wgHAPsAAwsHHQEZX19ydWJ5X3RvcF9sZXZlbF9mdW5jdGlvbgAHCAEDCpcCCAoAIAD7FgP7AAELCwAgAPsCAQD7Fm0LCwAgAPsWA/sCAwILOgAjCCMJ+wUDACMIIwv7BQMBIwkjCfsFAwAjCSMI+wUDASMKIwn7BQMAIwsjCfsFAwAjCyMK+wUDAQs1AQN/QQAhAiAA+w8gAfsPRgRAQQAPBQsDZG0gAiAA+w9GRQRAQQAPBQsgAkEBaiECDAALAAtNBAF/AWQIAWQAAWQCA2RtIAIgAPsPRgRAAAULIAAgAvsLByEDIAP7AggAIQQgA/sCCAEhBSAEIAEQBARAIAUPBQsgAkEBaiECDAALAAsoAgFkAwFkAiAA+wIBANQhAyAD+wIDAyABEAX7FgIhBCAAIAIgBBQCCwoAIwojByMAEAYLALgEBG5hbWUBbwgACm1ldGhvZF9uZXcBDG1ldGhvZF9jbGFzcwILbWV0aG9kX25hbWUDBl9zdGFydAQGc3RyX2VxBRRhbGlzdF9zdHJfbWV0aG9kX2dldAYEY2FsbAcZX19ydWJ5X3RvcF9sZXZlbF9mdW5jdGlvbgKTAQYAAgAEc2VsZgEEYXJncwECAARzZWxmAQRhcmdzAgIABHNlbGYBBGFyZ3MEBQABYQEBYgIDaWR4AwRhX2NoBARiX2NoBQYABWFsaXN0AQRuYW1lAgNpZHgDBHBhaXIEA2tleQUDdmFsBgUACHJlY2VpdmVyAQdtZXNzYWdlAgRhcmdzAwZwYXJlbnQEBm1ldGhvZAMPAgQBAQNmb3IFAQADZm9yBHsJAANzdHIBA29iagIGbWV0aG9kAwVjbGFzcwQLYXJyX3VuaXR5cGUFEWFsaXN0X3N0cl91bml0eXBlBhZhbGlzdF9zdHJfdW5pdHlwZV9wYWlyBxBhbGlzdF9zdHJfbWV0aG9kCBVhbGlzdF9zdHJfbWV0aG9kX3BhaXIHmwEMAAplbXB0eV9hcmdzAQpzdHJfTW9kdWxlAglzdHJfQ2xhc3MDD3N0cl9CYXNpY09iamVjdAQKc3RyX09iamVjdAUHc3RyX25ldwYJc3RyX2NsYXNzBwhzdHJfbmFtZQgMY2xhc3NfTW9kdWxlCQtjbGFzc19DbGFzcwoRY2xhc3NfQmFzaWNPYmplY3QLDGNsYXNzX09iamVjdA==";
+        const wasm_buffer = Uint8Array.from(atob(wasm_base64), c => c.charCodeAt(0)).buffer;
+        WebAssembly.compile(wasm_buffer).then(wasm => {
+            const wasm_instance = new WebAssembly.Instance(wasm);
+            const output = wasm_instance.exports["__ruby_top_level_function"]();
+            console.log(output);
+        });
+    }
+</script>
+<button onclick="compile_run_wasm()">Compile and run Wasm</button>
+

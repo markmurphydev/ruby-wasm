@@ -1,15 +1,11 @@
-// //! Compiles a Ruby AST to a Wasm module
-//
-// // W for Wasm
-// use crate::unitype::Unitype;
-// use crate::wasm::function::ExportStatus;
-// use crate::wasm::instr_seq::InstrSeqBuilder;
-// use crate::wasm::UnaryOp;
-// use crate::{corelib, node as R, FunctionBuilder};
-// use corelib::class::Class;
+use std::hash::{DefaultHasher, Hash, Hasher};
+use wat_defs::instr::Instr;
+use crate::node::{Call, ConstantRead, Expr, GlobalVariableRead, GlobalVariableWrite, If, Program, Statements, Subsequent, Until, While};
+use crate::unitype::Unitype;
 use wat_defs::module::Module;
-use crate::node::Program;
-// use std::hash::{DefaultHasher, Hash, Hasher};
+use wat_macro::wat;
+use crate::corelib;
+use crate::corelib::class::Class;
 
 pub const RUBY_TOP_LEVEL_FUNCTION_NAME: &str = "__ruby_top_level_function";
 
@@ -17,273 +13,235 @@ pub struct CompileCtx<'a> {
     pub module: &'a mut Module,
 }
 
-impl <'a> CompileCtx<'a> {
+impl<'a> CompileCtx<'a> {
     pub fn new(module: &'a mut Module) -> CompileCtx<'a> {
-        CompileCtx {
-            module
-        }
+        CompileCtx { module }
     }
 }
 
 pub fn compile(ctx: &mut CompileCtx<'_>, program: &Program) {
+    // TODO: exported.
+    let stmts = compile_program(ctx, program);
+    let top_level_func = wat! {
+        (func ,(RUBY_TOP_LEVEL_FUNCTION_NAME.to_string())
+            (export ,(RUBY_TOP_LEVEL_FUNCTION_NAME.to_string()))
+            (result (ref eq))
+            ,(stmts))
+    };
+    ctx.module.funcs.push(top_level_func);
 }
 
-// pub fn compile(ctx: &mut CompileCtx<'_>, program: &R::Program) {
-//     // Build the top-level function
-//     let top_level_builder = FunctionBuilder::new(
-//         ctx,
-//         RUBY_TOP_LEVEL_FUNCTION_NAME,
-//         ExportStatus::Exported,
-//         None,
-//         Box::new([]),
-//         Box::new([Unitype::UNITYPE.into_result_type()]),
-//         vec![]
-//     );
-//     compile_program(ctx, &top_level_builder, program);
-//     top_level_builder.finish(&mut ctx.module.funcs);
-// }
-//
-// fn compile_program(
-//     ctx: &mut CompileCtx<'_>,
-//     top_level_builder: &FunctionBuilder,
-//     program: &R::Program,
-// ) {
-//     compile_statements(ctx, &mut top_level_builder.func_body(), &program.statements);
-// }
-//
-// fn compile_statements(
-//     ctx: &mut CompileCtx<'_>,
-//     builder: &InstrSeqBuilder,
-//     statements: &R::Statements,
-// ) {
-//     let R::Statements { body } = statements;
-//
-//     // In Ruby, every expression returns a value or nil.
-//     // If there are no statements, return nil.
-//     // Suppress all values except the last.
-//     if body.is_empty() {
-//         builder.i31_const(ctx, Unitype::NIL_BIT_PATTERN);
-//     } else {
-//         let last_statement_idx = body.len() - 1;
-//         for expr in (&body[0..last_statement_idx]).into_iter() {
-//             compile_expr(ctx, builder, expr);
-//             builder.drop(ctx);
-//         }
-//         compile_expr(ctx, builder, &body[last_statement_idx]);
-//     }
-// }
-//
-// fn compile_expr(ctx: &mut CompileCtx<'_>, builder: &InstrSeqBuilder, expr: &R::Expr) {
-//     match expr {
-//         &R::Expr::Integer(n) => compile_integer(ctx, builder, n),
-//         R::Expr::SingleQuoteString(s) => compile_single_quote_string(ctx, builder, s),
-//
-//         R::Expr::False => {
-//             builder.i31_const(ctx, Unitype::FALSE_BIT_PATTERN);
-//         }
-//         R::Expr::True => {
-//             builder.i31_const(ctx, Unitype::TRUE_BIT_PATTERN);
-//         }
-//         R::Expr::Nil => {
-//             builder.i31_const(ctx, Unitype::NIL_BIT_PATTERN);
-//         }
-//
-//         R::Expr::GlobalVariableWrite(global_write) => {
-//             compile_global_variable_write(ctx, global_write)
-//         }
-//         R::Expr::GlobalVariableRead(global_read) => {
-//             compile_global_variable_read(ctx, builder, global_read)
-//         }
-//         R::Expr::ConstantWrite(_constant_write) => todo!(),
-//         R::Expr::ConstantRead(constant_read_expr) => {
-//             compile_constant_read_expr(ctx, builder, &*constant_read_expr)
-//         }
-//
-//         R::Expr::If(if_expr) => compile_if_expr(ctx, builder, &*if_expr),
-//         R::Expr::While(while_expr) => compile_while_expr(ctx, builder, &*while_expr),
-//         R::Expr::Until(until_expr) => compile_until_expr(ctx, builder, &*until_expr),
-//         R::Expr::Call(call_expr) => compile_call_expr(ctx, builder, &*call_expr),
-//     }
-// }
-//
-// /// Convert the given integer into a Wasm fixnum or const global representation
-// fn compile_integer(ctx: &mut CompileCtx<'_>, builder: &InstrSeqBuilder, n: i64) {
-//     let unitype = Unitype::from_integer(n);
-//     match unitype {
-//         fixnum @ Unitype::Fixnum(_) => {
-//             builder.i31_const(ctx, fixnum.to_i31_bits());
-//         }
-//         Unitype::HeapNum(heapnum) => {
-//             // `heapnum` is a constant value.
-//             // So, create a global and get its value.
-//
-//             // TODO -- We need to dedup constant heapnums.
-//             //  If you have 2 of the same-valued global this probably breaks at validation time.
-//             let global_id = format!("global-i32-{}", heapnum);
-//
-//             let global_builder =
-//                 GlobalBuilder::new(ctx.module, Unitype::GLOBAL_CONST_TYPE, global_id.clone());
-//             global_builder.instr_seq().i64_const(ctx, heapnum);
-//             global_builder.finish(ctx);
-//
-//             builder.global_get(ctx, global_id);
-//         }
-//         _ => unreachable!(),
-//     }
-// }
-//
-// fn compile_single_quote_string(ctx: &mut CompileCtx<'_>, builder: &InstrSeqBuilder, str: &String) {
-//     // TODO -- Dedup strings.
-//     let mut hasher = DefaultHasher::new();
-//     str.hash(&mut hasher);
-//     let global_id = format!("single-quote-string-{}", hasher.finish());
-//     let global_builder =
-//         GlobalBuilder::new(ctx.module, Unitype::GLOBAL_CONST_TYPE, global_id.clone());
-//     for byte in str.bytes() {
-//         global_builder.instr_seq().i32_const(ctx, byte as i32);
-//     }
-//     let len_bytes = i32::try_from(str.as_bytes().len()).unwrap();
-//     global_builder
-//         .instr_seq()
-//         .array_new_fixed(ctx, "unitype-string".to_string(), len_bytes);
-//     global_builder.finish(ctx);
-//
-//     builder.global_get(ctx, global_id.clone());
-// }
-//
-// /// Add a global to the Module, setting its value to the write's rhs.
-// fn compile_global_variable_write(ctx: &mut CompileCtx<'_>, global_write: &R::GlobalVariableWrite) {
-//     let R::GlobalVariableWrite { name, expr } = global_write;
-//
-//     let global_builder = GlobalBuilder::new(ctx.module, Unitype::GLOBAL_MUT_TYPE, name.clone());
-//     let instr_seq_builder = global_builder.instr_seq();
-//     compile_expr(ctx, &instr_seq_builder, expr);
-//     global_builder.finish(ctx);
-// }
-//
-// fn compile_global_variable_read(
-//     ctx: &mut CompileCtx<'_>,
-//     builder: &InstrSeqBuilder,
-//     global_read: &R::GlobalVariableRead,
-// ) {
-//     let R::GlobalVariableRead { name } = global_read;
-//
-//     builder.global_get(ctx, name.clone());
-// }
-//
-// fn compile_constant_read_expr(
-//     ctx: &mut CompileCtx<'_>,
-//     builder: &InstrSeqBuilder,
-//     constant_read_expr: &R::ConstantRead,
-// ) {
-//     // TODO -- Assuming all constants are classes.
-//     let R::ConstantRead { name } = constant_read_expr;
-//     builder.global_get(ctx, Class::name_to_identifier(name));
-// }
-//
-// fn compile_if_expr(ctx: &mut CompileCtx<'_>, builder: &InstrSeqBuilder, if_expr: &R::If) {
-//     let R::If {
-//         predicate,
-//         statements,
-//         subsequent,
-//     } = if_expr;
-//     builder.if_else(
-//         ctx,
-//         Some(Unitype::UNITYPE.into_block_type_result()),
-//         |ctx, builder| compile_expr_to_wasm_predicate(ctx, builder, predicate),
-//         |ctx, builder| {
-//             compile_statements(ctx, builder, statements);
-//         },
-//         |ctx, builder| match subsequent {
-//             R::Subsequent::None => {
-//                 builder.i31_const(ctx, Unitype::NIL_BIT_PATTERN);
-//             }
-//             R::Subsequent::Elsif(if_expr) => compile_if_expr(ctx, builder, &if_expr),
-//             R::Subsequent::Else(else_expr) => {
-//                 compile_statements(ctx, builder, &else_expr.statements)
-//             }
-//         },
-//     );
-// }
-//
-// fn compile_while_expr(ctx: &mut CompileCtx<'_>, builder: &InstrSeqBuilder, while_expr: &R::While) {
-//     // while ->
-//     // (loop
-//     //   (if UNITYPE predicate
-//     //      (then statements)
-//     //      (else (break)))
-//     let R::While {
-//         predicate,
-//         statements,
-//     } = while_expr;
-//
-//     let label = "while".to_string();
-//
-//     builder.loop_(ctx, label.clone(), |ctx, builder| {
-//         builder.if_else(
-//             ctx,
-//             Some(Unitype::UNITYPE.into_block_type_result()),
-//             |ctx, builder| {
-//                 compile_expr_to_wasm_predicate(ctx, builder, predicate);
-//             },
-//             |ctx, builder| compile_statements(ctx, builder, statements),
-//             |ctx, builder| {
-//                 builder.br(ctx, label);
-//             },
-//         );
-//     });
-// }
-//
-// fn compile_until_expr(ctx: &mut CompileCtx<'_>, builder: &InstrSeqBuilder, until_expr: &R::Until) {
-//     // TODO -- It might be nicer to have an IR where `until` is lowered to `while`
-//     // while ->
-//     // (loop
-//     //   (if UNITYPE (not predicate)
-//     //      (then statements)))
-//     let R::Until {
-//         predicate,
-//         statements,
-//     } = until_expr;
-//     let label = "until".to_string();
-//
-//     builder.loop_(ctx, label.clone(), |ctx, builder| {
-//         builder.if_else(
-//             ctx,
-//             Some(Unitype::UNITYPE.into_block_type_result()),
-//             |ctx, builder| {
-//                 compile_expr_to_wasm_predicate(ctx, builder, predicate);
-//                 // `binary_not ≡ eqz` when result is interpreted as boolean
-//                 builder.unop(ctx, UnaryOp::I32Eqz);
-//             },
-//             |ctx, builder| compile_statements(ctx, builder, statements),
-//             |ctx, builder| {
-//                 builder.br(ctx, label);
-//             },
-//         );
-//     });
-// }
-//
-// fn compile_call_expr(ctx: &mut CompileCtx<'_>, builder: &InstrSeqBuilder, call_expr: &R::Call) {
-//     let R::Call { receiver, name } = call_expr;
-//     compile_expr(ctx, builder, receiver);
-//     builder
-//         .global_get(ctx, corelib::global::string_identifier(name))
-//         .global_get(ctx, "empty-args".to_string())
-//         .call(ctx, "call".to_string());
-// }
-//
-//
-// /// Turns a Ruby Expr into a Wasm predicate.
-// /// A ruby Expr evaluates to a ruby-value (True, False, Nil, ...)
-// /// To use as a Wasm predicate, we need to test whether the result is truthy or not.
-// /// TODO -- right now we pretend that "truthy" is "not-false"
-// fn compile_expr_to_wasm_predicate(
-//     ctx: &mut CompileCtx<'_>,
-//     builder: &InstrSeqBuilder,
-//     expr: &R::Expr,
-// ) {
-//     compile_expr(ctx, builder, expr);
-//     builder
-//         .call(ctx, "is_false".to_string())
-//         .unop(ctx, UnaryOp::I32Eqz);
-// }
+fn compile_program(ctx: &mut CompileCtx<'_>, program: &Program) -> Vec<Instr> {
+    compile_statements(ctx, &program.statements)
+}
+
+fn compile_statements(ctx: &mut CompileCtx<'_>, statements: &Statements) -> Vec<Instr> {
+    let Statements { body } = statements;
+
+    // In Ruby, every expression returns a value or nil.
+    // If there are no statements, return nil.
+    // Suppress all values except the last.
+    if body.is_empty() {
+        i31_const(Unitype::NIL_BIT_PATTERN)
+    } else {
+        let mut stmts = vec![];
+        for expr in body.iter() {
+            stmts.append(&mut compile_expr(ctx, expr));
+        }
+        stmts
+    }
+}
+
+fn compile_expr(ctx: &mut CompileCtx<'_>, expr: &Expr) -> Vec<Instr> {
+    match expr {
+        &Expr::Integer(n) => compile_integer(ctx, n),
+        Expr::SingleQuoteString(s) => compile_single_quote_string(ctx, s),
+        Expr::False => i31_const(Unitype::FALSE_BIT_PATTERN),
+        Expr::True => i31_const(Unitype::TRUE_BIT_PATTERN),
+        Expr::Nil => i31_const(Unitype::NIL_BIT_PATTERN),
+        Expr::GlobalVariableWrite(global_write) => compile_global_variable_write(ctx, global_write),
+        Expr::GlobalVariableRead(global_read) => {
+            compile_global_variable_read(ctx, global_read)
+        }
+        Expr::ConstantWrite(_constant_write) => todo!(),
+        Expr::ConstantRead(constant_read_expr) => {
+            compile_constant_read_expr(ctx, &*constant_read_expr)
+        }
+
+        Expr::If(if_expr) => compile_if_expr(ctx, &*if_expr),
+        Expr::While(while_expr) => compile_while_expr(ctx, &*while_expr),
+        Expr::Until(until_expr) => compile_until_expr(ctx, &*until_expr),
+        Expr::Call(call_expr) => compile_call_expr(ctx, &*call_expr),
+    }
+}
+
+/// Convert the given integer into a Wasm fixnum or const global representation
+fn compile_integer(ctx: &mut CompileCtx<'_>, n: i64) -> Vec<Instr> {
+    let unitype = Unitype::from_integer(n);
+    match unitype {
+        fixnum @ Unitype::Fixnum(_) => {
+            i31_const(fixnum.to_i31_bits())
+        }
+        Unitype::HeapNum(heapnum) => {
+            // `heapnum` is a constant value.
+            // So, create a global and get its value.
+
+            // TODO -- We need to dedup constant heapnums.
+            //  If you have 2 of the same-valued global this probably breaks at validation time.
+            let global_id = format!("global_i32_{}", heapnum);
+            let global = wat![ (global ,(global_id) (ref eq) (const_i64 ,(heapnum))) ];
+            ctx.module.globals.push(global);
+
+            wat![ (global_get ,(global_id)) ]
+        }
+        _ => unreachable!(),
+    }
+}
+
+fn compile_single_quote_string(ctx: &mut CompileCtx<'_>, str: &String) -> Vec<Instr> {
+    // TODO -- Dedup strings.
+    let mut hasher = DefaultHasher::new();
+    str.hash(&mut hasher);
+    let global_id = format!("single_quote_string_{}", hasher.finish());
+
+    let bytes: Vec<_> = str.bytes().map(|b| wat![ (const_i32 ,(b as i64)) ]).flatten().collect();
+    let len = bytes.len() as i64;
+    let global = wat! {
+        (global ,(global_id.clone()) (ref $str)
+            (array_new_fixed $str ,(len)
+                ,(bytes)))
+    };
+    ctx.module.globals.push(global);
+
+    wat![ (global_get ,(global_id)) ]
+}
+
+/// Add a global to the Module, setting its value to the write's rhs.
+fn compile_global_variable_write(
+    ctx: &mut CompileCtx<'_>,
+    global_write: &GlobalVariableWrite,
+) -> Vec<Instr> {
+    let GlobalVariableWrite { name, expr } = global_write;
+
+    if !ctx.module.globals.iter().any(|glob| glob.name == *name) {
+        let global = wat![ (global ,(name) (mut (ref eq)) )];
+        ctx.module.globals.push(global);
+    }
+
+    let rhs = compile_expr(ctx, expr);
+    wat![ (global_set ,(name.to_string()) ,(rhs)) ]
+}
+
+fn compile_global_variable_read(
+    ctx: &mut CompileCtx<'_>,
+    global_read: &GlobalVariableRead,
+) -> Vec<Instr> {
+    let GlobalVariableRead { name } = global_read;
+    wat![ (global_get ,(name.to_string())) ]
+}
+
+fn compile_constant_read_expr(
+    ctx: &mut CompileCtx<'_>,
+    constant_read_expr: &ConstantRead,
+) -> Vec<Instr> {
+    // TODO -- Assuming all constants are classes.
+    let ConstantRead { name } = constant_read_expr;
+    let name = Class::name_to_identifier(name);
+    wat![ (global_get ,(name)) ]
+}
+
+fn compile_if_expr(
+    ctx: &mut CompileCtx<'_>,
+    if_expr: &If,
+) -> Vec<Instr> {
+    let If {
+        predicate,
+        statements,
+        subsequent,
+    } = if_expr;
+    let else_branch = match subsequent {
+        Subsequent::None => i31_const(Unitype::NIL_BIT_PATTERN),
+        Subsequent::Elsif(if_expr) => compile_if_expr(ctx, &if_expr),
+        Subsequent::Else(else_expr) => compile_statements(ctx, &else_expr.statements),
+    };
+
+    wat! {
+        (if (result (ref eq))
+            ,(compile_expr_to_wasm_predicate(ctx, predicate))
+            (then ,(compile_statements(ctx, statements)))
+            (else ,(else_branch))
+        )
+    }
+}
+
+fn compile_while_expr(
+    ctx: &mut CompileCtx<'_>,
+    while_expr: &While,
+) -> Vec<Instr> {
+    let While {
+        predicate,
+        statements,
+    } = while_expr;
+    let predicate = compile_expr_to_wasm_predicate(ctx, predicate);
+    let stmts = compile_statements(ctx, statements);
+
+    wat! {
+        (loop $while
+            (if (result (ref eq))
+                ,(predicate)
+                (then ,(stmts))
+                (else (br $while))
+            )
+        )
+    }
+}
+
+fn compile_until_expr(
+    ctx: &mut CompileCtx<'_>,
+    until_expr: &Until,
+) -> Vec<Instr> {
+    // TODO -- It might be nicer to have an IR where `until` is lowered to `while`
+    let Until {
+        predicate,
+        statements,
+    } = until_expr;
+    let predicate = compile_expr_to_wasm_predicate(ctx, predicate);
+    let stmts = compile_statements(ctx, statements);
+    wat! {
+        (loop $until
+            (i32_eqz ,(predicate))
+            (then ,(stmts))
+            (br $label)
+        )
+    }
+}
+
+fn compile_call_expr(ctx: &mut CompileCtx<'_>, call_expr: &Call) -> Vec<Instr> {
+    let Call { receiver, name } = call_expr;
+    let mut args = compile_expr(ctx, receiver);
+    let name = corelib::global::string_identifier(name);
+    // TODO: parsing broken. work-around.
+    args.append(&mut wat!{
+            (global_get ,(name))
+            (global_get $empty_args)
+    });
+    wat! {
+        (call $call
+            ,(args))
+    }
+}
+
+/// Turns a Ruby Expr into a Wasm predicate.
+/// A ruby Expr evaluates to a ruby-value (True, False, Nil, ...)
+/// To use as a Wasm predicate, we need to test whether the result is truthy or not.
+/// TODO -- right now we pretend that "truthy" is "not-false"
+fn compile_expr_to_wasm_predicate(ctx: &mut CompileCtx<'_>, expr: &Expr) -> Vec<Instr> {
+    let expr = compile_expr(ctx, expr);
+    wat! {
+        (i32_eqz (call $is_false ,(expr)))
+    }
+}
+
+fn i31_const(bits: i32) -> Vec<Instr> {
+    wat![ (ref_i31 (const_i32 ,(bits.into()))) ]
+}

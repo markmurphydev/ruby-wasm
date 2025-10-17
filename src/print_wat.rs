@@ -9,6 +9,7 @@ use std::borrow::Cow;
 use wat_defs::func::{Exported, Func, Local, Param};
 use wat_defs::global::Global;
 use wat_defs::instr::{Instr, UnfoldedInstr};
+use wat_defs::instr::UnfoldedInstr::Return;
 use wat_defs::module::{Module, TypeDef};
 use wat_defs::ty::{
     AbsHeapType, ArrayType, BlockType, CompType, Field, FieldType, Final, FuncType, GlobalType,
@@ -263,6 +264,7 @@ fn unfolded_instr_to_doc(instr: &UnfoldedInstr) -> Doc {
         If { .. } => unreachable!(),
         RefNull { ty } => text(format!("ref.null ${}", ty)),
         RefFunc { name } => text(format!("ref.func ${}", name)),
+        RefI31 => text("ref.i31"),
         RefAsNonNull => text("ref.as_non_null"),
         RefCast { ty } => text("ref.cast").append(ref_type_to_doc(ty)),
         Call { func } => text(format!("call ${}", func)),
@@ -487,7 +489,7 @@ fn val_type_to_doc(ty: &ValType) -> Doc {
 fn num_type_to_doc(ty: &NumType) -> Doc {
     text(match ty {
         NumType::I32 => "i32",
-        // NumType::I64 => "i64",
+        NumType::I64 => "i64",
         // NumType::F32 => "f32",
         // NumType::F64 => "f64",
     })
