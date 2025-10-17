@@ -1,10 +1,6 @@
 //! Ruby values lowered to a union of all possible values.
 //! Converted into Wasm `(ref eq)` subtypes
 
-use crate::wasm::types::{
-    AbsHeapType, ArrayType, CompType, FieldType, GlobalType, HeapType, Mutability, Nullability,
-    PackType, RefType,
-};
 use pretty::RcDoc;
 use serde::Serialize;
 use wasmtime::{AnyRef, Rooted};
@@ -36,36 +32,36 @@ pub struct Fixnum(i32);
 impl Unitype {
     /// Wasm-supertype of all Ruby values
     /// ≡ `(ref eq)`
-    pub const UNITYPE: RefType = RefType::new_abstract(AbsHeapType::Eq, Nullability::NonNullable);
+    // pub const UNITYPE: RefType = RefType::new_abstract(AbsHeapType::Eq, Nullability::NonNullable);
 
     /// `(ref i31)`
-    pub const REF_I31: RefType = RefType::new_abstract(AbsHeapType::I31, Nullability::NonNullable);
+    // pub const REF_I31: RefType = RefType::new_abstract(AbsHeapType::I31, Nullability::NonNullable);
 
-    pub const STRING_TYPE_IDENTIFIER: &'static str = "str";
-    pub const STRING_TYPE: CompType = CompType::Array(ArrayType {
-        field: FieldType {
-            mutability: Mutability::Const,
-            ty: PackType::I8.into_storage_type(),
-        },
-    });
-    pub fn string_ref_type() -> RefType {
-        RefType {
-            nullable: Nullability::NonNullable,
-            heap_type: HeapType::Identifier(Self::STRING_TYPE_IDENTIFIER.to_string()),
-        }
-    }
-
-    /// Global<Unitype>
-    pub const GLOBAL_CONST_TYPE: GlobalType = GlobalType {
-        mutable: Mutability::Const,
-        val_type: Self::UNITYPE.into_val_type(),
-    };
-
-    /// mut Global<Unitype>
-    pub const GLOBAL_MUT_TYPE: GlobalType = GlobalType {
-        mutable: Mutability::Mut,
-        val_type: Self::UNITYPE.into_val_type(),
-    };
+    // pub const STRING_TYPE_IDENTIFIER: &'static str = "str";
+    // pub const STRING_TYPE: CompType = CompType::Array(ArrayType {
+    //     field: FieldType {
+    //         mutability: Mutability::Const,
+    //         ty: PackType::I8.into_storage_type(),
+    //     },
+    // });
+    // pub fn string_ref_type() -> RefType {
+    //     RefType {
+    //         nullable: Nullability::NonNullable,
+    //         heap_type: HeapType::Identifier(Self::STRING_TYPE_IDENTIFIER.to_string()),
+    //     }
+    // }
+    // 
+    // /// Global<Unitype>
+    // pub const GLOBAL_CONST_TYPE: GlobalType = GlobalType {
+    //     mutable: Mutability::Const,
+    //     val_type: Self::UNITYPE.into_val_type(),
+    // };
+    // 
+    // /// mut Global<Unitype>
+    // pub const GLOBAL_MUT_TYPE: GlobalType = GlobalType {
+    //     mutable: Mutability::Mut,
+    //     val_type: Self::UNITYPE.into_val_type(),
+    // };
 
     pub const FALSE_BIT_PATTERN: i32 = 0b0001;
     pub const TRUE_BIT_PATTERN: i32 = 0b0011;

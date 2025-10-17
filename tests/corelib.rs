@@ -5,11 +5,6 @@
 
 use ruby_wasm::CompileCtx;
 use ruby_wasm::unitype::Unitype;
-use ruby_wasm::wasm::TypeDef;
-use ruby_wasm::wasm::types::{
-    ArrayType, CompType, FieldType, HeapType, Mutability, Nullability, RefType, StorageType,
-    StructType, SubType, ValType,
-};
 
 /// Wraps `body` in a function definition, includes the corelib definitions,
 /// and runs the file.
@@ -29,9 +24,9 @@ fn run_main_fn_body(body: &str) -> Unitype {
 #[test]
 pub fn run_without_panicking() {
     // `run_main_fn_body` expects a function `() -> (ref eq)`, so just return `I31::const(0)`
-    // let main_fn = "\
-    // (ref.i31 (i32.const 0))
-    // ";
-    // let res = run_main_fn_body(main_fn);
-    // println!("{}", res.to_pretty());
+    let main_fn = "\
+    (ref.i31 (i32.const 3))
+    ";
+    let res = run_main_fn_body(main_fn);
+    println!("{}", res.to_pretty());
 }

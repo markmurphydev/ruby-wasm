@@ -50,25 +50,15 @@ pub fn parse_func(input: ParseInput) -> Result<TokenStream> {
     })
 }
 
-fn parse_params(input: ParseInput) -> Result<TokenStream> {
-    let mut params = Vec::new();
-    loop {
-        match parse_param(input) {
-            Ok(param) => params.push(param),
-            Err(_) => break,
-        }
-    }
-    Ok(quote! { vec![ #(#params),* ] })
+pub fn parse_params(input: ParseInput) -> Result<TokenStream> {
+    parse_while_ok(input, parse_param)
 }
 
 fn parse_param(input: ParseInput) -> Result<TokenStream> {
     match expect_open_paren_named(&["param"], input) {
         Ok((mut input, _)) => {
             let input = &mut input;
-            let name = {
-                let name = expect_sym(input)?.to_string();
-                quote![ #name.to_string() ]
-            };
+            let name = parse_name(input)?;
             let ty = ty::parse_val_type(input)?;
 
             Ok(quote! {
@@ -82,15 +72,8 @@ fn parse_param(input: ParseInput) -> Result<TokenStream> {
     }
 }
 
-fn parse_results(input: ParseInput) -> Result<TokenStream> {
-    let mut results = Vec::new();
-    loop {
-        match parse_result(input) {
-            Ok(param) => results.push(param),
-            Err(_) => break,
-        }
-    }
-    Ok(quote! { vec![ #(#results),* ] })
+pub fn parse_results(input: ParseInput) -> Result<TokenStream> {
+    parse_while_ok(input, parse_result)
 }
 
 fn parse_result(input: ParseInput) -> Result<TokenStream> {
@@ -101,24 +84,14 @@ fn parse_result(input: ParseInput) -> Result<TokenStream> {
 }
 
 fn parse_locals(input: ParseInput) -> Result<TokenStream> {
-    let mut locals = Vec::new();
-    loop {
-        match parse_local(input) {
-            Ok(param) => locals.push(param),
-            Err(_) => break,
-        }
-    }
-    Ok(quote! { vec![ #(#locals),* ] })
+    parse_while_ok(input, parse_local)
 }
 
 fn parse_local(input: ParseInput) -> Result<TokenStream> {
     match expect_open_paren_named(&["local"], input) {
         Ok((mut input, _)) => {
             let input = &mut input;
-            let name = {
-                let name = expect_sym(input)?.to_string();
-                quote![ #name.to_string() ]
-            };
+            let name = parse_name(input)?;
             let ty = ty::parse_val_type(input)?;
 
             Ok(quote! {

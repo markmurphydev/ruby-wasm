@@ -1,12 +1,16 @@
-use crate::corelib::type_def::METHOD_TYPE_IDENTIFIER;
-use crate::unitype::Unitype;
-use crate::wasm::{Finality, TypeDef};
-use crate::wasm::types::{
-    AbsHeapType, ArrayType, CompType, FieldType, HeapType, Mutability, Nullability, RefType,
-    StorageType, StructType, SubType, ValType,
-};
-use crate::{CompileCtx, run_ruby_program};
+use wat_defs::module::TypeDef;
+use wat_defs::ty::{RefType, StorageType};
+use wat_macro::wat;
 
+// use crate::corelib::type_def::METHOD_TYPE_IDENTIFIER;
+// use crate::unitype::Unitype;
+// use crate::wasm::{Finality, TypeDef};
+// use crate::wasm::types::{
+//     AbsHeapType, ArrayType, CompType, FieldType, HeapType, Mutability, Nullability, RefType,
+//     StorageType, StructType, SubType, ValType,
+// };
+// use crate::{CompileCtx, run_ruby_program};
+//
 /// Most AList key, val types are written `(ref $<IDENTIFIER>)`.
 /// However, some types can't be given an identifier in Wasm.
 /// The main one of concern is [Unitype], which is represented as inline `(ref eq)` in .wat.
@@ -19,23 +23,20 @@ pub enum AListValTypeIdentifier {
 impl AListValTypeIdentifier {
     pub fn ref_type(&self) -> RefType {
         match self {
-            AListValTypeIdentifier::Unitype => Unitype::UNITYPE,
-            AListValTypeIdentifier::Identifier(ident) => RefType {
-                nullable: Nullability::NonNullable,
-                heap_type: HeapType::Identifier(ident.to_string()),
-            },
+            AListValTypeIdentifier::Unitype => wat![ (ref eq) ],
+            AListValTypeIdentifier::Identifier(ident) => wat![ (ref ,(ident.to_string())) ],
         }
     }
 }
 
 /// An assoc-list of type `[ {key: <KEY>, val: <VAL>} ]`
 /// Used as a temporary alternative to hash tables.
-#[derive(Clone, Debug, PartialEq, Eq, Hash)]
+#[derive(Debug)]
 pub struct AListTypeDef {
     /// Identifier of the `key` field of this AList's pairs
     pub key_type_identifier: String,
     /// Type of the `val` field of this AList's pairs
-    pub val_type: RefType,
+    pub val_type: StorageType,
 }
 
 impl AListTypeDef {
@@ -80,18 +81,17 @@ impl AListTypeDef {
     /// ```
     ///
     /// Returns `[alist_def, alist_pair_def]`
-    pub fn into_type_defs(self, ctx: &mut CompileCtx<'_>) -> [TypeDef; 2] {
-        let alist_type_def = TypeDef::new(
-            ctx,
-            &self.alist_type_identifier(),
-            SubType {
-                is_final: Finality::Final,
-                supertypes: vec![],
-                comp_type: CompType::Array(ArrayType {
-                    field: FieldType::ref_identifier(self.alist_pair_type_identifier()),
-                }),
-            },
-        );
+    pub fn into_type_defs(self) -> [TypeDef; 2] {
+        let alist_type_def = wat! {
+            (type ,(self.alist_type_identifier())
+                   (array (ref ,(self.alist_pair_type_identifier()))))
+        };
+
+        let alist_pair_type_def = wat! {
+            (type ,(self.alist_pair_type_identifier())
+                   (struct (field $key (ref ,(self.key_type_identifier)))
+                           (field $val ,(self.val_type))))
+        };
 
         let alist_pair_type_def = TypeDef::new(
             ctx,

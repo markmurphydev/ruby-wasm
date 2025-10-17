@@ -25,7 +25,7 @@ pub enum UnfoldedInstr {
 
 #[derive(Debug)]
 pub struct Instr {
-    pub instr: UnfoldedInstr,
+    pub unfolded_instr: UnfoldedInstr,
     pub folded_instrs: Vec<Instr>,
 }
 

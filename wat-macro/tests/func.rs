@@ -19,6 +19,6 @@ pub fn func_full() {
             (const_i32 1))
     };
     let actual = &format!("{:?}", actual);
-    let expected = expect![[r#"Func { name: "my_func", exported: NotExported, type_use: None, params: [Param { name: "a", ty: Num(I32) }, Param { name: "b", ty: Ref(RefType { null: Nullable, heap_type: TypeIdx("str") }) }], results: [Num(I32)], locals: [Local { name: "c", ty: Num(I32) }], instrs: [Instr { instr: Const { ty: I32, val: 1 }, folded_instrs: [] }] }"#]];
+    let expected = expect![[r#"Func { name: "my_func", exported: NotExported, type_use: None, params: [Param { name: "a", ty: Num(I32) }, Param { name: "b", ty: Ref(RefType { null: Nullable, heap_type: TypeIdx("str") }) }], results: [Num(I32)], locals: [Local { name: "c", ty: Num(I32) }], instrs: [Instr { unfolded_instr: Const { ty: I32, val: 1 }, folded_instrs: [] }] }"#]];
     expected.assert_eq(actual);
 }

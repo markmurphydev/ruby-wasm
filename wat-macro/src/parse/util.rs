@@ -1,6 +1,7 @@
 use crate::parse::parse_stream::{ParseInput, ParseStream};
 use crate::result::{Error, Result};
 use proc_macro2::{Delimiter, Ident, Punct, TokenTree, TokenStream};
+use quote::quote;
 
 macro_rules! check_quasi_quote {
     ($input:expr => $exp:expr) => {
@@ -11,6 +12,25 @@ macro_rules! check_quasi_quote {
     };
 }
 pub(crate) use check_quasi_quote;
+
+/// Parse a symbol `$<name>`, and return `"<name>".to_string()`
+pub fn parse_name(input: ParseInput) -> Result<TokenStream> {
+    check_quasi_quote!(input => {
+        let name = expect_sym(input)?.to_string();
+        Ok(quote![ #name.to_string() ])
+    })
+}
+
+pub fn parse_while_ok(input: ParseInput, f: fn(ParseInput) -> Result<TokenStream>) -> Result<TokenStream> {
+    let mut res = Vec::new();
+    loop {
+        match f(input) {
+            Ok(param) => res.push(param),
+            Err(_) => break,
+        }
+    }
+    Ok(quote! { vec![ #(#res),* ] })
+}
 
 pub fn expect_quasi_quote(input: ParseInput) -> Result<TokenStream> {
     match peek_quasi_quote(input) {

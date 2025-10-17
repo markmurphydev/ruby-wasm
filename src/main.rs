@@ -1,16 +1,16 @@
 use clap::Parser as ParserTrait;
 use clap::Subcommand;
-use ruby_wasm::compiler;
+use ruby_wasm::{compiler, CompileCtx};
 use ruby_wasm::compiler::RUBY_TOP_LEVEL_FUNCTION_NAME;
 use ruby_wasm::lexeme::LexemeKind;
 use ruby_wasm::lexer::Lexer;
 use ruby_wasm::parser::Parser;
-use ruby_wasm::unitype::{Unitype, WasmtimeRefEq};
-use ruby_wasm::wasm::module::Module;
 use ruby_wasm::{binary, html};
 use std::fs;
 use wasmtime::{Config, Engine, Instance, Store};
 use ruby_wasm::node::Program;
+use ruby_wasm::print_wat::module_to_pretty;
+use wat_defs::module::Module;
 
 #[derive(clap::Parser)]
 #[command(version, about, long_about = None)]
@@ -76,48 +76,49 @@ fn main() {
 
     match cli.command {
         Command::Lex { text } => {
-            let mut lexer = Lexer::new(&text);
-            loop {
-                let lexeme = lexer.next();
-                println!("{:?}", lexeme);
-                if let LexemeKind::Eof = lexeme.kind {
-                    return;
-                }
-            }
+            // let mut lexer = Lexer::new(&text);
+            // loop {
+            //     let lexeme = lexer.next();
+            //     println!("{:?}", lexeme);
+            //     if let LexemeKind::Eof = lexeme.kind {
+            //         return;
+            //     }
+            // }
         }
 
         Command::Parse { text } => {
-            let parser = Parser::new(Lexer::new(&text));
-            println!("{:?}", parser.parse());
+            // let parser = Parser::new(Lexer::new(&text));
+            // println!("{:?}", parser.parse());
         }
 
         Command::Compile { text } => {
-            let parser = Parser::new(Lexer::new(&text));
-            let program = parser.parse();
-            let mut module = Module::new();
-            let mut ctx = ruby_wasm::corelib::add_core_items(&mut module);
-            compiler::compile(&mut ctx, &program);
-            println!("{:?}", module);
+            // let parser = Parser::new(Lexer::new(&text));
+            // let program = parser.parse();
+            // let mut module = Module::new();
+            // let mut ctx = ruby_wasm::corelib::add_core_items(&mut module);
+            // compiler::compile(&mut ctx, &program);
+            // println!("{:?}", module);
         }
 
         Command::Wat { text } => {
             let parser = Parser::new(Lexer::new(&text));
             let program = parser.parse();
-            let mut module = Module::new();
-            let mut ctx = ruby_wasm::corelib::add_core_items(&mut module);
-            compiler::compile(&mut ctx, &program);
-            let wat = module.to_pretty();
+            let module = &mut Module::new();
+            let ctx = &mut CompileCtx::new(module);
+            ruby_wasm::corelib::add_core_items(ctx);
+            compiler::compile(ctx, &program);
+            let wat = module_to_pretty(ctx.module);
             println!("{}", wat);
         }
 
         Command::Wasm { text } => {
-            let parser = Parser::new(Lexer::new(&text));
-            let program = parser.parse();
-            let mut module = Module::new();
-            let mut ctx = ruby_wasm::corelib::add_core_items(&mut module);
-            compiler::compile(&mut ctx, &program);
-            let bytes = binary::module_to_binary(&module);
-            binary::print_bytes(&bytes);
+            // let parser = Parser::new(Lexer::new(&text));
+            // let program = parser.parse();
+            // let mut module = Module::new();
+            // let mut ctx = ruby_wasm::corelib::add_core_items(&mut module);
+            // compiler::compile(&mut ctx, &program);
+            // let bytes = binary::module_to_binary(&module);
+            // binary::print_bytes(&bytes);
         }
 
         Command::Run { text } => {
@@ -125,35 +126,35 @@ fn main() {
         }
 
         Command::Html { text } => {
-            let parser = Parser::new(Lexer::new(&text));
-            let program = parser.parse();
-            let mut module = Module::new();
-            let mut ctx = ruby_wasm::corelib::add_core_items(&mut module);
-            compiler::compile(&mut ctx, &program);
-            let bytes = binary::module_to_binary(&module);
-            let html = html::make_html_wrapper(&bytes);
-            println!("{}", html);
+            // let parser = Parser::new(Lexer::new(&text));
+            // let program = parser.parse();
+            // let mut module = Module::new();
+            // let mut ctx = ruby_wasm::corelib::add_core_items(&mut module);
+            // compiler::compile(&mut ctx, &program);
+            // let bytes = binary::module_to_binary(&module);
+            // let html = html::make_html_wrapper(&bytes);
+            // println!("{}", html);
         }
 
         Command::Scratch => {
-            let wat = fs::read_to_string("core_generated.wat").unwrap();
-            let mut config = Config::new();
-            config.wasm_function_references(true).wasm_gc(true);
-            let engine = Engine::new(&config).unwrap();
-            let module = wasmtime::Module::new(&engine, wat);
-            let module = module.unwrap();
-            // let mut linker = Linker::new(&engine);
-            let mut store = Store::new(&engine, ());
-            let instance = Instance::new(&mut store, &module, &[]);
-
-            let top_level = instance
-                .unwrap()
-                .get_typed_func::<(), WasmtimeRefEq>(&mut store, RUBY_TOP_LEVEL_FUNCTION_NAME)
-                .unwrap();
-            let res = top_level.call(&mut store, ()).unwrap();
-
-            let output = Unitype::parse_ref_eq(res, &mut store).to_pretty();
-            println!("{}", output);
+            // let wat = fs::read_to_string("core_generated.wat").unwrap();
+            // let mut config = Config::new();
+            // config.wasm_function_references(true).wasm_gc(true);
+            // let engine = Engine::new(&config).unwrap();
+            // let module = wasmtime::Module::new(&engine, wat);
+            // let module = module.unwrap();
+            // // let mut linker = Linker::new(&engine);
+            // let mut store = Store::new(&engine, ());
+            // let instance = Instance::new(&mut store, &module, &[]);
+            //
+            // let top_level = instance
+            //     .unwrap()
+            //     .get_typed_func::<(), WasmtimeRefEq>(&mut store, RUBY_TOP_LEVEL_FUNCTION_NAME)
+            //     .unwrap();
+            // let res = top_level.call(&mut store, ()).unwrap();
+            //
+            // let output = Unitype::parse_ref_eq(res, &mut store).to_pretty();
+            // println!("{}", output);
         }
     }
 }

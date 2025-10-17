@@ -28,7 +28,7 @@ pub fn parse_instr(input: ParseInput) -> Result<TokenStream> {
 
         Ok(quote! {
             wat_defs::instr::Instr {
-                instr: #instr,
+                unfolded_instr: #instr,
                 folded_instrs: #folded_instrs,
             }
         })
@@ -66,7 +66,7 @@ fn parse_if(input: ParseInput) -> Result<TokenStream> {
 
     Ok(quote! {
         wat_defs::instr::Instr {
-            instr: wat_defs::instr::UnfoldedInstr::If {
+            unfolded_instr: wat_defs::instr::UnfoldedInstr::If {
                 label: #label,
                 block_type: #block_type,
                 then_block: #then_block,
@@ -143,7 +143,7 @@ mod test {
     pub fn _if() {
         let input: TokenStream = quote! { (if $label (then (nop)) ) };
         let actual = parse_instr(&mut ParseStream::new(input)).unwrap().to_string();
-        let expected = expect![[r#"wat_defs :: instr :: Instr { instr : wat_defs :: instr :: UnfoldedInstr :: If { label : Some ("label" . to_string ()) , block_type : None , then_block : vec ! [wat_defs :: instr :: Instr { instr : wat_defs :: instr :: UnfoldedInstr :: Nop , folded_instrs : vec ! [] , }] , else_block : Vec :: new () , } , folded_instrs : vec ! [] , }"#]];
+        let expected = expect![[r#"wat_defs :: instr :: Instr { unfolded_instr : wat_defs :: instr :: UnfoldedInstr :: If { label : Some ("label" . to_string ()) , block_type : None , then_block : vec ! [wat_defs :: instr :: Instr { unfolded_instr : wat_defs :: instr :: UnfoldedInstr :: Nop , folded_instrs : vec ! [] , }] , else_block : Vec :: new () , } , folded_instrs : vec ! [] , }"#]];
         expected.assert_eq(&actual);
     }
 }
