@@ -16,10 +16,7 @@ pub fn parse_func(input: ParseInput) -> Result<TokenStream> {
     //  <instr>*)
 
     let (input, _) = &mut expect_open_paren_named(&["func"], input)?;
-    let name = {
-        let name = expect_sym(input)?.to_string();
-        quote![ #name.to_string() ]
-    };
+    let name = parse_name(input)?;
 
     let exported = {
         match expect_open_paren_named(&["export"], input) {
@@ -32,6 +29,13 @@ pub fn parse_func(input: ParseInput) -> Result<TokenStream> {
         }
     };
 
+    let type_use = match expect_open_paren_named(&["type"], input) {
+        Ok((mut input, _)) => {
+            let name = parse_name(&mut input)?;
+            quote![ Some(#name) ]
+        },
+        Err(_) => quote![ None ],
+    };
     let params = parse_params(input)?;
     let results = parse_results(input)?;
     let locals = parse_locals(input)?;
@@ -41,7 +45,7 @@ pub fn parse_func(input: ParseInput) -> Result<TokenStream> {
         wat_defs::func::Func {
             name: #name,
             exported: #exported,
-            type_use: None,
+            type_use: #type_use,
             params: #params,
             results: #results,
             locals: #locals,
@@ -105,14 +109,14 @@ fn parse_local(input: ParseInput) -> Result<TokenStream> {
     }
 }
 
-
+// 
 // #[cfg(test)]
 // mod test {
 //     use crate::parse::ParseStream;
 //     use expect_test::expect;
 //     use quote::quote;
 //     use super::*;
-//
+// 
 //     #[test]
 //     pub fn _func() {
 //         let input: TokenStream = quote! {
@@ -124,4 +128,4 @@ fn parse_local(input: ParseInput) -> Result<TokenStream> {
 //         expected.assert_eq(&actual);
 //     }
 // }
-//
+// 

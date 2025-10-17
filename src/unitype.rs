@@ -41,7 +41,7 @@ impl Unitype {
     /// `(ref i31)`
     // pub const REF_I31: RefType = RefType::new_abstract(AbsHeapType::I31, Nullability::NonNullable);
 
-    // pub const STRING_TYPE_IDENTIFIER: &'static str = "str";
+    pub const STRING_TYPE_IDENTIFIER: &'static str = "str";
     // pub const STRING_TYPE: CompType = CompType::Array(ArrayType {
     //     field: FieldType {
     //         mutability: Mutability::Const,

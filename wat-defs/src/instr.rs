@@ -1,17 +1,37 @@
-use crate::ty::{BlockType, NumType};
+use crate::ty::{BlockType, NumType, RefType};
 
 #[derive(Debug)]
 pub enum UnfoldedInstr {
-    /// No-op instruction.
     Nop,
+
+    I32Eqz,
+
+    I32Eq,
+
+    I32Add,
 
     Const {
         ty: NumType,
         val: i64,
     },
 
+    Br {
+        label: String,
+    },
+
+    BrIf {
+        label: String,
+    },
+
+    Return,
+
+    Block {
+        label: String,
+    },
+
     Loop {
         label: String,
+        block_type: Option<BlockType>,
     },
 
     /// Loop instruction. The test instructions are on the stack (or in `folded_instrs`).
@@ -21,6 +41,75 @@ pub enum UnfoldedInstr {
         then_block: Vec<Instr>,
         else_block: Vec<Instr>,
     },
+
+    RefNull {
+        ty: String,
+    },
+
+    RefFunc {
+        name: String,
+    },
+
+    RefAsNonNull,
+
+    RefCast {
+        ty: RefType,
+    },
+
+    Call {
+        func: String,
+    },
+
+    CallRef {
+        type_idx: String,
+    },
+
+    LocalGet {
+        name: String,
+    },
+
+    LocalSet {
+        name: String,
+    },
+
+    GlobalGet {
+        name: String,
+    },
+
+    GlobalSet {
+        name: String,
+    },
+
+    ArrayNewFixed {
+        type_idx: String,
+        len: i64,
+    },
+
+    ArrayGet {
+        ty: String,
+    },
+
+    ArrayGetU {
+        ty: String,
+    },
+
+    ArrayLen,
+
+    StructNew {
+        ty: String,
+    },
+
+    StructGet {
+        ty: String,
+        field: String,
+    },
+
+    StructSet {
+        ty: String,
+        field: String,
+    },
+
+    Unreachable,
 }
 
 #[derive(Debug)]
@@ -31,6 +120,34 @@ pub struct Instr {
 
 impl Instr {
     pub fn is_instr(str: &str) -> bool {
-        str == "nop" || str == "const" || str == "loop" || str == "if" || str == "const_i32"
+        str == "nop"
+            || str == "const_i32"
+            || str == "i32_eqz"
+            || str == "i32_eq"
+            || str == "i32_add"
+            || str == "br"
+            || str == "br_if"
+            || str == "return"
+            || str == "block"
+            || str == "loop"
+            || str == "if"
+            || str == "ref_null"
+            || str == "ref_func"
+            || str == "ref_as_non_null"
+            || str == "ref_cast"
+            || str == "call"
+            || str == "call_ref"
+            || str == "local_get"
+            || str == "local_set"
+            || str == "global_get"
+            || str == "global_set"
+            || str == "array_new_fixed"
+            || str == "array_get"
+            || str == "array_get_u"
+            || str == "array_len"
+            || str == "struct_new"
+            || str == "struct_get"
+            || str == "struct_set"
+            || str == "unreachable"
     }
 }

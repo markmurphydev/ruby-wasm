@@ -228,11 +228,14 @@ fn instr_to_doc(instr: &Instr) -> Doc {
     }
 
     let unfolded_instr = unfolded_instr_to_doc(unfolded_instr);
-    let folded_instrs = instrs_to_doc(folded_instrs);
+    let folded_instrs = if folded_instrs.is_empty() {
+        nil()
+    } else {
+        hardline().append(instrs_to_doc(folded_instrs))
+    };
 
     text("(")
         .append(unfolded_instr)
-        .append(hardline())
         .append(folded_instrs)
         .append(")")
         .nest(INDENT)
@@ -243,35 +246,39 @@ fn unfolded_instr_to_doc(instr: &UnfoldedInstr) -> Doc {
     use UnfoldedInstr::*;
     match instr {
         Nop => text("nop"),
-        // Block(b) => block_to_doc(instr_seq_arena, b),
-        Loop { label } => text(format!("loop ${}", label)),
         Const { ty, val } => const_to_doc(ty, *val),
-        // Unop(u) => unop_to_doc(u),
-        // Binop(b) => binop_to_doc(b),
+        I32Eqz => text("i32.eqz"),
+        I32Eq => text("i32.eq"),
+        I32Add => text("i32.add"),
+        Br { label } => text(format!("br ${}", label)),
+        BrIf { label } => text(format!("br.if ${}", label)),
+        Return => text("return"),
+        Block { label} => text(format!("block ${}", label)),
+        Loop { label, block_type } => {
+            text(format!("loop ${}", label,)).append(match block_type {
+                Some(block_type) => block_type_to_doc(block_type),
+                None => nil()
+            })
+        }
         If { .. } => unreachable!(),
-        // Drop(_) => text("(drop)"),
-        // GlobalGet(global) => text(format!("(global.get ${})", global.name.clone())),
-        // Br(br) => text(format!("(br ${})", br.label.clone())),
-        // Call(call) => text(format!("(call ${})", call.func.clone())),
-        // LocalGet(get) => text(format!("(local.get ${})", get.name.clone())),
-        // BrIf(br_if) => text(format!("(br_if ${})", br_if.block.clone())),
-        // RefTest(r) => ref_test_to_doc(r),
-        // RefCast(c) => ref_cast_to_doc(c),
-        // ArrayNewFixed(arr) => text(format!(
-        //     "(array.new_fixed ${} {})",
-        //     arr.type_name, arr.length
-        // )),
-        // RefNull(r) => text(format!("(ref.null ${})", r.type_name)),
-        // StructNew(s) => text(format!("(struct.new ${})", s.type_name)),
-        // RefFunc(r) => text(format!("(ref.func ${})", r.func_name)),
-        // StructGet(sg) => text(format!("(struct.get ${} ${})", sg.type_name, sg.field_name)),
-        // StructSet(ss) => text(format!("(struct.set ${} ${})", ss.type_name, ss.field_name)),
-        // LocalSet(ls) => text(format!("(local.set ${})", ls.name)),
-        // Unreachable(_) => text("(unreachable)"),
-        // Return(_) => text("(return)"),
-        // ArrayGetU(agu) => text(format!("(array.get_u ${})", agu.type_name)),
-        // ArrayGet(ag) => text(format!("(array.get ${})", ag.type_name)),
-        // CallRef(cr) => text(format!("(call_ref ${})", cr.type_name))
+        RefNull { ty } => text(format!("ref.null ${}", ty)),
+        RefFunc { name } => text(format!("ref.func ${}", name)),
+        RefAsNonNull => text("ref.as_non_null"),
+        RefCast { ty } => text("ref.cast").append(ref_type_to_doc(ty)),
+        Call { func } => text(format!("call ${}", func)),
+        CallRef { type_idx } => text(format!("call_ref ${}", type_idx)),
+        LocalGet { name } => text(format!("local.get ${}", name)),
+        LocalSet { name } => text(format!("local.set ${}", name)),
+        GlobalGet { name } => text(format!("global.get ${}", name)),
+        GlobalSet { name } => text(format!("global.set ${}", name)),
+        ArrayNewFixed { type_idx, len } => text(format!("array.new_fixed ${} {}", type_idx, len)),
+        ArrayGet { ty } => text(format!("array.get ${}", ty)),
+        ArrayGetU { ty } => text(format!("array.get_u ${}", ty)),
+        ArrayLen => text("array.len"),
+        StructNew { ty } => text(format!("struct.new ${}", ty)),
+        StructGet { ty, field } => text(format!("struct.get ${} ${}", ty, field)),
+        StructSet { ty, field } => text(format!("struct.set ${} ${}", ty, field)),
+        Unreachable => text("unreachable"),
     }
 }
 
@@ -295,15 +302,10 @@ fn unfolded_instr_to_doc(instr: &UnfoldedInstr) -> Doc {
 // }
 
 fn const_to_doc(ty: &NumType, val: i64) -> Doc {
-    let ty = num_type_to_doc(ty);
+    let instr = num_type_to_doc(ty).append(".const");
     let val = text(val.to_string());
 
-    text("(")
-        .append(ty)
-        .append(space())
-        .append(val)
-        .append(")")
-        .group()
+    instr.append(space()).append(val)
 }
 
 // fn unop_to_doc(unop: &Unop) -> Doc {

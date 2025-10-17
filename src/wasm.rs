@@ -101,12 +101,6 @@
 //         name: String,
 //     },
 //
-//     // /// `local.set n`
-//     // LocalSet {
-//     //     /// The local being set.
-//     //     local: LocalId,
-//     // },
-//     //
 //     // /// `local.tee n`
 //     // LocalTee {
 //     //     /// The local being set.
@@ -129,12 +123,6 @@
 //         value: Value,
 //     },
 //
-//     // /// Ternary operations, those requiring three operands
-//     // TernOp {
-//     //     /// The operation being performed
-//     //     #[walrus(skip_visit)]
-//     //     op: TernaryOp,
-//     // },
 //     /// Binary operations, those requiring two operands
 //     Binop {
 //         /// The operation being performed

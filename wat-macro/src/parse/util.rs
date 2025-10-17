@@ -53,14 +53,16 @@ pub fn peek_quasi_quote(input: ParseInput) -> Option<TokenStream> {
 }
 
 /// Post: On failure, does not mutate `input`.
-pub fn expect_int_literal(input: ParseInput) -> Result<i64> {
-    match peek_int_literal(input) {
-        Some(n) => {
-            input.next();
-            Ok(n)
+pub fn expect_int_literal(input: ParseInput) -> Result<TokenStream> {
+    check_quasi_quote!(input => {
+        match peek_int_literal(input) {
+            Some(n) => {
+                input.next();
+                Ok(quote!(#n))
+            }
+            None => Err(error(input, "Expected int literal.")),
         }
-        None => Err(error(input, "Expected int literal.")),
-    }
+    })
 }
 
 /// Post: On failure, does not mutate `input`.

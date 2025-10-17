@@ -3,7 +3,7 @@ use wat_macro::wat;
 
 pub fn array_unitype() -> TypeDef {
     wat! {
-        (type $array_unitype (array (ref eq)))
+        (type $arr_unitype (array (ref eq)))
     }
 }
 

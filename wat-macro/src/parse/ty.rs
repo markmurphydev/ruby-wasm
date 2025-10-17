@@ -342,6 +342,17 @@ mod test {
     }
 
     #[test]
+    pub fn test_ref_name() {
+        let input = quote! { (ref $obj) };
+        let actual = parse_ref_type(&mut ParseStream::new(input))
+            .unwrap()
+            .to_string();
+        let actual = &format!("{}", actual);
+        let expected = expect![[r#"wat_defs :: ty :: RefType { null : wat_defs :: ty :: Nullable :: NonNullable , heap_type : wat_defs :: ty :: HeapType :: TypeIdx ("obj" . to_string ()) , }"#]];
+        expected.assert_eq(actual);
+    }
+
+    #[test]
     pub fn test_array_ref_eq() {
         let input = quote! { (array (ref eq)) };
         let actual = parse_comp_type(&mut ParseStream::new(input))

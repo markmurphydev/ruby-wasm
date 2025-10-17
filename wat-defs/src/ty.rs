@@ -51,6 +51,15 @@ pub struct RefType {
     pub heap_type: HeapType,
 }
 
+impl RefType {
+    pub fn into_val_type(self) -> ValType {
+        ValType::Ref(self)
+    }
+    pub fn into_storage_type(self) -> StorageType {
+        StorageType::Val(self.into_val_type())
+    }
+}
+
 #[derive(Debug)]
 pub enum ValType {
     Num(NumType),

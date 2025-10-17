@@ -1,7 +1,7 @@
 use wat_defs::module::TypeDef;
 use wat_macro::wat;
 use crate::CompileCtx;
-use crate::corelib::array;
+use crate::corelib::{alist, array};
 
 pub const OBJECT_TYPE_IDENTIFIER: &str = "obj";
 pub const CLASS_TYPE_IDENTIFIER: &str = "class";
@@ -15,7 +15,7 @@ pub fn add_type_defs(ctx: &mut CompileCtx<'_>) {
         class_type_def(),
     ];
     type_defs.append(&mut array::array_type_defs());
-    type_defs.append(&mut alist::alist_type_defs(ctx));
+    type_defs.append(&mut alist::alist_type_defs());
 
     ctx.module.types.append(&mut type_defs);
 }
@@ -27,7 +27,7 @@ pub fn string_type_def() -> TypeDef {
 /// The wasm type-definition of a Ruby object.
 pub fn object_type_def() -> TypeDef {
     wat! {
-        (type $obj (struct (field $parent (mut (ref null $class)))))
+        (type $obj (sub (struct (field $parent (mut (ref null $class))))))
     }
 }
 
@@ -52,21 +52,7 @@ pub fn method_type_def() -> TypeDef {
         (type $method
             (sub final
                 (func (param $self (ref $obj))
-                      (param $args (ref $arr_unitype)))
-                      (result (ref eq))))
+                      (param $args (ref $arr_unitype))
+                      (result (ref eq)))))
     }
 }
-
-// /// `(mut (ref null $class))`
-// /// Wasm global definitions can't cyclic,
-// ///  so we set the initial $class fields to `ref.null`,
-// ///  then tie them together in the `start` function.
-// fn mut_ref_null_class() -> FieldType {
-//     FieldType {
-//         mutability: Mutability::Mut,
-//         ty: StorageType::Val(ValType::Ref(RefType {
-//             nullable: Nullability::Nullable,
-//             heap_type: HeapType::Identifier(CLASS_TYPE_IDENTIFIER.to_string()),
-//         })),
-//     }
-// }

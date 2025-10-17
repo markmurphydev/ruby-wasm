@@ -9,3 +9,10 @@ pub fn wat(input: proc_macro::TokenStream) -> proc_macro::TokenStream {
         .unwrap_or_else(|err| TokenStream::from(err.to_compile_error()));
     res.into()
 }
+
+// TODO: Parse typed
+// #[macro_export]
+// macro_rules! wat {
+//     [ $tt:tt ] => { $crate::parse(quote::quote!($tt)) }
+//     { $tt:tt } => { wat! { $tt } }
+// }

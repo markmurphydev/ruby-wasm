@@ -1,3 +1,4 @@
+use crate::parse::instr::parse_instr_seq;
 use wat_defs::module::TypeDef;
 use crate::parse::util::{parse_name, peek_sym};
 use crate::parse::ty::parse_ref_type;
@@ -18,6 +19,21 @@ mod global;
 mod func;
 mod type_def;
 
+// TODO: Parse typed
+// pub trait Parse: Sized {
+//     fn parse(input: TokenStream) -> Self;
+// }
+//
+// pub fn parse<T: Parse>(input: TokenStream) -> T {
+//     T::parse(input)
+// }
+//
+// impl Parse for TypeDef {
+//     fn parse(input: TokenStream) -> Self {
+//         parse_
+//     }
+// }
+
 pub fn parse_item(input: TokenStream) -> Result<TokenStream> {
     let input = &mut ParseStream::new(input);
     check_quasi_quote!(input => {
@@ -32,7 +48,7 @@ pub fn parse_item(input: TokenStream) -> Result<TokenStream> {
         } else if peek_sym(input).is_some() {
             parse_name(input)
         } else {
-            parse_instr(input)
+            parse_instr_seq(input)
         }
     })
 }
