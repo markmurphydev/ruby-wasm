@@ -3,7 +3,7 @@ use clap::Subcommand;
 use ruby_wasm::lexer::Lexer;
 use ruby_wasm::parser::Parser;
 use ruby_wasm::print_wat::module_to_pretty;
-use ruby_wasm::{binary, html};
+use ruby_wasm::{binary, html, run};
 use ruby_wasm::{compiler, CompileCtx};
 use ruby_wasm::lexeme::LexemeKind;
 use wat_defs::module::Module;
@@ -72,14 +72,7 @@ fn main() {
 
     match cli.command {
         Command::Lex { text } => {
-            let mut lexer = Lexer::new(&text);
-            loop {
-                let lexeme = lexer.next();
-                println!("{:?}", lexeme);
-                if let LexemeKind::Eof = lexeme.kind {
-                    return;
-                }
-            }
+            run::lex(&text);
         }
 
         Command::Parse { text } => {

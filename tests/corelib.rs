@@ -3,7 +3,6 @@
 //! - Compiles and type-checks
 //! - Runs correctly
 
-use ruby_wasm::CompileCtx;
 use ruby_wasm::unitype::Unitype;
 
 /// Wraps `body` in a function definition, includes the corelib definitions,

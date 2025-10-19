@@ -396,7 +396,10 @@ impl<'text> Lexer<'text> {
             }
         }
 
-        // This is a float.
+        // TODO: This is a float, or a property access/method call
+        //  Determining which one requires >1 char lookahead...
+
+        // Assume this is a float
         loop {
             match self.iter.peek() {
                 // Floats can contain `_` in the decimal part, but can't end on it.
@@ -1029,6 +1032,17 @@ mod tests {
         let actual = lex_to_sexpr(text);
         expected.assert_eq(&actual);
     }
+
+    // TODO
+    #[cfg(false)]
+    #[test]
+    fn integer_call_no_args() {
+        let text = "1.foo()";
+        let expected = expect![[""]];
+        let actual = lex_to_sexpr(text);
+        expected.assert_eq(&actual);
+    }
+
 
     #[test]
     fn object_new() {

@@ -73,7 +73,8 @@ pub struct Until {
 #[derive(Debug, Clone, PartialEq, Eq, Serialize)]
 pub struct Call {
     pub receiver: Expr,
-    pub name: String
+    pub name: String,
+    pub args: Vec<Expr>,
 }
 
 #[derive(Debug, Clone, PartialEq, Eq, Serialize)]

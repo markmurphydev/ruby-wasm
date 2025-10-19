@@ -2,6 +2,20 @@ use crate::unitype::{Unitype, WasmtimeRefEq};
 use crate::{print_wat, CompileCtx};
 use wasmtime::{Config, Engine, Instance, Module, Store};
 use crate::compiler::RUBY_TOP_LEVEL_FUNCTION_NAME;
+use crate::lexeme::LexemeKind;
+use crate::lexer::Lexer;
+
+pub fn lex(text: &str) -> String {
+    let mut res = String::new();
+    let mut lexer = Lexer::new(text);
+    loop {
+        let lexeme = lexer.next();
+        res.push_str(&format!("{:?}\n", lexeme));
+        if let LexemeKind::Eof = lexeme.kind {
+            return res;
+        }
+    }
+}
 
 /// Writes out `module` as a .wat file, includes the corelib definitions,
 /// and runs it.

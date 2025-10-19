@@ -52,6 +52,10 @@ impl<'text> Parser<'text> {
     /// EXPR = keyword | integer_literal
     /// ```
     fn expr(&mut self) -> Option<N::Expr> {
+        self.expr_bp(0)
+    }
+
+    fn expr_bp(&mut self, min_bp: u8) -> Option<N::Expr> {
         /// Expect the given keyword's lexem kind, then return its node
         macro_rules! expect_simple_kw(
             ($lexeme_kind:path, $node_expr_variant:path) => ({
@@ -81,7 +85,6 @@ impl<'text> Parser<'text> {
             LK::Constant { .. } => Some(self.constant()),
 
             // Control flow
-            // LK::If => Some(N::Expr::If(Box::new(self.if_expr()))),
             LK::If => box_expr_variant!(self.if_expr(), N::Expr::If),
             LK::While => box_expr_variant!(self.while_expr(), N::Expr::While),
             LK::Until => box_expr_variant!(self.until_expr(), N::Expr::Until),
@@ -91,14 +94,34 @@ impl<'text> Parser<'text> {
         let Some(mut lhs) = lhs else { return None };
 
         loop {
-            let lexeme = self.lexer.peek().kind;
-            match lexeme {
-                LK::Dot => {
-                    lhs = self.call_expr(lhs);
-                }
-                _ => return Some(lhs),
+            let op = match self.lexer.peek() {
+                op if op.is_operator() => op,
+                _ => break,
             };
+            let (l_bp, r_bp) = op.binding_power();
+            if l_bp < min_bp {
+                break;
+            }
+
+            self.lexer.next();
+            let rhs = self.expr_bp(r_bp).unwrap();
+
+            let name = match op.kind {
+                LK::Minus => "-",
+                LK::Plus => "+",
+                LK::Slash => "/",
+                LK::Star => "*",
+                _ => unreachable!(),
+            }
+            .to_string();
+
+            lhs = N::Expr::Call(Box::new(N::Call {
+                receiver: lhs,
+                name,
+                args: vec![rhs],
+            }))
         }
+        Some(lhs)
     }
 
     /// Once we see "if", should be irrefutable.
@@ -252,7 +275,7 @@ impl<'text> Parser<'text> {
         let text = match rhs.kind {
             LK::Identifier { text } => text,
             LK::Class => "class".to_string(),
-            _ => panic!("Illegal kind: {:?}", rhs.kind)
+            _ => panic!("Illegal kind: {:?}", rhs.kind),
         };
 
         self.expect(&[LK::LeftParen]);
@@ -261,6 +284,7 @@ impl<'text> Parser<'text> {
         N::Expr::Call(Box::new(N::Call {
             receiver,
             name: text,
+            args: todo!(),
         }))
     }
 
@@ -291,6 +315,7 @@ impl<'text> Parser<'text> {
 #[cfg(test)]
 mod tests {
     use super::*;
+    use expect_test::expect;
     use serde_lexpr::print;
     use std::process::Command;
 
@@ -329,12 +354,9 @@ mod tests {
         let parser = Parser::new(Lexer::new(text));
         let program = parser.parse();
 
-        match program {
-            N::Program { statements } => {
-                assert_eq!(1, statements.body.len());
-                assert_eq!(N::Expr::Integer(22), statements.body[0]);
-            }
-        }
+        let N::Program { statements } = program;
+        assert_eq!(1, statements.body.len());
+        assert_eq!(N::Expr::Integer(22), statements.body[0]);
 
         // let text = "-22_222";
         // let parser = Parser::new(Lexer::new(text));
@@ -364,6 +386,92 @@ mod tests {
                 );
             }
         }
+    }
+
+    #[test]
+    fn integer() {
+        let text = "'22'";
+        let parser = Parser::new(Lexer::new(text));
+        let program = parser.parse();
+
+        let N::Program { statements } = program;
+        assert_eq!(1, statements.body.len());
+        // Strips quotes
+        assert_eq!(
+            N::Expr::SingleQuoteString("22".to_string()),
+            statements.body[0]
+        );
+    }
+
+    #[test]
+    fn single_addition() {
+        let text = "1 + 2";
+        let expected = expect![[r#"
+            ((statements
+              (body
+               (Call (receiver Integer . 1) (name . "+") (args (Integer . 2))))))
+        "#]];
+        let actual = parse_to_sexpr(text);
+        expected.assert_eq(&actual);
+    }
+
+    #[test]
+    fn multiple_addition() {
+        let text = "1 + 2 + 3";
+        let expected = expect![[r#"
+            ((statements
+              (body
+               (Call
+                (receiver Call (receiver Integer . 1) (name . "+")
+            	      (args (Integer . 2)))
+                (name . "+") (args (Integer . 3))))))
+        "#]];
+        let actual = parse_to_sexpr(text);
+        expected.assert_eq(&actual);
+    }
+
+    #[test]
+    fn add_sub_mul_div() {
+        let text = "1 + 2 - 3 * 4 / 5";
+        let expected = expect![[r#"
+            ((statements
+              (body
+               (Call
+                (receiver Call (receiver Integer . 1) (name . "+")
+            	      (args (Integer . 2)))
+                (name . "-")
+                (args
+                 (Call
+                  (receiver Call (receiver Integer . 3) (name . "*")
+            		(args (Integer . 4)))
+                  (name . "/") (args (Integer . 5))))))))
+        "#]];
+        let actual = parse_to_sexpr(text);
+        expected.assert_eq(&actual);
+    }
+
+    #[test]
+    fn matklad_example() {
+        // Example from https://matklad.github.io/2020/04/13/simple-but-powerful-pratt-parsing.html
+        let text = "1 + 2 * 3 * 4 + 5";
+        // (+ (+ 1
+        //       (* (* 2 3)
+        //          4)
+        //    5)
+        let expected = expect![[r#"
+            ((statements
+              (body
+               (Call
+                (receiver Call (receiver Integer . 1) (name . "+")
+            	      (args
+            	       (Call
+            		(receiver Call (receiver Integer . 2) (name . "*")
+            			  (args (Integer . 3)))
+            		(name . "*") (args (Integer . 4)))))
+                (name . "+") (args (Integer . 5))))))
+        "#]];
+        let actual = parse_to_sexpr(text);
+        expected.assert_eq(&actual);
     }
 
     mod globals {

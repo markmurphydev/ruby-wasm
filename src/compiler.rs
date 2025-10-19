@@ -217,7 +217,8 @@ fn compile_until_expr(
 }
 
 fn compile_call_expr(ctx: &mut CompileCtx<'_>, call_expr: &Call) -> Vec<Instr> {
-    let Call { receiver, name } = call_expr;
+    todo!("Handle args field");
+    let Call { receiver, name, args } = call_expr;
     let mut args = compile_expr(ctx, receiver);
     let name = corelib::global::string_identifier(name);
     // TODO: parsing broken. work-around.

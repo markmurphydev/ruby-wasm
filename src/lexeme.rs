@@ -55,6 +55,27 @@ impl Lexeme {
             .take(self.len.0)
             .collect()
     }
+
+    pub fn is_operator(&self) -> bool {
+        use LexemeKind::*;
+        match self.kind {
+            Minus | Plus | Slash | Star => true,
+            _ => false
+        }
+    }
+
+    /// Gets `(lhs_binding_power, rhs_binding_power)`
+    pub fn binding_power(&self) -> (u8, u8) {
+        use LexemeKind::*;
+        // Higher rhs binding power makes it left-associative.
+        const BP_TERM: (u8, u8) = (1, 2);
+        const BP_FACTOR: (u8, u8) = (3, 4);
+        match &self.kind {
+            Minus | Plus => BP_TERM,
+            Slash | Star => BP_FACTOR,
+            other => panic!("Lexeme of kind {:?} has no binding power", other)
+        }
+    }
 }
 
 pub struct LineColRange {
