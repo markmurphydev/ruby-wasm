@@ -1,3 +1,4 @@
+require "js"
 
 $cells = [
   [0, 0, 0, 0, 0, 0, 0, 0, 0, 0],
@@ -14,8 +15,13 @@ $cells = [
 
 def get_cells; $cells end
 
-def set_cell(row, col, val)
-  $cells[row][col] = val
+def toggle_cell(row, col)
+  if $cells[row][col] == 1
+    res = 0
+  else
+    res = 1
+  end
+  $cells[row][col] = res
 end
 
 def count_neighbors(row, col)
@@ -101,15 +107,28 @@ def print_neighbors
 end
 
 
-set_cell(4, 5, 1)
-set_cell(5, 6, 1)
-set_cell(6, 4, 1)
-set_cell(6, 5, 1)
-set_cell(6, 6, 1)
+toggle_cell(4, 5)
+toggle_cell(5, 6)
+toggle_cell(6, 4)
+toggle_cell(6, 5)
+toggle_cell(6, 6)
 
-print_cells
+def js_get_cells
+  $cells.to_js
+end
 
-10.times do
-  step
-  print_cells
+def js_toggle_cell(row, col)
+  toggle_cell(row.to_i, col.to_i)
+end
+
+JS.global[:getCells] = lambda {
+  js_get_cells
+}
+JS.global[:toggleCell] = lambda { |row, col|
+  js_toggle_cell(row, col)
+}
+JS.global[:step] = lambda { step }
+
+if JS.global[:onRuby]
+  JS.global[:onRuby].call(:call)
 end

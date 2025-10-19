@@ -1,0 +1,69 @@
+<!--
+Attribution: Prototype created with the help of Claude Code.
+I will re-write a version of this demo using my compiler's FFI facilities.
+-->
+<!DOCTYPE html>
+<html>
+<head>
+    <title>Ruby WASM Game of Life</title>
+</head>
+<body>
+    <h1>Game of Life - Ruby WASM Demo</h1>
+
+    <div>
+        <button onclick="callStep()">Step</button>
+        <button onclick="showCells()">Show Cells</button>
+    </div>
+
+    <div style="margin-top: 20px;">
+        <form id="form">
+            <label>Row (0-9): <input type="number" id="row" min="0" max="9" value="0"></label>
+            <label>Col (0-9): <input type="number" id="col" min="0" max="9" value="0"></label>
+            <button type="submit">Toggle Cell</button>
+        </form>
+    </div>
+
+    <pre id="output"></pre>
+
+    <script defer src="https://cdn.jsdelivr.net/npm/@ruby/3.4-wasm-wasi@2.7.2/dist/browser.script.iife.js"></script>
+    <script type="text/ruby" src="game_of_life.rb"></script>
+
+    <script>
+        function callStep() {
+            step()
+            showCells()
+        }
+
+        function showCells() {
+            const cells = getCells()
+            let output = ""
+            cells.forEach((row) => {
+                row.forEach((cell) => {
+                    output += (cell === 1 ? "X " : "_ ")
+                })
+                output += "\n"
+            })
+            document.getElementById("output").textContent = output
+        }
+
+        function callToggleCell(event) {
+            event.preventDefault()
+            const row = parseInt(document.getElementById("row").value)
+            const col = parseInt(document.getElementById("col").value)
+            toggleCell(row, col)
+            showCells()
+        }
+
+        function onRuby() {
+            showCells()
+        }
+
+        window.addEventListener("load", () => {
+            if (typeof getCells !== "undefined") {
+                showCells()
+            }
+        })
+        document.getElementById("form").addEventListener("submit", callToggleCell)
+    </script>
+</body>
+</html>
