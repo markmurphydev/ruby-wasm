@@ -9,10 +9,10 @@ pub const METHOD_TYPE_IDENTIFIER: &str = "method";
 
 pub fn add_type_defs(ctx: &mut CompileCtx<'_>) {
     let mut type_defs = vec![
-        string_type_def(),
-        object_type_def(),
-        method_type_def(),
-        class_type_def(),
+        string(),
+        obj(),
+        method(),
+        class(),
     ];
     type_defs.append(&mut array::array_type_defs());
     type_defs.append(&mut alist::alist_type_defs());
@@ -20,12 +20,26 @@ pub fn add_type_defs(ctx: &mut CompileCtx<'_>) {
     ctx.module.types.append(&mut type_defs);
 }
 
-pub fn string_type_def() -> TypeDef {
+// Not needed unless we need an `identity` field for object-equality.
+//      At that time, $string, $obj, $class should all subtype this.
+// fn unitype_heap_val() -> TypeDef {
+//     wat! {
+//         (type $unitype_heap
+//             (sub (struct)))
+//     }
+// }
+
+fn string() -> TypeDef {
     wat![ (type $str (array i8)) ]
 }
 
+
+fn boxnum() -> TypeDef {
+    wat![ (type $boxnum (struct (field $val i64))) ]
+}
+
 /// The wasm type-definition of a Ruby object.
-pub fn object_type_def() -> TypeDef {
+fn obj() -> TypeDef {
     wat! {
         (type $obj (sub (struct (field $parent (mut (ref null $class))))))
     }
@@ -34,7 +48,7 @@ pub fn object_type_def() -> TypeDef {
 /// The wasm type-definition of a Ruby class.
 /// Each defined class (`BasicObject`, `Class`, ...)
 ///     is a global of type $class
-pub fn class_type_def() -> TypeDef {
+fn class() -> TypeDef {
     wat! {
         (type $class
             (sub final $obj
@@ -47,7 +61,7 @@ pub fn class_type_def() -> TypeDef {
 
 /// The wasm type-definition of a Ruby method.
 /// Each method definition is a function subtyping $method.
-pub fn method_type_def() -> TypeDef {
+fn method() -> TypeDef {
     wat! {
         (type $method
             (sub final
@@ -56,3 +70,4 @@ pub fn method_type_def() -> TypeDef {
                       (result (ref eq)))))
     }
 }
+

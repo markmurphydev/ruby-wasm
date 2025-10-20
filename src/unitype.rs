@@ -7,13 +7,6 @@ use wasmtime::{AnyRef, Rooted};
 use wat_defs::ty::RefType;
 use wat_macro::wat;
 
-/// Fixnums are identified with a 1 in the MSB of the i31
-const FIXNUM_MARKER: i32 = 1 << 30;
-
-/// We give fixnums half an i31, marking MSB 1
-/// (0b1xx_xxxx...): i31
-const FIXNUM_BIT_WIDTH: u32 = 30;
-
 /// `wasmtime`'s Rust-side representation of a Wasm `(ref eq)` value
 pub type WasmtimeRefEq = Rooted<AnyRef>;
 
@@ -67,6 +60,16 @@ impl Unitype {
     //     val_type: Self::UNITYPE.into_val_type(),
     // };
 
+    /// We give fixnums half an i31, marking MSB 1
+    /// (0b1xx_xxxx...): i31
+    pub const FIXNUM_BIT_WIDTH: u32 = 30;
+
+    /// Fixnums are identified with a 1 in the MSB of the i31
+    const FIXNUM_MARKER: i32 = 1 << 30;
+
+    pub const FIXNUM_MASK: u32 = u32::MAX >> (u32::BITS - Self::FIXNUM_BIT_WIDTH);
+    pub const FIXNUM_TOP_BIT_MASK: u32 = 1 << (Self::FIXNUM_BIT_WIDTH - 1);
+
     pub const FALSE_BIT_PATTERN: i32 = 0b0001;
     pub const TRUE_BIT_PATTERN: i32 = 0b0011;
     pub const NIL_BIT_PATTERN: i32 = 0b0101;
@@ -89,7 +92,7 @@ impl Unitype {
         }
 
         match n {
-            n if bit_width(n) <= FIXNUM_BIT_WIDTH => {
+            n if bit_width(n) <= Self::FIXNUM_BIT_WIDTH => {
                 Unitype::Fixnum(Fixnum(i32::try_from(n).unwrap()))
             }
             n if bit_width(n) <= i64::BITS => Unitype::HeapNum(n),
@@ -113,7 +116,7 @@ impl Unitype {
                 Self::FALSE_BIT_PATTERN => Self::False,
                 Self::TRUE_BIT_PATTERN => Self::True,
                 Self::NIL_BIT_PATTERN => Self::Nil,
-                val if (val & FIXNUM_MARKER) != 0 => Self::Fixnum(Fixnum(val & !FIXNUM_MARKER)),
+                val if (val & Self::FIXNUM_MARKER) != 0 => Self::Fixnum(Fixnum(val & !Self::FIXNUM_MARKER)),
                 _ => panic!("Invalid i31 bit pattern 0b{:b}", value),
             }
         } else {
@@ -145,7 +148,7 @@ impl Unitype {
             Unitype::True => Self::TRUE_BIT_PATTERN,
             Unitype::False => Self::FALSE_BIT_PATTERN,
             Unitype::Nil => Self::NIL_BIT_PATTERN,
-            Unitype::Fixnum(Fixnum(val)) => val | FIXNUM_MARKER,
+            Unitype::Fixnum(Fixnum(val)) => val | Self::FIXNUM_MARKER,
             Unitype::HeapNum(_) => panic!("Not an i31 value: {:?}", self),
             Unitype::String(_) => panic!("Not an i31 value: {:?}", self),
         }

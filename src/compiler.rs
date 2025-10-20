@@ -217,18 +217,50 @@ fn compile_until_expr(
 }
 
 fn compile_call_expr(ctx: &mut CompileCtx<'_>, call_expr: &Call) -> Vec<Instr> {
-    todo!("Handle args field");
     let Call { receiver, name, args } = call_expr;
-    let mut args = compile_expr(ctx, receiver);
-    let name = corelib::global::string_identifier(name);
-    // TODO: parsing broken. work-around.
-    args.append(&mut wat!{
-            (global_get ,(name))
-            (global_get $empty_args)
-    });
+
+    match name.as_str() {
+        "+" => {
+            assert_eq!(1, args.len());
+            compile_plus(ctx, receiver, &args[0])
+        },
+        _ => {
+            let name = corelib::global::string_identifier(name);
+            let mut receiver = compile_expr(ctx, receiver);
+
+            let mut message = wat!{
+                (global_get ,(name))
+            };
+
+            let args: Vec<_> = args.iter().map(|arg| compile_expr(ctx, arg)).flatten().collect();
+            let mut args = wat! {
+                (array_new_fixed $arr_unitype ,(args.len() as i64)
+                    ,(args))
+            };
+            let wat_args = {
+                receiver.append(&mut message);
+                receiver.append(&mut args);
+                receiver
+            };
+            wat! {
+                (call $call
+                    ,(wat_args))
+            }
+        }
+    }
+}
+
+fn compile_plus(ctx: &mut CompileCtx, lhs: &Expr, rhs: &Expr) -> Vec<Instr> {
+    let mut lhs = compile_expr(ctx, lhs);
+    let mut rhs = compile_expr(ctx, rhs);
+    let wat_args ={
+        lhs.append(&mut rhs);
+        lhs
+    };
+
     wat! {
-        (call $call
-            ,(args))
+        (call $add
+            ,(wat_args))
     }
 }
 

@@ -9,19 +9,42 @@
 // use crate::{CompileCtx, FunctionBuilder, InstrSeqBuilder};
 // use crate::corelib::array::ARRAY_UNITYPE_TYPE_IDENTIFIER;
 
+use wat_defs::func::Func;
 use wat_defs::instr::Instr;
 use wat_defs::ty::BlockType;
-use crate::CompileCtx;
+use crate::{unitype, CompileCtx};
 use crate::corelib::class;
 use crate::corelib::class::Class;
 use wat_macro::wat;
 use crate::corelib::alist::AListTypeDef;
+use crate::unitype::Unitype;
 
 pub fn add_functions(ctx: &mut CompileCtx<'_>) {
     add_start(ctx);
-    add_str_eq(ctx);
-    add_alist_str_method_get(ctx);
-    add_call(ctx);
+
+    for func in funcs() {
+        ctx.module.funcs.push(func);
+    }
+}
+
+fn funcs() -> Vec<Func> {
+    vec![
+        str_eq(),
+        alist_str_method_get(),
+        call(),
+        is_fixnum(),
+        sign_extend(),
+        sign_extend_fixnum(),
+        fixnum_to_i64(),
+        boxnum_to_i64(),
+        integer_to_i64(),
+        in_fixnum_range(),
+        i32_to_fixnum(),
+        i64_to_fixnum(),
+        i64_to_boxnum(),
+        i64_to_integer(),
+        add(),
+    ]
 }
 
 /// The `start` function runs when the module is loaded.
@@ -64,8 +87,8 @@ fn add_start(ctx: &mut CompileCtx<'_>) {
 }
 
 /// `str-eq : (ref $str) (ref $str) -> Bool`
-fn add_str_eq(ctx: &mut CompileCtx<'_>) {
-    let res = wat! {
+fn str_eq() -> Func {
+    wat! {
         (func $str_eq
             (param $a (ref $str))
             (param $b (ref $str))
@@ -93,15 +116,14 @@ fn add_str_eq(ctx: &mut CompileCtx<'_>) {
                                          (const_i32 1)))
                 (br $for))
             (unreachable))
-    };
-    ctx.module.funcs.push(res);
+    }
 }
 
 const ALIST_STR_METHOD_GET_IDENTIFIER: &str = "alist-str-method-get";
 
 /// TODO: This should be genericized for any type of alist we have.
-fn add_alist_str_method_get(ctx: &mut CompileCtx<'_>) {
-    let res = wat! {
+fn alist_str_method_get() -> Func {
+    wat! {
         (func $alist_str_method_get
             (param $alist (ref $alist_str_method))
             (param $name (ref $str))
@@ -134,12 +156,11 @@ fn add_alist_str_method_get(ctx: &mut CompileCtx<'_>) {
                     (i32_add (local_get $idx) (const_i32 1)))
                 (br $for))
             (unreachable))
-    };
-    ctx.module.funcs.push(res);
+    }
 }
 
-fn add_call(ctx: &mut CompileCtx<'_>) {
-    let res = wat! {
+fn call() -> Func {
+    wat! {
         (func $call
             (param $receiver (ref eq))
             (param $message (ref $str))
@@ -165,12 +186,173 @@ fn add_call(ctx: &mut CompileCtx<'_>) {
                 (local_get $args)
                 (local_get $method))
         )
-    };
-    ctx.module.funcs.push(res);
+    }
 }
 
-fn helper_add_for_in(
-    ctx: &mut CompileCtx<'_>,
+fn is_fixnum() -> Func {
+    // Cast to `i31`, then test for the Unitype::FIXNUM_MARKER
+    wat! {
+        (func $is_fixnum
+            (param $n (ref eq))
+            (result i32)
+
+            // Wasm has no short-circuiting booleans.
+            (if (result i32)
+                (ref_test (ref i31) (local_get $n))
+                (then (and (i32_const ,(Unitype::FIXNUM_MARKER))
+                           (cast (ref_cast i31))))
+                (else (const_i32 0))))
+    }
+}
+
+/// `sign_extend(val: i32, bit_width: i32) -> i32`
+/// Sign-extend an `i_(bit_width)` to `i32`.
+fn sign_extend() -> Func {
+    wat! {
+        (func $sign_extend
+            (param $val i32)
+            (param $bit_width i32)
+            (result i32)
+            (local $top_bit_mask i32)
+
+            (local_set $top_bit_mask
+                (i32_shl (i32_const 1)
+                         (i32_sub (local_get $bit_width) (i32_const 1))))
+        )
+    }
+}
+
+fn sign_extend_fixnum() -> Func {
+    wat! {
+        (func $sign_extend_fixnum
+            (param $n i32)
+            (result i32)
+
+            (call $sign_extend
+                  (local_get $n)
+                  (i32_const ,(Unitype::FIXNUM_BIT_WIDTH))))
+    }
+}
+
+fn fixnum_to_i64() -> Func {
+    // - Strip Unitype::FIXNUM_MARKER
+    // - Sign-extend i_Unitype::FIXNUM_BIT_WIDTH -> i64
+
+    wat !{
+        (func $fixnum_to_i64
+            (param $n (ref i31))
+            (result i64)
+            (local $n_i32 i32)
+            (local $n_i32_sign_extend i32)
+
+            (local_set $n_i32 (i31_get_u (local_get $n)))
+            (local_set $n_i32_sign_extend (call $sign_extend_fixnum (local_get $n_i32)))
+            (i64_extend_i32_s (local_get $n_i32_sign_extend))
+        )
+    }
+}
+
+fn boxnum_to_i64() -> Func {
+    wat! {
+        (func $boxnum_to_i64
+            (param $n (ref $boxnum))
+            (result i64)
+            (struct_get $boxnum $val (local_get $n))
+        )
+    }
+}
+
+fn integer_to_i64() -> Func {
+    wat! {
+        (func $integer_to_i64
+            (param $n (ref eq))
+            (result i64)
+            (if (result i64)
+                (call $is_fixnum (local_get $n))
+                (then (call $fixnum_to_i64
+                            (ref_cast (ref i31) (local_get $n))))
+                (else (call $boxnum_to_i64
+                            (ref_cast (ref $unitype_boxnum) (local_get $n))))))
+    }
+}
+
+fn in_fixnum_range() -> Func {
+    let min = -(2i64.pow(Unitype::FIXNUM_BIT_WIDTH - 1));
+    let max = 2i64.pow(Unitype::FIXNUM_BIT_WIDTH - 1) - 1;
+
+    wat! {
+        (func $in_fixnum_range
+            (param $n i64)
+            (result i32)
+            (i32_and (i32_lt_s ,(min) (local_get $n))
+                     (i32_lt_s (local_get $n) ,(max))))
+    }
+}
+
+
+/// Pre: $n has the bit pattern of a valid fixnum, sans marker.
+fn i32_to_fixnum() -> Func {
+    wat! {
+        (func $i32_to_fixnum
+            (param $n i32)
+            (result (ref i31))
+            (ref_i31 (i32_or (local_get $n)
+                             (i32_const ,(Unitype::FIXNUM_MARKER)))))
+    }
+}
+
+/// Pre: $n has the bit pattern of a valid fixnum, sans marker.
+fn i64_to_fixnum() -> Func {
+    wat! {
+        (func $i64_to_fixnum
+            (param $n i64)
+            (result (ref i31))
+            (call $i32_to_fixnum (i32_wrap_i64 (local_get $n))))
+    }
+}
+
+fn i64_to_boxnum() -> Func {
+    wat! {
+        (func $i64_to_boxnum
+            (param $n i64)
+            (result (ref $boxnum))
+            (struct_new $boxnum (local_get $n)))
+    }
+}
+
+fn i64_to_integer() -> Func {
+    wat! {
+        (func $integer_to_i64
+            (param $n i64)
+            (result (ref eq))
+            (if (result (ref eq))
+                (call $in_fixnum_range (local_get $lhs))
+                (then (call $i64_to_fixnum (local_get $lhs)))
+                (else (call $i64_to_boxnum (local_get $lhs)))))
+    }
+}
+
+fn add() -> Func {
+    // TODO: Should do checked add at least.
+    wat! {
+        (func $add
+            (param $lhs (ref eq))
+            (param $rhs (ref eq))
+            (result (ref eq))
+            (local $lhs_val i64)
+            (local $rhs_val i64)
+            (local $res i64)
+
+            (local_set $lhs_val (call $integer_to_i64 (local_get $lhs)))
+            (local_set $rhs_val (call $integer_to_i64 (local_get $rhs)))
+            (local_set $res (i64_add (local_get $lhs_val)
+                                     (local_get $rhs_val)))
+            (call $i64_to_integer (local_get $res))
+        )
+    }
+}
+
+fn helper_for_in(
     alist_type_def: AListTypeDef,
     body: Vec<Instr>
 ) -> Vec<Instr> {
@@ -198,4 +380,17 @@ fn helper_add_for_in(
                                    (const_i32 1)))
             (br $for))
     }
+}
+
+/// `(i32.not x) ≡ (i32.xor x -1)`
+///     (because `-1 = 0b1111_...`)
+fn not(mut body: Vec<Instr>) -> Instr {
+    let wat_args = {
+        let mut res = wat![-1];
+        res.append(&mut body);
+        res
+    };
+    wat! {
+        (i32_xor ,(wat_args))
+    }.remove(0)
 }

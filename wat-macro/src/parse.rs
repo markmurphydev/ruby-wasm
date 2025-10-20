@@ -1,15 +1,13 @@
-use crate::parse::instr::parse_instr_seq;
-use wat_defs::module::TypeDef;
-use crate::parse::util::{parse_name, peek_sym};
-use crate::parse::ty::parse_ref_type;
-use crate::parse::type_def::parse_type_def;
 use crate::parse::func::parse_func;
 use crate::parse::global::parse_global;
-use proc_macro2::TokenStream;
-use crate::parse::instr::parse_instr;
+use crate::parse::instr::parse_instr_seq;
 use crate::parse::parse_stream::ParseStream;
+use crate::parse::ty::parse_ref_type;
+use crate::parse::type_def::parse_type_def;
 use crate::parse::util::{check_quasi_quote, peek_open_paren_named};
+use crate::parse::util::{parse_name, peek_sym};
 use crate::result::Result;
+use proc_macro2::TokenStream;
 
 mod instr;
 mod parse_stream;
