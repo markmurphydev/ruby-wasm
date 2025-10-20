@@ -10,7 +10,6 @@ use wat_defs::ty::FuncType;
 ///     - `(sub ...)`
 ///     - `<comp_type>`
 pub fn parse_sub_type(input: ParseInput) -> Result<TokenStream> {
-    eprintln!("pst input={:?}", input);
     if let Ok((mut input, _)) = expect_open_paren_named(&["sub"], input) {
         let input = &mut input;
         let is_final = match expect_ident_named(&["final"], input) {
@@ -197,7 +196,6 @@ pub fn parse_block_type(input: ParseInput) -> Result<TokenStream> {
 /// Pre: `input` contains entire type.
 /// Post: If `input` _is_ valid input, but _cannot_ be parsed as NumType, does not consume any tokens.
 pub fn parse_val_type(input: ParseInput) -> Result<TokenStream> {
-    eprintln!("parse_val_type");
     check_quasi_quote!(input => {
         let path = quote![wat_defs::ty::ValType];
         if let Ok(num_type) = parse_num_type(input) {

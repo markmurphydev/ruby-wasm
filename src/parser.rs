@@ -72,7 +72,8 @@ impl<'text> Parser<'text> {
         );
 
         let lexeme = self.lexer.peek();
-        let mut lhs = match lexeme.kind {
+        let lhs = match lexeme.kind {
+            // Literals
             LK::IntegerLiteral { .. } => self.integer_literal(),
             LK::SingleQuoteStringLiteral { .. } => self.single_quote_string_literal(),
 
@@ -88,11 +89,13 @@ impl<'text> Parser<'text> {
             LK::If => box_expr_variant!(self.if_expr(), N::Expr::If),
             LK::While => box_expr_variant!(self.while_expr(), N::Expr::While),
             LK::Until => box_expr_variant!(self.until_expr(), N::Expr::Until),
+
             _ => None,
         };
 
         let Some(mut lhs) = lhs else { return None };
 
+        // Parse infix operators
         loop {
             let op = match self.lexer.peek() {
                 op if op.is_operator() => op,
@@ -104,24 +107,61 @@ impl<'text> Parser<'text> {
             }
 
             self.lexer.next();
-            let rhs = self.expr_bp(r_bp).unwrap();
+            lhs = match op.kind {
+                LK::Dot => {
+                    let LK::Identifier { text: name } = self.lexer.next().kind else {
+                        panic!("Expected identifier.")
+                    };
 
-            let name = match op.kind {
-                LK::Minus => "-",
-                LK::Plus => "+",
-                LK::Slash => "/",
-                LK::Star => "*",
-                _ => unreachable!(),
-            }
-            .to_string();
+                    let args = self.parse_args();
 
-            lhs = N::Expr::Call(Box::new(N::Call {
-                receiver: lhs,
-                name,
-                args: vec![rhs],
-            }))
+                    N::Expr::Call(Box::new(N::Call {
+                        receiver: lhs,
+                        name,
+                        args,
+                    }))
+                }
+                op@(LK::Minus | LK::Plus | LK::Slash | LK::Star) => {
+                    let name = match op {
+                        LK::Minus => "-".to_string(),
+                        LK::Plus => "+".to_string(),
+                        LK::Slash => "/".to_string(),
+                        LK::Star => "*".to_string(),
+                        _ => unreachable!()
+                    };
+                    let rhs = self.expr_bp(r_bp).unwrap();
+
+                    N::Expr::Call(Box::new(N::Call {
+                        receiver: lhs,
+                        name,
+                        args: vec![rhs],
+                    }))
+                }
+                other => unreachable!("Lexeme kind {:?} is not an operator.", other)
+            };
         }
         Some(lhs)
+    }
+
+    /// Parse args inside parentheses.
+    fn parse_args(&mut self) -> Vec<N::Expr> {
+        self.expect(&[LK::LeftParen]);
+
+        let mut args = vec![];
+        while let Some(arg) = self.expr() {
+            args.push(arg);
+
+            match self.lexer.peek().kind {
+                LK::Comma => {
+                    self.lexer.next();
+                }
+                LK::RightParen => break,
+                _ => panic!()
+            }
+        }
+
+        self.expect(&[LK::RightParen]);
+        args
     }
 
     /// Once we see "if", should be irrefutable.
@@ -469,6 +509,52 @@ mod tests {
             			  (args (Integer . 3)))
             		(name . "*") (args (Integer . 4)))))
                 (name . "+") (args (Integer . 5))))))
+        "#]];
+        let actual = parse_to_sexpr(text);
+        expected.assert_eq(&actual);
+    }
+
+    #[test]
+    fn method_call() {
+        let text = "$foo.bar()";
+        let expected = expect![[r#"
+            ((statements
+              (body
+               (Call (receiver GlobalVariableRead (name . "foo")) (name . "bar")
+            	 (args)))))
+        "#]];
+        let actual = parse_to_sexpr(text);
+        expected.assert_eq(&actual);
+    }
+
+    #[test]
+    fn method_call_multiple_args() {
+        let text = "$foo.bar(1, 2, 3)";
+        let expected = expect![[r#"
+            ((statements
+              (body
+               (Call (receiver GlobalVariableRead (name . "foo")) (name . "bar")
+            	 (args (Integer . 1) (Integer . 2) (Integer . 3))))))
+        "#]];
+        let actual = parse_to_sexpr(text);
+        expected.assert_eq(&actual);
+    }
+
+    #[test]
+    fn method_call_in_operators() {
+        let text = "1 + $foo.bar() * 2 + 3";
+        let expected = expect![[r#"
+            ((statements
+              (body
+               (Call
+                (receiver Call (receiver Integer . 1) (name . "+")
+            	      (args
+            	       (Call
+            		(receiver Call
+            			  (receiver GlobalVariableRead (name . "foo"))
+            			  (name . "bar") (args))
+            		(name . "*") (args (Integer . 2)))))
+                (name . "+") (args (Integer . 3))))))
         "#]];
         let actual = parse_to_sexpr(text);
         expected.assert_eq(&actual);

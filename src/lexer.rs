@@ -391,8 +391,9 @@ impl<'text> Lexer<'text> {
                 Some((_, c)) if c.is_whitespace() => {
                     return self.integer_literal(start_idx, CharDifference(len));
                 }
-                None => return self.integer_literal(start_idx, CharDifference(len)),
-                _ => panic!(),
+                _ => {
+                    return self.integer_literal(start_idx, CharDifference(len));
+                }
             }
         }
 
@@ -1086,5 +1087,20 @@ mod tests {
             let actual = lex_to_sexpr(text);
             expected.assert_eq(&actual);
         }
+    }
+
+    #[test]
+    fn method_call() {
+        let text = "$foo.bar()";
+        let expected = expect![[r#"
+            (((kind GlobalVariable (text . "$foo")) (start . 0) (len . 4))
+             ((kind . Dot) (start . 4) (len . 1))
+             ((kind Identifier (text . "bar")) (start . 5) (len . 3))
+             ((kind . LeftParen) (start . 8) (len . 1))
+             ((kind . RightParen) (start . 9) (len . 1))
+             ((kind . Eof) (start . 10) (len . 0)))
+        "#]];
+        let actual = lex_to_sexpr(text);
+        expected.assert_eq(&actual);
     }
 }

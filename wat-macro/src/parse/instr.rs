@@ -80,7 +80,6 @@ fn parse_unfolded_instr(name: Ident, input: ParseInput) -> Result<TokenStream> {
     let path = quote![wat_defs::instr::UnfoldedInstr];
     let name = name.to_string();
 
-    eprintln!("parse_unfolded_instr: name={}", name);
     let res = match name.as_str() {
         "nop" => quote!(wat_defs::instr::UnfoldedInstr::Nop),
         "const_i32" => parse_const(NumType::I32, input)?,

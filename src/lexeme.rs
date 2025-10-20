@@ -59,7 +59,7 @@ impl Lexeme {
     pub fn is_operator(&self) -> bool {
         use LexemeKind::*;
         match self.kind {
-            Minus | Plus | Slash | Star => true,
+            Dot | Minus | Plus | Slash | Star => true,
             _ => false
         }
     }
@@ -67,12 +67,21 @@ impl Lexeme {
     /// Gets `(lhs_binding_power, rhs_binding_power)`
     pub fn binding_power(&self) -> (u8, u8) {
         use LexemeKind::*;
+        // Copied from Prism `prism.c` `pm_binding_power_t`
         // Higher rhs binding power makes it left-associative.
-        const BP_TERM: (u8, u8) = (1, 2);
-        const BP_FACTOR: (u8, u8) = (3, 4);
+        const BP_MATCH: (u8, u8) = (12, 13);
+        const BP_ASSIGNMENT: (u8, u8) = (18, 18);
+        const BP_LOGICAL_OR: (u8, u8) = (24, 25);
+        const BP_LOGICAL_AND: (u8, u8) = (26, 27);
+        const BP_EQUALITY: (u8, u8) = (28, 29);
+        const BP_TERM: (u8, u8) = (38, 39);
+        const BP_FACTOR: (u8, u8) = (40, 41);
+        const BP_CALL: (u8, u8) = (50, 50);
         match &self.kind {
+            In => BP_MATCH,
             Minus | Plus => BP_TERM,
             Slash | Star => BP_FACTOR,
+            Dot => BP_CALL,
             other => panic!("Lexeme of kind {:?} has no binding power", other)
         }
     }
