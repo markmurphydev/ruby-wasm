@@ -1,5 +1,6 @@
 (rec
   (type $str (sub final (array i8)))
+  (type $boxnum (sub final (struct (field $val i64))))
   (type $obj (sub (struct (field $parent (mut (ref null $class))))))
   (type $method
     (sub
@@ -297,11 +298,164 @@
     (local.get $args)
     (local.get $method)))
 (func
+  $is_fixnum
+  (param $n (ref eq))
+  (result i32)
+  (if
+    (result i32)
+    (ref.test(ref i31)
+      (local.get $n))
+    (then
+      (i32.and
+        (i32.const 1073741824)
+        (i31.get_u
+          (ref.cast(ref i31)
+            (local.get $n)))))
+    (else
+      (i32.const 0))))
+(func
+  $sign_extend
+  (param $val i32) (param $bit_width i32)
+  (result i32)
+  (local $top_bit_mask i32) (local $missing_bits_mask i32)
+  (local.set $top_bit_mask
+    (i32.shl
+      (i32.const 1)
+      (i32.sub
+        (local.get $bit_width)
+        (i32.const 1))))
+  (local.set $missing_bits_mask
+    (i32.shr_s
+      (i32.shl
+        (i32.const 1)
+        (i32.const 31))
+      (i32.sub
+        (i32.const 32)
+        (local.get $bit_width))))
+  (if
+    (result i32)
+    (i32.and
+      (local.get $val)
+      (local.get $top_bit_mask))
+    (then
+      (i32.or
+        (local.get $val)
+        (local.get $missing_bits_mask)))
+    (else
+      (local.get $val))))
+(func
+  $sign_extend_fixnum
+  (param $n i32)
+  (result i32)
+  (call $sign_extend
+    (local.get $n)
+    (i32.const 30)))
+(func
+  $fixnum_to_i64
+  (param $n (ref i31))
+  (result i64)
+  (local $n_i32 i32) (local $n_i32_sign_extend i32)
+  (local.set $n_i32
+    (i31.get_u
+      (local.get $n)))
+  (local.set $n_i32_sign_extend
+    (call $sign_extend_fixnum
+      (local.get $n_i32)))
+  (i64.extend_i32_s
+    (local.get $n_i32_sign_extend)))
+(func
+  $boxnum_to_i64
+  (param $n (ref $boxnum))
+  (result i64)
+  (struct.get $boxnum $val
+    (local.get $n)))
+(func
+  $integer_to_i64
+  (param $n (ref eq))
+  (result i64)
+  (if
+    (result i64)
+    (call $is_fixnum
+      (local.get $n))
+    (then
+      (call $fixnum_to_i64
+        (ref.cast(ref i31)
+          (local.get $n))))
+    (else
+      (call $boxnum_to_i64
+        (ref.cast(ref $boxnum)
+          (local.get $n))))))
+(func
+  $in_fixnum_range
+  (param $n i64)
+  (result i32)
+  (local $n_i32 i32)
+  (local.set $n_i32
+    (i32.wrap_i64
+      (local.get $n)))
+  (i32.and
+    (i32.lt_s
+      (i32.const -536870912)
+      (local.get $n_i32))
+    (i32.lt_s
+      (local.get $n_i32)
+      (i32.const 536870911))))
+(func
+  $i32_to_fixnum
+  (param $n i32)
+  (result (ref i31))
+  (ref.i31
+    (i32.or
+      (local.get $n)
+      (i32.const 1073741824))))
+(func
+  $i64_to_fixnum
+  (param $n i64)
+  (result (ref i31))
+  (call $i32_to_fixnum
+    (i32.wrap_i64
+      (local.get $n))))
+(func
+  $i64_to_boxnum
+  (param $n i64)
+  (result (ref $boxnum))
+  (struct.new $boxnum
+    (local.get $n)))
+(func
+  $i64_to_integer
+  (param $n i64)
+  (result (ref eq))
+  (if
+    (result (ref eq))
+    (call $in_fixnum_range
+      (local.get $n))
+    (then
+      (call $i64_to_fixnum
+        (local.get $n)))
+    (else
+      (call $i64_to_boxnum
+        (local.get $n)))))
+(func
+  $add
+  (param $lhs (ref eq)) (param $rhs (ref eq))
+  (result (ref eq))
+  (local $lhs_val i64) (local $rhs_val i64) (local $res i64)
+  (local.set $lhs_val
+    (call $integer_to_i64
+      (local.get $lhs)))
+  (local.set $rhs_val
+    (call $integer_to_i64
+      (local.get $rhs)))
+  (local.set $res
+    (i64.add
+      (local.get $lhs_val)
+      (local.get $rhs_val)))
+  (call $i64_to_integer
+    (local.get $res)))
+(func
   $__ruby_top_level_function
   (export "__ruby_top_level_function")
   (result (ref eq))
-  (call $call
-    (global.get $class_BasicObject)
-    (global.get $str_name)
-    (global.get $empty_args)))
+  (ref.i31
+    (i32.const 5)))
 (start $_start)

@@ -34,6 +34,8 @@ pub enum UnfoldedInstr {
 
     I32WrapI64,
 
+    I64Add,
+
     I64ExtendI32U,
 
     I64ExtendI32S,
@@ -176,6 +178,7 @@ impl Instr {
             || str == "i32_shr_s"
             || str == "i32_shr_u"
             || str == "i32_wrap_i64"
+            || str == "i64_add"
             || str == "i64_extend_i32_u"
             || str == "i64_extend_i32_s"
             || str == "br"

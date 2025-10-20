@@ -6,6 +6,7 @@ use serde::Serialize;
 use wasmtime::{AnyRef, Rooted};
 use wat_defs::ty::RefType;
 use wat_macro::wat;
+use wasmtime as WT;
 
 /// `wasmtime`'s Rust-side representation of a Wasm `(ref eq)` value
 pub type WasmtimeRefEq = Rooted<AnyRef>;
@@ -63,6 +64,8 @@ impl Unitype {
     /// We give fixnums half an i31, marking MSB 1
     /// (0b1xx_xxxx...): i31
     pub const FIXNUM_BIT_WIDTH: u32 = 30;
+    pub const FIXNUM_MIN_VAL: i64 = -2i64.pow(Self::FIXNUM_BIT_WIDTH - 1);
+    pub const FIXNUM_MAX_VAL: i64 = 2i64.pow(Self::FIXNUM_BIT_WIDTH - 1) - 1;
 
     /// Fixnums are identified with a 1 in the MSB of the i31
     pub const FIXNUM_MARKER: i32 = 1 << 30;
@@ -84,18 +87,11 @@ impl Unitype {
         // assert_eq!(-1, u64::MAX as i64);
         // ```
 
-        /// Minimum size required for 2's complement representation of the given number
-        /// Strategy from:
-        /// https://internals.rust-lang.org/t/add-methods-that-return-the-number-of-bits-necessary-to-represent-an-integer-in-binary-to-the-standard-library/21870/7
-        fn bit_width(n: i64) -> u32 {
-            i64::BITS - n.abs().leading_zeros() + 1
-        }
-
         match n {
-            n if bit_width(n) <= Self::FIXNUM_BIT_WIDTH => {
+            n if Self::FIXNUM_MIN_VAL <= n && n <= Self::FIXNUM_MAX_VAL => {
                 Unitype::Fixnum(Fixnum(i32::try_from(n).unwrap()))
             }
-            n if bit_width(n) <= i64::BITS => Unitype::HeapNum(n),
+            n if n <= i64::MAX => Unitype::HeapNum(n),
             _ => {
                 todo!(
                     "Bignums not yet implemented.
@@ -108,7 +104,7 @@ impl Unitype {
 
     /// Parse a Wasm `(ref eq)` value into a `UnitypeValue`.
     /// Used only for displaying `wasmtime` output.
-    pub fn parse_ref_eq(ref_eq: WasmtimeRefEq, store: &mut wasmtime::Store<()>) -> Self {
+    pub fn parse_ref_eq(ref_eq: WasmtimeRefEq, engine: &mut WT::Engine, store: &mut WT::Store<()>) -> Self {
         let is_i31 = ref_eq.is_i31(&store).unwrap();
         if is_i31 {
             let value = ref_eq.unwrap_i31(&store).unwrap().get_u32() as i32;
@@ -136,9 +132,18 @@ impl Unitype {
                     let string = String::from_utf8(bytes).unwrap();
                     Unitype::String(string)
                 }
-                ref_eq => {
-                    panic!("Unknown type: {:?}", ref_eq.ty(&store))
+                strukt if strukt.is_struct(&store).unwrap() => {
+
+                    let strukt = strukt.as_struct(&store).unwrap().unwrap();
+                    if let Some(n) = strukt.field(store, 0).ok().and_then(|f| f.i64()) {
+                        Unitype::HeapNum(n)
+                    } else {
+                        todo!("Unknown struct type")
+                    }
                 },
+                other => {
+                    panic!("Unknown type: {:?}", other.ty(&store))
+                }
             }
         }
     }

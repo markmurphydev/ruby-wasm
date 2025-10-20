@@ -10,6 +10,7 @@ pub const METHOD_TYPE_IDENTIFIER: &str = "method";
 pub fn add_type_defs(ctx: &mut CompileCtx<'_>) {
     let mut type_defs = vec![
         string(),
+        boxnum(),
         obj(),
         method(),
         class(),

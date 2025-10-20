@@ -44,6 +44,7 @@ fn funcs() -> Vec<Func> {
         i64_to_boxnum(),
         i64_to_integer(),
         add(),
+        to_bool(),
     ]
 }
 
@@ -214,11 +215,18 @@ fn sign_extend() -> Func {
             (param $bit_width i32)
             (result i32)
             (local $top_bit_mask i32)
+            (local $missing_bits_mask i32)
 
             (local_set $top_bit_mask
-                (i32_shl (i32_const 1)
-                         (i32_sub (local_get $bit_width) (i32_const 1))))
-        )
+                (i32_shl (const_i32 1)
+                         (i32_sub (local_get $bit_width) (const_i32 1))))
+            (local_set $missing_bits_mask
+                (i32_shr_s (i32_shl (const_i32 1) (const_i32 31))
+                           (i32_sub (const_i32 32) (local_get $bit_width))))
+            (if (result i32)
+                (i32_and (local_get $val) (local_get $top_bit_mask))
+                (then (i32_or (local_get $val) (local_get $missing_bits_mask)))
+                (else (local_get $val))))
     }
 }
 
@@ -230,7 +238,7 @@ fn sign_extend_fixnum() -> Func {
 
             (call $sign_extend
                   (local_get $n)
-                  (i32_const ,(Unitype::FIXNUM_BIT_WIDTH))))
+                  (const_i32 ,(Unitype::FIXNUM_BIT_WIDTH as i64))))
     }
 }
 
@@ -243,10 +251,14 @@ fn fixnum_to_i64() -> Func {
             (param $n (ref i31))
             (result i64)
             (local $n_i32 i32)
+            (local $n_i32_no_fixnum_marker i32)
             (local $n_i32_sign_extend i32)
 
             (local_set $n_i32 (i31_get_u (local_get $n)))
-            (local_set $n_i32_sign_extend (call $sign_extend_fixnum (local_get $n_i32)))
+            (local_set $n_i32_no_fixnum_marker
+                (i32_and (local_get $n_i32)
+                         (const_i32 ,(!Unitype::FIXNUM_MARKER as i64))))
+            (local_set $n_i32_sign_extend (call $sign_extend_fixnum (local_get $n_i32_no_fixnum_marker)))
             (i64_extend_i32_s (local_get $n_i32_sign_extend))
         )
     }
@@ -272,7 +284,7 @@ fn integer_to_i64() -> Func {
                 (then (call $fixnum_to_i64
                             (ref_cast (ref i31) (local_get $n))))
                 (else (call $boxnum_to_i64
-                            (ref_cast (ref $unitype_boxnum) (local_get $n))))))
+                            (ref_cast (ref $boxnum) (local_get $n))))))
     }
 }
 
@@ -284,9 +296,11 @@ fn in_fixnum_range() -> Func {
         (func $in_fixnum_range
             (param $n i64)
             (result i32)
+            (local $n_i32 i32)
+            (local_set $n_i32 (i32_wrap_i64 (local_get $n)))
             (i32_and (i32_lt_s (const_i32 ,(min))
-                               (local_get $n))
-                     (i32_lt_s (local_get $n)
+                               (local_get $n_i32))
+                     (i32_lt_s (local_get $n_i32)
                                (const_i32 ,(max)))))
     }
 }
@@ -299,7 +313,7 @@ fn i32_to_fixnum() -> Func {
             (param $n i32)
             (result (ref i31))
             (ref_i31 (i32_or (local_get $n)
-                             (i32_const ,(Unitype::FIXNUM_MARKER)))))
+                             (const_i32 ,(Unitype::FIXNUM_MARKER as i64)))))
     }
 }
 
@@ -324,13 +338,13 @@ fn i64_to_boxnum() -> Func {
 
 fn i64_to_integer() -> Func {
     wat! {
-        (func $integer_to_i64
+        (func $i64_to_integer
             (param $n i64)
             (result (ref eq))
             (if (result (ref eq))
-                (call $in_fixnum_range (local_get $lhs))
-                (then (call $i64_to_fixnum (local_get $lhs)))
-                (else (call $i64_to_boxnum (local_get $lhs)))))
+                (call $in_fixnum_range (local_get $n))
+                (then (call $i64_to_fixnum (local_get $n)))
+                (else (call $i64_to_boxnum (local_get $n)))))
     }
 }
 
@@ -351,6 +365,19 @@ fn add() -> Func {
                                      (local_get $rhs_val)))
             (call $i64_to_integer (local_get $res))
         )
+    }
+}
+
+fn to_bool() -> Func {
+    wat! {
+        (func $to_bool
+            (param $b i32)
+            (result (ref i31))
+            (ref_i31
+                (if (result i32)
+                    (local_get $b)
+                    (then (const_i32 ,(Unitype::TRUE_BIT_PATTERN as i64)))
+                    (else (const_i32 ,(Unitype::FALSE_BIT_PATTERN as i64))))))
     }
 }
 

@@ -13,7 +13,9 @@ $cells = [
   [0, 0, 0, 0, 0, 0, 0, 0, 0, 0],
 ]
 
-def get_cells; $cells end
+def get_cells
+  $cells 
+end
 
 def toggle_cell(row, col)
   if $cells[row][col] == 1
@@ -70,41 +72,41 @@ def step
   $cells = res
 end
 
-def print_cells
-  for row in [0, 1, 2, 3, 4, 5, 6, 7, 8, 9] do
-    for col in [0, 1, 2, 3, 4, 5, 6, 7, 8, 9] do
-      if $cells[row][col] == 1
-        print("X ")
-      else
-        print("_ ")
-      end
-    end
-    print("\n")
-  end
-  print("\n")
-end
-
-def print_neighbors
-  res = [
-    [0, 0, 0, 0, 0, 0, 0, 0, 0, 0],
-    [0, 0, 0, 0, 0, 0, 0, 0, 0, 0],
-    [0, 0, 0, 0, 0, 0, 0, 0, 0, 0],
-    [0, 0, 0, 0, 0, 0, 0, 0, 0, 0],
-    [0, 0, 0, 0, 0, 0, 0, 0, 0, 0],
-    [0, 0, 0, 0, 0, 0, 0, 0, 0, 0],
-    [0, 0, 0, 0, 0, 0, 0, 0, 0, 0],
-    [0, 0, 0, 0, 0, 0, 0, 0, 0, 0],
-    [0, 0, 0, 0, 0, 0, 0, 0, 0, 0],
-    [0, 0, 0, 0, 0, 0, 0, 0, 0, 0],
-  ]
-  (0..9).each do |row|
-    (0..9).each do |col|
-      res[row][col] = count_neighbors(row, col)
-    end
-  end
-
-  puts res.map { |x| x.join(' ') }
-end
+# def print_cells
+#   for row in [0, 1, 2, 3, 4, 5, 6, 7, 8, 9] do
+#     for col in [0, 1, 2, 3, 4, 5, 6, 7, 8, 9] do
+#       if $cells[row][col] == 1
+#         print("X ")
+#       else
+#         print("_ ")
+#       end
+#     end
+#     print("\n")
+#   end
+#   print("\n")
+# end
+# 
+# def print_neighbors
+#   res = [
+#     [0, 0, 0, 0, 0, 0, 0, 0, 0, 0],
+#     [0, 0, 0, 0, 0, 0, 0, 0, 0, 0],
+#     [0, 0, 0, 0, 0, 0, 0, 0, 0, 0],
+#     [0, 0, 0, 0, 0, 0, 0, 0, 0, 0],
+#     [0, 0, 0, 0, 0, 0, 0, 0, 0, 0],
+#     [0, 0, 0, 0, 0, 0, 0, 0, 0, 0],
+#     [0, 0, 0, 0, 0, 0, 0, 0, 0, 0],
+#     [0, 0, 0, 0, 0, 0, 0, 0, 0, 0],
+#     [0, 0, 0, 0, 0, 0, 0, 0, 0, 0],
+#     [0, 0, 0, 0, 0, 0, 0, 0, 0, 0],
+#   ]
+#   (0..9).each do |row|
+#     (0..9).each do |col|
+#       res[row][col] = count_neighbors(row, col)
+#     end
+#   end
+# 
+#   puts res.map { |x| x.join(' ') }
+# end
 
 
 toggle_cell(4, 5)

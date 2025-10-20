@@ -263,6 +263,7 @@ fn unfolded_instr_to_doc(instr: &UnfoldedInstr) -> Doc {
         I32ShrS => text("i32.shr_s"),
         I32ShrU => text("i32.shr_u"),
         I32WrapI64 => text("i32.wrap_i64"),
+        I64Add => text("i64.add"),
         I64ExtendI32S => text("i64.extend_i32_s"),
         I64ExtendI32U => text("i64.extend_i32_u"),
         Br { label } => text(format!("br ${}", label)),
