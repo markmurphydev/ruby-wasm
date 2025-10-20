@@ -27,6 +27,20 @@ pub enum Expr {
     While(Box<While>),
     Until(Box<Until>),
     Call(Box<Call>),
+    And(Box<And>),
+    Or(Box<Or>),
+}
+
+#[derive(Debug, Clone, PartialEq, Eq, Serialize)]
+pub struct And {
+    pub lhs: Expr,
+    pub rhs: Expr,
+}
+
+#[derive(Debug, Clone, PartialEq, Eq, Serialize)]
+pub struct Or {
+    pub lhs: Expr,
+    pub rhs: Expr,
 }
 
 #[derive(Debug, Clone, PartialEq, Eq, Serialize)]

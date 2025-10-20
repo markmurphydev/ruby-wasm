@@ -123,8 +123,20 @@ impl<'text> Parser<'text> {
                         args,
                     }))
                 }
-                op @ (LK::Minus | LK::Plus | LK::Slash | LK::Star) => {
+                LK::AmpersandAmpersand => {
+                    let rhs = self.expr_bp(r_bp).unwrap();
+
+                    N::Expr::And(Box::new(N::And { lhs, rhs }))
+                }
+                LK::PipePipe => {
+                    let rhs = self.expr_bp(r_bp).unwrap();
+
+                    N::Expr::Or(Box::new(N::Or { lhs, rhs }))
+                }
+                op @ (LK::Greater | LK::Less | LK::Minus | LK::Plus | LK::Slash | LK::Star) => {
                     let name = match op {
+                        LK::Greater => ">".to_string(),
+                        LK::Less => "<".to_string(),
                         LK::Minus => "-".to_string(),
                         LK::Plus => "+".to_string(),
                         LK::Slash => "/".to_string(),
@@ -568,6 +580,22 @@ mod tests {
             ((statements
               (body (Call (receiver Integer . 9999) (name . "-@") (args)))))
         "#]];
+        let actual = parse_to_sexpr(text);
+        expected.assert_eq(&actual);
+    }
+
+    #[test]
+    fn logical_ops() {
+        let text = "false && true || false";
+        let expected = expect![[""]];
+        let actual = parse_to_sexpr(text);
+        expected.assert_eq(&actual);
+    }
+
+    #[test]
+    fn gt_lt() {
+        let text = "1 < 2 && 3 < 4";
+        let expected = expect![[""]];
         let actual = parse_to_sexpr(text);
         expected.assert_eq(&actual);
     }

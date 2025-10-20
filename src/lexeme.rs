@@ -75,11 +75,16 @@ impl Lexeme {
         const BP_LOGICAL_OR: (u8, u8) = (24, 25);
         const BP_LOGICAL_AND: (u8, u8) = (26, 27);
         const BP_EQUALITY: (u8, u8) = (28, 29);
+        const BP_COMPARISON: (u8, u8) = (30, 31);
+
         const BP_TERM: (u8, u8) = (38, 39);
         const BP_FACTOR: (u8, u8) = (40, 41);
         const BP_CALL: (u8, u8) = (50, 50);
         match &self.kind {
             In => BP_MATCH,
+            PipePipe => BP_LOGICAL_OR,
+            AmpersandAmpersand => BP_LOGICAL_AND,
+            Greater | GreaterEqual | Less | LessEqual => BP_COMPARISON,
             Minus | Plus => BP_TERM,
             Slash | Star => BP_FACTOR,
             Dot => BP_CALL,
