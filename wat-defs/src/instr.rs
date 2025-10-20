@@ -3,43 +3,36 @@ use crate::ty::{BlockType, NumType, RefType};
 #[derive(Debug)]
 pub enum UnfoldedInstr {
     Nop,
-
     I32Eqz,
-
     I32Eq,
-
     I32LtS,
-
     I32LtU,
-
     I32GtS,
-
     I32GtU,
-
     I32Add,
-
     I32Sub,
-
     I32And,
-
     I32Or,
-
     I32Xor,
-
     I32Shl,
-
     I32ShrS,
-
     I32ShrU,
-
     I32WrapI64,
-
+    I64Eqz,
+    I64Eq,
+    I64LtS,
+    I64LtU,
+    I64GtS,
+    I64GtU,
     I64Add,
-
+    I64Sub,
+    I64And,
+    I64Or,
     I64Xor,
-
+    I64Shl,
+    I64ShrS,
+    I64ShrU,
     I64ExtendI32U,
-
     I64ExtendI32S,
 
     Const {
@@ -89,6 +82,8 @@ pub enum UnfoldedInstr {
     I31GetU,
 
     RefAsNonNull,
+
+    RefEq,
 
     RefTest {
         ty: RefType,
@@ -180,8 +175,20 @@ impl Instr {
             || str == "i32_shr_s"
             || str == "i32_shr_u"
             || str == "i32_wrap_i64"
+            || str == "i64_eqz"
+            || str == "i64_eq"
+            || str == "i64_lt_s"
+            || str == "i64_lt_u"
+            || str == "i64_gt_s"
+            || str == "i64_gt_u"
             || str == "i64_add"
+            || str == "i64_sub"
+            || str == "i64_and"
+            || str == "i64_or"
             || str == "i64_xor"
+            || str == "i64_shl"
+            || str == "i64_shr_s"
+            || str == "i64_shr_u"
             || str == "i64_extend_i32_u"
             || str == "i64_extend_i32_s"
             || str == "br"
@@ -196,6 +203,7 @@ impl Instr {
             || str == "i31_get_s"
             || str == "i31_get_u"
             || str == "ref_as_non_null"
+            || str == "ref_eq"
             || str == "ref_test"
             || str == "ref_cast"
             || str == "call"

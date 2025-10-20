@@ -471,6 +471,14 @@
       (else
         (i32.const 1)))))
 (func
+  $from_bool
+  (param $b (ref i31))
+  (result i32)
+  (ref.eq
+    (local.get $b)
+    (ref.i31
+      (i32.const 3))))
+(func
   $negate
   (param $n (ref eq))
   (result (ref eq))
@@ -506,9 +514,32 @@
         (ref.cast(ref i31)
           (local.get $b))))))
 (func
+  $lt
+  (param $a (ref eq)) (param $b (ref eq))
+  (result (ref eq))
+  (call $to_bool
+    (i64.lt_s
+      (call $integer_to_i64
+        (local.get $a))
+      (call $integer_to_i64
+        (local.get $a)))))
+(func
+  $gt
+  (param $a (ref eq)) (param $b (ref eq))
+  (result (ref eq))
+  (call $to_bool
+    (i64.gt_s
+      (call $integer_to_i64
+        (local.get $a))
+      (call $integer_to_i64
+        (local.get $a)))))
+(func
   $__ruby_top_level_function
   (export "__ruby_top_level_function")
   (result (ref eq))
-  (ref.i31
-    (i32.const 5)))
+  (call $lt
+    (ref.i31
+      (i32.const 1073741825))
+    (ref.i31
+      (i32.const 1073741826))))
 (start $_start)

@@ -8,7 +8,7 @@ use pretty::RcDoc;
 use std::borrow::Cow;
 use wat_defs::func::{Exported, Func, Local, Param};
 use wat_defs::global::Global;
-use wat_defs::instr::UnfoldedInstr::{I32WrapI64, I64Add, I64Xor, RefI31, Return};
+use wat_defs::instr::UnfoldedInstr::{I32WrapI64, I64Add, I64Xor, RefAsNonNull, RefI31, Return};
 use wat_defs::instr::{Instr, UnfoldedInstr};
 use wat_defs::module::{Module, TypeDef};
 use wat_defs::ty::{
@@ -263,8 +263,20 @@ fn unfolded_instr_to_doc(instr: &UnfoldedInstr) -> Doc {
         I32ShrS => text("i32.shr_s"),
         I32ShrU => text("i32.shr_u"),
         I32WrapI64 => text("i32.wrap_i64"),
+        I64Eqz => text("i64.eqz"),
+        I64Eq => text("i64.eq"),
+        I64LtS => text("i64.lt_s"),
+        I64LtU => text("i64.lt_u"),
+        I64GtS => text("i64.gt_s"),
+        I64GtU => text("i64.gt_u"),
         I64Add => text("i64.add"),
+        I64Sub => text("i64.sub"),
+        I64And => text("i64.and"),
+        I64Or => text("i64.or"),
         I64Xor => text("i64.xor"),
+        I64Shl => text("i64.shl"),
+        I64ShrS => text("i64.shr_s"),
+        I64ShrU => text("i64.shr_u"),
         I64ExtendI32S => text("i64.extend_i32_s"),
         I64ExtendI32U => text("i64.extend_i32_u"),
         Br { label } => text(format!("br ${}", label)),
@@ -282,6 +294,7 @@ fn unfolded_instr_to_doc(instr: &UnfoldedInstr) -> Doc {
         I31GetS => text("i31.get_s"),
         I31GetU => text("i31.get_u"),
         RefAsNonNull => text("ref.as_non_null"),
+        RefEq => text("ref.eq"),
         RefTest { ty } => text("ref.test").append(ref_type_to_doc(ty)),
         RefCast { ty } => text("ref.cast").append(ref_type_to_doc(ty)),
         Call { func } => text(format!("call ${}", func)),

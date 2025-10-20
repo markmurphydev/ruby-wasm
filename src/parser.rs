@@ -111,8 +111,10 @@ impl<'text> Parser<'text> {
             self.lexer.next();
             lhs = match op.kind {
                 LK::Dot => {
-                    let LK::Identifier { text: name } = self.lexer.next().kind else {
-                        panic!("Expected identifier.")
+                    let name = match self.lexer.next().kind {
+                        LK::Identifier { text: name } => name,
+                        LK::BracketLeftRight => "[]".to_string(),
+                        _ => panic!("Expected identifier or `[]`."),
                     };
 
                     let args = self.args();
@@ -595,6 +597,14 @@ mod tests {
     #[test]
     fn gt_lt() {
         let text = "1 < 2 && 3 < 4";
+        let expected = expect![[""]];
+        let actual = parse_to_sexpr(text);
+        expected.assert_eq(&actual);
+    }
+
+    #[test]
+    fn call_brackets() {
+        let text = "true.[](0)";
         let expected = expect![[""]];
         let actual = parse_to_sexpr(text);
         expected.assert_eq(&actual);

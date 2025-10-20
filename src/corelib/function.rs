@@ -1,12 +1,12 @@
+use crate::CompileCtx;
 use crate::corelib::alist::AListTypeDef;
 use crate::corelib::class;
 use crate::corelib::class::Class;
+use crate::corelib::helpers::i64_neg;
 use crate::unitype::Unitype;
-use crate::CompileCtx;
 use wat_defs::func::Func;
 use wat_defs::instr::Instr;
 use wat_macro::wat;
-use crate::corelib::helpers::i64_neg;
 
 pub fn add_functions(ctx: &mut CompileCtx<'_>) {
     add_start(ctx);
@@ -34,9 +34,12 @@ fn funcs() -> Vec<Func> {
         i64_to_integer(),
         add(),
         to_bool(),
+        from_bool(),
         negate(),
         and(),
         or(),
+        lt(),
+        gt(),
     ]
 }
 
@@ -238,7 +241,7 @@ fn fixnum_to_i64() -> Func {
     // - Strip Unitype::FIXNUM_MARKER
     // - Sign-extend i_Unitype::FIXNUM_BIT_WIDTH -> i64
 
-    wat !{
+    wat! {
         (func $fixnum_to_i64
             (param $n (ref i31))
             (result i64)
@@ -296,7 +299,6 @@ fn in_fixnum_range() -> Func {
                                (const_i32 ,(max)))))
     }
 }
-
 
 /// Pre: $n has the bit pattern of a valid fixnum, sans marker.
 fn i32_to_fixnum() -> Func {
@@ -373,6 +375,16 @@ fn to_bool() -> Func {
     }
 }
 
+fn from_bool() -> Func {
+    wat! {
+        (func $from_bool
+            (param $b (ref i31))
+            (result i32)
+            (ref_eq (local_get $b)
+                    (ref_i31 (const_i32 ,(Unitype::TRUE_BIT_PATTERN as i64)))))
+    }
+}
+
 fn negate() -> Func {
     wat! {
         (func $negate
@@ -405,5 +417,31 @@ fn or() -> Func {
             (ref_i31
                 (i32_or (i31_get_u (ref_cast (ref i31) (local_get $a)))
                         (i31_get_u (ref_cast (ref i31) (local_get $b))))))
+    }
+}
+
+fn lt() -> Func {
+    wat! {
+        (func $lt
+            (param $a (ref eq))
+            (param $b (ref eq))
+            (result (ref eq))
+
+            (call $to_bool
+                (i64_lt_s (call $integer_to_i64 (local_get $a))
+                          (call $integer_to_i64 (local_get $b)))))
+    }
+}
+
+fn gt() -> Func {
+    wat! {
+        (func $gt
+            (param $a (ref eq))
+            (param $b (ref eq))
+            (result (ref eq))
+
+            (call $to_bool
+                (i64_gt_s (call $integer_to_i64 (local_get $a))
+                          (call $integer_to_i64 (local_get $b)))))
     }
 }

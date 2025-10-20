@@ -243,11 +243,19 @@ fn compile_call_expr(ctx: &mut CompileCtx<'_>, call_expr: &Call) -> Vec<Instr> {
     match name.as_str() {
         "+" => {
             assert_eq!(1, args.len());
-            compile_plus(ctx, receiver, &args[0])
+            compile_binop(ctx, wat!($add), receiver, &args[0])
         },
         "-@" => {
             assert!(args.is_empty());
-            compile_unary_negate(ctx, receiver)
+            wat![ (call $negate ,(compile_expr(ctx, receiver)))]
+        }
+        ">" => {
+            assert_eq!(1, args.len());
+            compile_binop(ctx, wat!($gt), receiver, &args[0])
+        }
+        "<" => {
+            assert_eq!(1, args.len());
+            compile_binop(ctx, wat!($lt), receiver, &args[0])
         }
         _ => {
             let name = corelib::global::string_identifier(name);
@@ -275,7 +283,7 @@ fn compile_call_expr(ctx: &mut CompileCtx<'_>, call_expr: &Call) -> Vec<Instr> {
     }
 }
 
-fn compile_plus(ctx: &mut CompileCtx, lhs: &Expr, rhs: &Expr) -> Vec<Instr> {
+fn compile_binop(ctx: &mut CompileCtx, name: String, lhs: &Expr, rhs: &Expr) -> Vec<Instr> {
     let mut lhs = compile_expr(ctx, lhs);
     let mut rhs = compile_expr(ctx, rhs);
     let wat_args ={
@@ -284,13 +292,9 @@ fn compile_plus(ctx: &mut CompileCtx, lhs: &Expr, rhs: &Expr) -> Vec<Instr> {
     };
 
     wat! {
-        (call $add
+        (call ,(name)
             ,(wat_args))
     }
-}
-
-fn compile_unary_negate(ctx: &mut CompileCtx, val: &Expr) -> Vec<Instr> {
-    wat![ (call $negate ,(compile_expr(ctx, val)))]
 }
 
 /// Turns a Ruby Expr into a Wasm predicate.

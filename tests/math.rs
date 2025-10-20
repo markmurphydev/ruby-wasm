@@ -35,3 +35,11 @@ fn and_or() {
     let actual = ruby_wasm::run_ruby_program(text.to_owned());
     expected.assert_eq(&actual);
 }
+
+#[test]
+fn lt() {
+    let text = "1 < 2 && -2 < -1";
+    let expected = expect![["true"]];
+    let actual = ruby_wasm::run_ruby_program(text.to_owned());
+    expected.assert_eq(&actual);
+}

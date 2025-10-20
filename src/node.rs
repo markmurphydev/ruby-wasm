@@ -29,6 +29,12 @@ pub enum Expr {
     Call(Box<Call>),
     And(Box<And>),
     Or(Box<Or>),
+    Array(Box<Array>)
+}
+
+#[derive(Debug, Clone, PartialEq, Eq, Serialize)]
+pub struct Array {
+    pub vals: Vec<Expr>
 }
 
 #[derive(Debug, Clone, PartialEq, Eq, Serialize)]

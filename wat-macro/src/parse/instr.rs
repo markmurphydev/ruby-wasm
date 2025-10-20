@@ -98,8 +98,20 @@ fn parse_unfolded_instr(name: Ident, input: ParseInput) -> Result<TokenStream> {
         "i32_shr_s" => quote![ #path::I32ShrS ],
         "i32_shr_u" => quote![ #path::I32ShrU ],
         "i32_wrap_i64" => quote![ #path::I32WrapI64 ],
+        "i64_eqz" => quote![ #path::I64Eqz ],
+        "i64_eq" => quote![ #path::I64Eq ],
+        "i64_lt_s" => quote![ #path::I64LtS ],
+        "i64_lt_u" => quote![ #path::I64LtU ],
+        "i64_gt_s" => quote![ #path::I64GtS ],
+        "i64_gt_u" => quote![ #path::I64GtU ],
         "i64_add" => quote![ #path::I64Add ],
+        "i64_sub" => quote![ #path::I64Sub ],
+        "i64_and" => quote![ #path::I64And ],
+        "i64_or" => quote![ #path::I64Or ],
         "i64_xor" => quote![ #path::I64Xor ],
+        "i64_shl" => quote![ #path::I64Shl ],
+        "i64_shr_s" => quote![ #path::I64ShrS ],
+        "i64_shr_u" => quote![ #path::I64ShrU ],
         "i64_extend_i32_s" => quote![ #path::I64ExtendI32S ],
         "i64_extend_i32_u" => quote![ #path::I64ExtendI32U ],
         "const_i64" => parse_const(NumType::I64, input)?,
@@ -127,6 +139,7 @@ fn parse_unfolded_instr(name: Ident, input: ParseInput) -> Result<TokenStream> {
         "i31_get_s" => quote![ #path::I31GetS ],
         "i31_get_u" => quote![ #path::I31GetU ],
         "ref_as_non_null" => quote![ #path::RefAsNonNull ],
+        "ref_eq" => quote![ #path::RefEq ],
         "ref_test" => {
             let ty = ty::parse_ref_type(input)?;
             quote![ #path::RefTest { ty: #ty } ]
