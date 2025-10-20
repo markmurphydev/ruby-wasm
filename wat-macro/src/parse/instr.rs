@@ -264,15 +264,29 @@ mod test {
     use expect_test::expect;
     use quote::quote;
 
+    fn parse_to_string(input: TokenStream) -> String {
+        parse_instr(&mut ParseStream::new(input)).unwrap().to_string()
+    }
+
     #[test]
     pub fn _if() {
-        let input: TokenStream = quote! { (if $label (then (nop)) ) };
-        let actual = parse_instr(&mut ParseStream::new(input))
-            .unwrap()
-            .to_string();
-        let expected = expect![[
-            r#"wat_defs :: instr :: Instr { unfolded_instr : wat_defs :: instr :: UnfoldedInstr :: If { label : Some ("label" . to_string ()) , block_type : None , then_block : vec ! [wat_defs :: instr :: Instr { unfolded_instr : wat_defs :: instr :: UnfoldedInstr :: Nop , folded_instrs : vec ! [] , }] , else_block : Vec :: new () , } , folded_instrs : vec ! [] , }"#
-        ]];
+        let input: TokenStream = quote! { (if $label (const_i32 1) (then (nop)) ) };
+        let actual = parse_to_string(input);
+        let expected = expect![[r#"wat_defs :: instr :: Instr { unfolded_instr : wat_defs :: instr :: UnfoldedInstr :: If { label : Some ("label" . to_string ()) , block_type : None , then_block : vec ! [wat_defs :: instr :: Instr { unfolded_instr : wat_defs :: instr :: UnfoldedInstr :: Nop , folded_instrs : vec ! [] , }] , else_block : Vec :: new () , } , folded_instrs : vec ! [wat_defs :: instr :: Instr { unfolded_instr : wat_defs :: instr :: UnfoldedInstr :: Const { ty : wat_defs :: ty :: NumType :: I32 , val : 1i64 } , folded_instrs : vec ! [] , }] , }"#]];
+        expected.assert_eq(&actual);
+    }
+
+    #[test]
+    pub fn if_no_label_type_then_else() {
+        let input: TokenStream = quote! {
+            (if (result i32)
+                (ref_test (ref i31) (local_get $n))
+                (then (i32_and (const_i32 ,(Unitype::FIXNUM_MARKER))
+                               (i31_get_u (ref_cast (ref i31) (local_get $n)))))
+                (else (const_i32 0)))
+        };
+        let actual = parse_to_string(input);
+        let expected = expect![[r#"wat_defs :: instr :: Instr { unfolded_instr : wat_defs :: instr :: UnfoldedInstr :: If { label : None , block_type : Some (wat_defs :: ty :: BlockType :: Result (wat_defs :: ty :: ValType :: Num (wat_defs :: ty :: NumType :: I32))) , then_block : vec ! [wat_defs :: instr :: Instr { unfolded_instr : wat_defs :: instr :: UnfoldedInstr :: I32And , folded_instrs : vec ! [wat_defs :: instr :: Instr { unfolded_instr : wat_defs :: instr :: UnfoldedInstr :: Const { ty : wat_defs :: ty :: NumType :: I32 , val : Unitype :: FIXNUM_MARKER } , folded_instrs : vec ! [] , } , wat_defs :: instr :: Instr { unfolded_instr : wat_defs :: instr :: UnfoldedInstr :: I31GetU , folded_instrs : vec ! [wat_defs :: instr :: Instr { unfolded_instr : wat_defs :: instr :: UnfoldedInstr :: RefCast { ty : wat_defs :: ty :: RefType { null : wat_defs :: ty :: Nullable :: NonNullable , heap_type : wat_defs :: ty :: HeapType :: Abs (wat_defs :: ty :: AbsHeapType :: I31) , } } , folded_instrs : vec ! [wat_defs :: instr :: Instr { unfolded_instr : wat_defs :: instr :: UnfoldedInstr :: LocalGet { name : "n" . to_string () } , folded_instrs : vec ! [] , }] , }] , }] , }] , else_block : vec ! [wat_defs :: instr :: Instr { unfolded_instr : wat_defs :: instr :: UnfoldedInstr :: Const { ty : wat_defs :: ty :: NumType :: I32 , val : 0i64 } , folded_instrs : vec ! [] , }] , } , folded_instrs : vec ! [wat_defs :: instr :: Instr { unfolded_instr : wat_defs :: instr :: UnfoldedInstr :: RefTest { ty : wat_defs :: ty :: RefType { null : wat_defs :: ty :: Nullable :: NonNullable , heap_type : wat_defs :: ty :: HeapType :: Abs (wat_defs :: ty :: AbsHeapType :: I31) , } } , folded_instrs : vec ! [wat_defs :: instr :: Instr { unfolded_instr : wat_defs :: instr :: UnfoldedInstr :: LocalGet { name : "n" . to_string () } , folded_instrs : vec ! [] , }] , }] , }"#]];
         expected.assert_eq(&actual);
     }
 }

@@ -65,7 +65,7 @@ impl Unitype {
     pub const FIXNUM_BIT_WIDTH: u32 = 30;
 
     /// Fixnums are identified with a 1 in the MSB of the i31
-    const FIXNUM_MARKER: i32 = 1 << 30;
+    pub const FIXNUM_MARKER: i32 = 1 << 30;
 
     pub const FIXNUM_MASK: u32 = u32::MAX >> (u32::BITS - Self::FIXNUM_BIT_WIDTH);
     pub const FIXNUM_TOP_BIT_MASK: u32 = 1 << (Self::FIXNUM_BIT_WIDTH - 1);

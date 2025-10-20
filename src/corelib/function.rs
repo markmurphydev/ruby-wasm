@@ -199,8 +199,8 @@ fn is_fixnum() -> Func {
             // Wasm has no short-circuiting booleans.
             (if (result i32)
                 (ref_test (ref i31) (local_get $n))
-                (then (and (i32_const ,(Unitype::FIXNUM_MARKER))
-                           (cast (ref_cast i31))))
+                (then (i32_and (const_i32 ,(Unitype::FIXNUM_MARKER as i64))
+                               (i31_get_u (ref_cast (ref i31) (local_get $n)))))
                 (else (const_i32 0))))
     }
 }
