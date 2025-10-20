@@ -354,13 +354,19 @@
   $fixnum_to_i64
   (param $n (ref i31))
   (result i64)
-  (local $n_i32 i32) (local $n_i32_sign_extend i32)
+  (local $n_i32 i32)
+  (local $n_i32_no_fixnum_marker i32)
+  (local $n_i32_sign_extend i32)
   (local.set $n_i32
     (i31.get_u
       (local.get $n)))
+  (local.set $n_i32_no_fixnum_marker
+    (i32.and
+      (local.get $n_i32)
+      (i32.const -1073741825)))
   (local.set $n_i32_sign_extend
     (call $sign_extend_fixnum
-      (local.get $n_i32)))
+      (local.get $n_i32_no_fixnum_marker)))
   (i64.extend_i32_s
     (local.get $n_i32_sign_extend)))
 (func
@@ -452,6 +458,29 @@
       (local.get $rhs_val)))
   (call $i64_to_integer
     (local.get $res)))
+(func
+  $to_bool
+  (param $b i32)
+  (result (ref i31))
+  (ref.i31
+    (if
+      (result i32)
+      (local.get $b)
+      (then
+        (i32.const 3))
+      (else
+        (i32.const 1)))))
+(func
+  $negate
+  (param $n (ref eq))
+  (result (ref eq))
+  (call $i64_to_integer
+    (i64.add
+      (i64.const 1)
+      (i64.xor
+        (i64.const -1)
+        (call $integer_to_i64
+          (local.get $n))))))
 (func
   $__ruby_top_level_function
   (export "__ruby_top_level_function")

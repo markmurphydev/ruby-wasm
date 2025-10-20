@@ -70,8 +70,8 @@ impl Unitype {
     /// Fixnums are identified with a 1 in the MSB of the i31
     pub const FIXNUM_MARKER: i32 = 1 << 30;
 
-    pub const FIXNUM_MASK: u32 = u32::MAX >> (u32::BITS - Self::FIXNUM_BIT_WIDTH);
-    pub const FIXNUM_TOP_BIT_MASK: u32 = 1 << (Self::FIXNUM_BIT_WIDTH - 1);
+    pub const FIXNUM_MASK: i32 = i32::MAX >> (i32::BITS - Self::FIXNUM_BIT_WIDTH);
+    pub const FIXNUM_TOP_BIT_MASK: i32 = 1 << (Self::FIXNUM_BIT_WIDTH - 1);
 
     pub const FALSE_BIT_PATTERN: i32 = 0b0001;
     pub const TRUE_BIT_PATTERN: i32 = 0b0011;
@@ -108,13 +108,7 @@ impl Unitype {
         let is_i31 = ref_eq.is_i31(&store).unwrap();
         if is_i31 {
             let value = ref_eq.unwrap_i31(&store).unwrap().get_u32() as i32;
-            match value {
-                Self::FALSE_BIT_PATTERN => Self::False,
-                Self::TRUE_BIT_PATTERN => Self::True,
-                Self::NIL_BIT_PATTERN => Self::Nil,
-                val if (val & Self::FIXNUM_MARKER) != 0 => Self::Fixnum(Fixnum(val & !Self::FIXNUM_MARKER)),
-                _ => panic!("Invalid i31 bit pattern 0b{:b}", value),
-            }
+            Self::from_i31_bits(value)
         } else {
             match ref_eq {
                 arr if ref_eq.is_array(&store).unwrap() => {
@@ -159,6 +153,22 @@ impl Unitype {
         }
     }
 
+    pub fn from_i31_bits(value: i32) -> Self {
+        match value {
+            Self::FALSE_BIT_PATTERN => Self::False,
+            Self::TRUE_BIT_PATTERN => Self::True,
+            Self::NIL_BIT_PATTERN => Self::Nil,
+            val if (val & Self::FIXNUM_MARKER) != 0 => {
+                let val = val & !Self::FIXNUM_MARKER;
+                // sign-extend
+                let extend_width = i32::BITS - Self::FIXNUM_BIT_WIDTH;
+                let val = (val << extend_width) >> extend_width;
+                Self::Fixnum(Fixnum(val))
+            },
+            _ => panic!("Invalid i31 bit pattern 0b{:b}", value),
+        }
+    }
+
     pub fn to_pretty(self) -> String {
         let mut w = Vec::new();
         self.module_to_doc().render(80, &mut w).unwrap();
@@ -175,5 +185,17 @@ impl Unitype {
             Unitype::String(s) => format!("\"{}\"", s),
         };
         RcDoc::text(text)
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use crate::unitype::{Fixnum, Unitype};
+
+    #[test]
+    fn negative_fixnum_round_trip() {
+        let expected = Unitype::Fixnum(Fixnum(-22));
+        let actual = Unitype::from_i31_bits(expected.clone().to_i31_bits());
+        assert_eq!(expected, actual);
     }
 }

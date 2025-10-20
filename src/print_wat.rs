@@ -8,7 +8,7 @@ use pretty::RcDoc;
 use std::borrow::Cow;
 use wat_defs::func::{Exported, Func, Local, Param};
 use wat_defs::global::Global;
-use wat_defs::instr::UnfoldedInstr::{I32WrapI64, RefI31, Return};
+use wat_defs::instr::UnfoldedInstr::{I32WrapI64, I64Add, I64Xor, RefI31, Return};
 use wat_defs::instr::{Instr, UnfoldedInstr};
 use wat_defs::module::{Module, TypeDef};
 use wat_defs::ty::{
@@ -264,6 +264,7 @@ fn unfolded_instr_to_doc(instr: &UnfoldedInstr) -> Doc {
         I32ShrU => text("i32.shr_u"),
         I32WrapI64 => text("i32.wrap_i64"),
         I64Add => text("i64.add"),
+        I64Xor => text("i64.xor"),
         I64ExtendI32S => text("i64.extend_i32_s"),
         I64ExtendI32U => text("i64.extend_i32_u"),
         Br { label } => text(format!("br ${}", label)),

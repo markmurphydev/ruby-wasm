@@ -39,11 +39,10 @@ fn run_main_fn_i64(body: Vec<Instr>) -> String {
 
 #[test]
 pub fn run_without_panicking() {
-    // `run_main_fn_body` expects a function `() -> (ref eq)`, so just return `I31::const(3)`
     let main_fn = wat! {
         (ref_i31 (const_i32 3))
     };
-    let res = run_main_fn_i64(main_fn);
+    let res = run_main_fn_ref_eq(main_fn);
     println!("{}", res);
 }
 
@@ -145,7 +144,7 @@ mod function {
         #[test]
         pub fn test_22() {
             let input = wat! {
-                (call $i64_to_integer (const_i64 ,(22)))
+                (call $i64_to_integer (const_i64 22))
             };
             let actual = run_main_fn_ref_eq(input);
             let expected = expect![["22"]];
@@ -179,6 +178,35 @@ mod function {
             };
             let actual = run_main_fn_ref_eq(input);
             let expected = expect!["536870912"];
+            expected.assert_eq(&actual);
+        }
+    }
+
+    mod negate {
+        use expect_test::expect;
+        use ruby_wasm::corelib::helpers;
+        use ruby_wasm::unitype::Unitype;
+        use wat_macro::wat;
+        use crate::{run_main_fn_i64, run_main_fn_ref_eq};
+
+        #[test]
+        pub fn i64_neg() {
+            let input = wat! {
+                ,(helpers::i64_neg(wat![ (const_i64 22) ]))
+            };
+            eprintln!("{:?}", input);
+            let actual = run_main_fn_i64(vec![input]);
+            let expected = expect![["-22"]];
+            expected.assert_eq(&actual);
+        }
+
+        #[test]
+        pub fn test_22() {
+            let input = wat! {
+                (call $negate (ref_i31 (const_i32 ,(Unitype::from_integer(22).to_i31_bits() as i64))))
+            };
+            let actual = run_main_fn_ref_eq(input);
+            let expected = expect![["-22"]];
             expected.assert_eq(&actual);
         }
     }

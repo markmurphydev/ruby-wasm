@@ -64,6 +64,7 @@ impl Lexeme {
         }
     }
 
+    pub const UNARY_MINUS_BINDING_POWER: u8 = 42;
     /// Gets `(lhs_binding_power, rhs_binding_power)`
     pub fn binding_power(&self) -> (u8, u8) {
         use LexemeKind::*;

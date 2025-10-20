@@ -61,7 +61,7 @@ fn compile_expr(ctx: &mut CompileCtx<'_>, expr: &Expr) -> Vec<Instr> {
         Expr::Nil => i31_const(Unitype::NIL_BIT_PATTERN),
         Expr::GlobalVariableWrite(global_write) => compile_global_variable_write(ctx, global_write),
         Expr::GlobalVariableRead(global_read) => {
-            compile_global_variable_read(ctx, global_read)
+            compile_global_variable_read(global_read)
         }
         Expr::ConstantWrite(_constant_write) => todo!(),
         Expr::ConstantRead(constant_read_expr) => {
@@ -133,7 +133,6 @@ fn compile_global_variable_write(
 }
 
 fn compile_global_variable_read(
-    ctx: &mut CompileCtx<'_>,
     global_read: &GlobalVariableRead,
 ) -> Vec<Instr> {
     let GlobalVariableRead { name } = global_read;
@@ -224,6 +223,10 @@ fn compile_call_expr(ctx: &mut CompileCtx<'_>, call_expr: &Call) -> Vec<Instr> {
             assert_eq!(1, args.len());
             compile_plus(ctx, receiver, &args[0])
         },
+        "-@" => {
+            assert!(args.is_empty());
+            compile_unary_negate(ctx, receiver)
+        }
         _ => {
             let name = corelib::global::string_identifier(name);
             let mut receiver = compile_expr(ctx, receiver);
@@ -262,6 +265,10 @@ fn compile_plus(ctx: &mut CompileCtx, lhs: &Expr, rhs: &Expr) -> Vec<Instr> {
         (call $add
             ,(wat_args))
     }
+}
+
+fn compile_unary_negate(ctx: &mut CompileCtx, val: &Expr) -> Vec<Instr> {
+    wat![ (call $negate ,(compile_expr(ctx, val)))]
 }
 
 /// Turns a Ruby Expr into a Wasm predicate.

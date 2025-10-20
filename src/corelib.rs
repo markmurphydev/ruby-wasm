@@ -10,6 +10,7 @@ pub mod class;
 pub mod global;
 mod method;
 mod function;
+pub mod helpers;
 
 use crate::CompileCtx;
 

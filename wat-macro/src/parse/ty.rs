@@ -4,7 +4,6 @@ use crate::parse::util::*;
 use crate::result::Result;
 use proc_macro2::TokenStream;
 use quote::quote;
-use wat_defs::ty::FuncType;
 
 /// Pre: `(type ...)` has been unwrapped. We are consuming one of:
 ///     - `(sub ...)`

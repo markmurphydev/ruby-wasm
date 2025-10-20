@@ -1,23 +1,12 @@
-// use crate::corelib::alist::{AListTypeDef, alist_str_method};
-// use crate::corelib::class;
-// use crate::corelib::class::Class;
-// use crate::corelib::type_def::{method_params_type, method_results_type, CLASS_TYPE_IDENTIFIER, METHOD_TYPE_IDENTIFIER, OBJECT_TYPE_IDENTIFIER};
-// use crate::unitype::Unitype;
-// use crate::wasm::function::{ExportStatus, Local};
-// use crate::wasm::types::{NumType, ParamType, ParamsType, RefType};
-// use crate::wasm::{BinaryOp, UnaryOp};
-// use crate::{CompileCtx, FunctionBuilder, InstrSeqBuilder};
-// use crate::corelib::array::ARRAY_UNITYPE_TYPE_IDENTIFIER;
-
-use wat_defs::func::Func;
-use wat_defs::instr::Instr;
-use wat_defs::ty::BlockType;
-use crate::{unitype, CompileCtx};
+use crate::corelib::alist::AListTypeDef;
 use crate::corelib::class;
 use crate::corelib::class::Class;
-use wat_macro::wat;
-use crate::corelib::alist::AListTypeDef;
 use crate::unitype::Unitype;
+use crate::CompileCtx;
+use wat_defs::func::Func;
+use wat_defs::instr::Instr;
+use wat_macro::wat;
+use crate::corelib::helpers::i64_neg;
 
 pub fn add_functions(ctx: &mut CompileCtx<'_>) {
     add_start(ctx);
@@ -45,6 +34,7 @@ fn funcs() -> Vec<Func> {
         i64_to_integer(),
         add(),
         to_bool(),
+        negate(),
     ]
 }
 
@@ -381,45 +371,11 @@ fn to_bool() -> Func {
     }
 }
 
-fn helper_for_in(
-    alist_type_def: AListTypeDef,
-    body: Vec<Instr>
-) -> Vec<Instr> {
-    let alist_identifier = alist_type_def.alist_type_identifier();
-    let pair_identifier = alist_type_def.alist_pair_type_identifier();
-
+fn negate() -> Func {
     wat! {
-        (local_set $idx (const_i32 0))
-        (loop $for
-            (if (i32_eq (local_get $idx)
-                        (array_len (local_get $alist)))
-                (then (unreachable)))
-            (local_set $pair
-                (array_get ,(alist_identifier)
-                    (local_get $alist)
-                    (local_get $idx)))
-            (local_set $key
-                (struct_get ,(pair_identifier.clone()) $key
-                    (local_get $pair)))
-            (local_set $val
-                (struct_get ,(pair_identifier.clone()) $val
-                    (local_get $pair)))
-            (block $body ,(body))
-            (local_set $idx (i32_add (local_get $idx)
-                                   (const_i32 1)))
-            (br $for))
+        (func $negate
+            (param $n (ref eq))
+            (result (ref eq))
+            (call $i64_to_integer ,(vec![i64_neg(wat![ (call $integer_to_i64 (local_get $n)) ])])))
     }
-}
-
-/// `(i32.not x) ≡ (i32.xor x -1)`
-///     (because `-1 = 0b1111_...`)
-fn not(mut body: Vec<Instr>) -> Instr {
-    let wat_args = {
-        let mut res = wat![-1];
-        res.append(&mut body);
-        res
-    };
-    wat! {
-        (i32_xor ,(wat_args))
-    }.remove(0)
 }

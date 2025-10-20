@@ -99,6 +99,7 @@ fn parse_unfolded_instr(name: Ident, input: ParseInput) -> Result<TokenStream> {
         "i32_shr_u" => quote![ #path::I32ShrU ],
         "i32_wrap_i64" => quote![ #path::I32WrapI64 ],
         "i64_add" => quote![ #path::I64Add ],
+        "i64_xor" => quote![ #path::I64Xor ],
         "i64_extend_i32_s" => quote![ #path::I64ExtendI32S ],
         "i64_extend_i32_u" => quote![ #path::I64ExtendI32U ],
         "const_i64" => parse_const(NumType::I64, input)?,

@@ -90,6 +90,8 @@ impl<'text> Parser<'text> {
             LK::While => box_expr_variant!(self.while_expr(), N::Expr::While),
             LK::Until => box_expr_variant!(self.until_expr(), N::Expr::Until),
 
+            LK::Minus => self.unary_minus(),
+
             _ => None,
         };
 
@@ -113,7 +115,7 @@ impl<'text> Parser<'text> {
                         panic!("Expected identifier.")
                     };
 
-                    let args = self.parse_args();
+                    let args = self.args();
 
                     N::Expr::Call(Box::new(N::Call {
                         receiver: lhs,
@@ -121,13 +123,13 @@ impl<'text> Parser<'text> {
                         args,
                     }))
                 }
-                op@(LK::Minus | LK::Plus | LK::Slash | LK::Star) => {
+                op @ (LK::Minus | LK::Plus | LK::Slash | LK::Star) => {
                     let name = match op {
                         LK::Minus => "-".to_string(),
                         LK::Plus => "+".to_string(),
                         LK::Slash => "/".to_string(),
                         LK::Star => "*".to_string(),
-                        _ => unreachable!()
+                        _ => unreachable!(),
                     };
                     let rhs = self.expr_bp(r_bp).unwrap();
 
@@ -137,14 +139,24 @@ impl<'text> Parser<'text> {
                         args: vec![rhs],
                     }))
                 }
-                other => unreachable!("Lexeme kind {:?} is not an operator.", other)
+                other => unreachable!("Lexeme kind {:?} is not an operator.", other),
             };
         }
         Some(lhs)
     }
 
+    fn unary_minus(&mut self) -> Option<N::Expr> {
+        self.expect(&[LK::Minus]);
+        let lhs = self.expr_bp(Lexeme::UNARY_MINUS_BINDING_POWER).unwrap();
+        Some(N::Expr::Call(Box::new(N::Call {
+            receiver: lhs,
+            name: "-@".to_string(),
+            args: vec![],
+        })))
+    }
+
     /// Parse args inside parentheses.
-    fn parse_args(&mut self) -> Vec<N::Expr> {
+    fn args(&mut self) -> Vec<N::Expr> {
         self.expect(&[LK::LeftParen]);
 
         let mut args = vec![];
@@ -156,7 +168,7 @@ impl<'text> Parser<'text> {
                     self.lexer.next();
                 }
                 LK::RightParen => break,
-                _ => panic!()
+                _ => panic!(),
             }
         }
 
@@ -305,27 +317,6 @@ impl<'text> Parser<'text> {
             }
             _ => unreachable!(),
         }
-    }
-
-    /// Pre: `self.lexer.next().kind == LexemeKind::Dot`
-    fn call_expr(&mut self, receiver: N::Expr) -> N::Expr {
-        self.debug_expect(&[LK::Dot]);
-        let rhs = self.lexer.next();
-        // TODO -- `Class` is a contextual keyword.
-        let text = match rhs.kind {
-            LK::Identifier { text } => text,
-            LK::Class => "class".to_string(),
-            _ => panic!("Illegal kind: {:?}", rhs.kind),
-        };
-
-        self.expect(&[LK::LeftParen]);
-        self.expect(&[LK::RightParen]);
-
-        N::Expr::Call(Box::new(N::Call {
-            receiver,
-            name: text,
-            args: todo!(),
-        }))
     }
 
     /// Peek the next token. If it's of kind `expected`, consume it.
@@ -555,6 +546,27 @@ mod tests {
             			  (name . "bar") (args))
             		(name . "*") (args (Integer . 2)))))
                 (name . "+") (args (Integer . 3))))))
+        "#]];
+        let actual = parse_to_sexpr(text);
+        expected.assert_eq(&actual);
+    }
+
+    #[test]
+    fn unary_minus() {
+        let text = "-1";
+        let expected = expect![[r#"
+            ((statements (body (Call (receiver Integer . 1) (name . "-@") (args)))))
+        "#]];
+        let actual = parse_to_sexpr(text);
+        expected.assert_eq(&actual);
+    }
+
+    #[test]
+    fn unary_minus_multi_digit() {
+        let text = "-9999";
+        let expected = expect![[r#"
+            ((statements
+              (body (Call (receiver Integer . 9999) (name . "-@") (args)))))
         "#]];
         let actual = parse_to_sexpr(text);
         expected.assert_eq(&actual);
