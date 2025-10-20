@@ -8,7 +8,35 @@ pub enum UnfoldedInstr {
 
     I32Eq,
 
+    I32LtS,
+
+    I32LtU,
+
+    I32GtS,
+
+    I32GtU,
+
     I32Add,
+
+    I32Sub,
+
+    I32And,
+
+    I32Or,
+
+    I32Xor,
+
+    I32Shl,
+
+    I32ShrS,
+
+    I32ShrU,
+
+    I32WrapI64,
+
+    I64ExtendI32U,
+
+    I64ExtendI32S,
 
     Const {
         ty: NumType,
@@ -52,7 +80,15 @@ pub enum UnfoldedInstr {
 
     RefI31,
 
+    I31GetS,
+
+    I31GetU,
+
     RefAsNonNull,
+
+    RefTest {
+        ty: RefType,
+    },
 
     RefCast {
         ty: RefType,
@@ -127,7 +163,21 @@ impl Instr {
             || str == "const_i64"
             || str == "i32_eqz"
             || str == "i32_eq"
+            || str == "i32_lt_s"
+            || str == "i32_lt_u"
+            || str == "i32_gt_s"
+            || str == "i32_gt_u"
             || str == "i32_add"
+            || str == "i32_sub"
+            || str == "i32_and"
+            || str == "i32_or"
+            || str == "i32_xor"
+            || str == "i32_shl"
+            || str == "i32_shr_s"
+            || str == "i32_shr_u"
+            || str == "i32_wrap_i64"
+            || str == "i64_extend_i32_u"
+            || str == "i64_extend_i32_s"
             || str == "br"
             || str == "br_if"
             || str == "return"
@@ -137,7 +187,10 @@ impl Instr {
             || str == "ref_null"
             || str == "ref_func"
             || str == "ref_i31"
+            || str == "i31_get_s"
+            || str == "i31_get_u"
             || str == "ref_as_non_null"
+            || str == "ref_test"
             || str == "ref_cast"
             || str == "call"
             || str == "call_ref"

@@ -284,8 +284,10 @@ fn in_fixnum_range() -> Func {
         (func $in_fixnum_range
             (param $n i64)
             (result i32)
-            (i32_and (i32_lt_s ,(min) (local_get $n))
-                     (i32_lt_s (local_get $n) ,(max))))
+            (i32_and (i32_lt_s (const_i32 ,(min))
+                               (local_get $n))
+                     (i32_lt_s (local_get $n)
+                               (const_i32 ,(max)))))
     }
 }
 

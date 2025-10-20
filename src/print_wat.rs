@@ -8,8 +8,8 @@ use pretty::RcDoc;
 use std::borrow::Cow;
 use wat_defs::func::{Exported, Func, Local, Param};
 use wat_defs::global::Global;
+use wat_defs::instr::UnfoldedInstr::{I32WrapI64, RefI31, Return};
 use wat_defs::instr::{Instr, UnfoldedInstr};
-use wat_defs::instr::UnfoldedInstr::Return;
 use wat_defs::module::{Module, TypeDef};
 use wat_defs::ty::{
     AbsHeapType, ArrayType, BlockType, CompType, Field, FieldType, Final, FuncType, GlobalType,
@@ -250,22 +250,37 @@ fn unfolded_instr_to_doc(instr: &UnfoldedInstr) -> Doc {
         Const { ty, val } => const_to_doc(ty, *val),
         I32Eqz => text("i32.eqz"),
         I32Eq => text("i32.eq"),
+        I32LtS => text("i32.lt_s"),
+        I32LtU => text("i32.lt_u"),
+        I32GtS => text("i32.gt_s"),
+        I32GtU => text("i32.gt_u"),
         I32Add => text("i32.add"),
+        I32Sub => text("i32.sub"),
+        I32And => text("i32.and"),
+        I32Or => text("i32.or"),
+        I32Xor => text("i32.xor"),
+        I32Shl => text("i32.shl"),
+        I32ShrS => text("i32.shr_s"),
+        I32ShrU => text("i32.shr_u"),
+        I32WrapI64 => text("i32.wrap_i64"),
+        I64ExtendI32S => text("i64.extend_i32_s"),
+        I64ExtendI32U => text("i64.extend_i32_u"),
         Br { label } => text(format!("br ${}", label)),
         BrIf { label } => text(format!("br.if ${}", label)),
         Return => text("return"),
-        Block { label} => text(format!("block ${}", label)),
-        Loop { label, block_type } => {
-            text(format!("loop ${}", label,)).append(match block_type {
-                Some(block_type) => block_type_to_doc(block_type),
-                None => nil()
-            })
-        }
+        Block { label } => text(format!("block ${}", label)),
+        Loop { label, block_type } => text(format!("loop ${}", label,)).append(match block_type {
+            Some(block_type) => block_type_to_doc(block_type),
+            None => nil(),
+        }),
         If { .. } => unreachable!(),
         RefNull { ty } => text(format!("ref.null ${}", ty)),
         RefFunc { name } => text(format!("ref.func ${}", name)),
         RefI31 => text("ref.i31"),
+        I31GetS => text("i31.get_s"),
+        I31GetU => text("i31.get_u"),
         RefAsNonNull => text("ref.as_non_null"),
+        RefTest { ty } => text("ref.test").append(ref_type_to_doc(ty)),
         RefCast { ty } => text("ref.cast").append(ref_type_to_doc(ty)),
         Call { func } => text(format!("call ${}", func)),
         CallRef { type_idx } => text(format!("call_ref ${}", type_idx)),

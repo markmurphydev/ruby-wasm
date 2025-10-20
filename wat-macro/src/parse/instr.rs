@@ -85,7 +85,21 @@ fn parse_unfolded_instr(name: Ident, input: ParseInput) -> Result<TokenStream> {
         "const_i32" => parse_const(NumType::I32, input)?,
         "i32_eqz" => quote![ #path::I32Eqz ],
         "i32_eq" => quote![ #path::I32Eq ],
+        "i32_lt_s" => quote![ #path::I32LtS ],
+        "i32_lt_u" => quote![ #path::I32LtU ],
+        "i32_gt_s" => quote![ #path::I32GtS ],
+        "i32_gt_u" => quote![ #path::I32GtU ],
         "i32_add" => quote![ #path::I32Add ],
+        "i32_sub" => quote![ #path::I32Sub ],
+        "i32_and" => quote![ #path::I32And ],
+        "i32_or" => quote![ #path::I32Or ],
+        "i32_xor" => quote![ #path::I32Xor ],
+        "i32_shl" => quote![ #path::I32Shl ],
+        "i32_shr_s" => quote![ #path::I32ShrS ],
+        "i32_shr_u" => quote![ #path::I32ShrU ],
+        "i32_wrap_i64" => quote![ #path::I32WrapI64 ],
+        "i64_extend_i32_s" => quote![ #path::I64ExtendI32S ],
+        "i64_extend_i32_u" => quote![ #path::I64ExtendI32U ],
         "const_i64" => parse_const(NumType::I64, input)?,
         "br" => {
             let label = parse_name(input)?;
@@ -108,7 +122,13 @@ fn parse_unfolded_instr(name: Ident, input: ParseInput) -> Result<TokenStream> {
             quote![ #path::RefFunc { name: #name } ]
         }
         "ref_i31" => quote![ #path::RefI31 ],
+        "i31_get_s" => quote![ #path::I31GetS ],
+        "i31_get_u" => quote![ #path::I31GetU ],
         "ref_as_non_null" => quote![ #path::RefAsNonNull ],
+        "ref_test" => {
+            let ty = ty::parse_ref_type(input)?;
+            quote![ #path::RefTest { ty: #ty } ]
+        }
         "ref_cast" => {
             let ty = ty::parse_ref_type(input)?;
             quote![ #path::RefCast { ty: #ty } ]
