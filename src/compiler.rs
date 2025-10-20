@@ -1,6 +1,6 @@
 use std::hash::{DefaultHasher, Hash, Hasher};
 use wat_defs::instr::Instr;
-use crate::node::{Call, ConstantRead, Expr, GlobalVariableRead, GlobalVariableWrite, If, Program, Statements, Subsequent, Until, While};
+use crate::node::{And, Call, ConstantRead, Expr, GlobalVariableRead, GlobalVariableWrite, If, Or, Program, Statements, Subsequent, Until, While};
 use crate::unitype::Unitype;
 use wat_defs::module::Module;
 use wat_macro::wat;
@@ -72,7 +72,29 @@ fn compile_expr(ctx: &mut CompileCtx<'_>, expr: &Expr) -> Vec<Instr> {
         Expr::While(while_expr) => compile_while_expr(ctx, &*while_expr),
         Expr::Until(until_expr) => compile_until_expr(ctx, &*until_expr),
         Expr::Call(call_expr) => compile_call_expr(ctx, &*call_expr),
+        Expr::And(and_expr) => compile_and_expr(ctx, &*and_expr),
+        Expr::Or(or_expr) => compile_or_expr(ctx, &*or_expr),
     }
+}
+
+fn compile_and_expr(ctx: &mut CompileCtx<'_>, and_expr: &And) -> Vec<Instr> {
+    let And { lhs, rhs } = and_expr;
+    let wat_args = {
+        let mut res = compile_expr(ctx, lhs);
+        res.append(&mut compile_expr(ctx, rhs));
+        res
+    };
+    wat![ (call $and ,(wat_args)) ]
+}
+
+fn compile_or_expr(ctx: &mut CompileCtx<'_>, or_expr: &Or) -> Vec<Instr> {
+    let Or { lhs, rhs } = or_expr;
+    let wat_args = {
+        let mut res = compile_expr(ctx, lhs);
+        res.append(&mut compile_expr(ctx, rhs));
+        res
+    };
+    wat![ (call $or ,(wat_args)) ]
 }
 
 /// Convert the given integer into a Wasm fixnum or const global representation

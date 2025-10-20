@@ -1,3 +1,4 @@
+use crate::lexeme::LexemeKind::{Greater, GreaterEqual, Less, LessEqual};
 use serde::Serialize;
 use std::ops::{Add, AddAssign};
 
@@ -59,8 +60,9 @@ impl Lexeme {
     pub fn is_operator(&self) -> bool {
         use LexemeKind::*;
         match self.kind {
-            Dot | Minus | Plus | Slash | Star => true,
-            _ => false
+            In | PipePipe | AmpersandAmpersand | Greater | GreaterEqual | Less | LessEqual
+            | Dot | Minus | Plus | Slash | Star => true,
+            _ => false,
         }
     }
 
@@ -88,7 +90,7 @@ impl Lexeme {
             Minus | Plus => BP_TERM,
             Slash | Star => BP_FACTOR,
             Dot => BP_CALL,
-            other => panic!("Lexeme of kind {:?} has no binding power", other)
+            other => panic!("Lexeme of kind {:?} has no binding power", other),
         }
     }
 }

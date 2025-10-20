@@ -482,6 +482,30 @@
         (call $integer_to_i64
           (local.get $n))))))
 (func
+  $and
+  (param $a (ref eq)) (param $b (ref eq))
+  (result (ref eq))
+  (ref.i31
+    (i32.and
+      (i31.get_u
+        (ref.cast(ref i31)
+          (local.get $a)))
+      (i31.get_u
+        (ref.cast(ref i31)
+          (local.get $b))))))
+(func
+  $or
+  (param $a (ref eq)) (param $b (ref eq))
+  (result (ref eq))
+  (ref.i31
+    (i32.or
+      (i31.get_u
+        (ref.cast(ref i31)
+          (local.get $a)))
+      (i31.get_u
+        (ref.cast(ref i31)
+          (local.get $b))))))
+(func
   $__ruby_top_level_function
   (export "__ruby_top_level_function")
   (result (ref eq))

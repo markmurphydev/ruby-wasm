@@ -35,6 +35,8 @@ fn funcs() -> Vec<Func> {
         add(),
         to_bool(),
         negate(),
+        and(),
+        or(),
     ]
 }
 
@@ -377,5 +379,31 @@ fn negate() -> Func {
             (param $n (ref eq))
             (result (ref eq))
             (call $i64_to_integer ,(vec![i64_neg(wat![ (call $integer_to_i64 (local_get $n)) ])])))
+    }
+}
+
+fn and() -> Func {
+    wat! {
+        (func $and
+            (param $a (ref eq))
+            (param $b (ref eq))
+            (result (ref eq))
+
+            (ref_i31
+                (i32_and (i31_get_u (ref_cast (ref i31) (local_get $a)))
+                         (i31_get_u (ref_cast (ref i31) (local_get $b))))))
+    }
+}
+
+fn or() -> Func {
+    wat! {
+        (func $or
+            (param $a (ref eq))
+            (param $b (ref eq))
+            (result (ref eq))
+
+            (ref_i31
+                (i32_or (i31_get_u (ref_cast (ref i31) (local_get $a)))
+                        (i31_get_u (ref_cast (ref i31) (local_get $b))))))
     }
 }

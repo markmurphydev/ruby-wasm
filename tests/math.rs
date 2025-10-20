@@ -25,3 +25,13 @@ fn add_neg_neg() {
     let actual = ruby_wasm::run_ruby_program(text.to_owned());
     expected.assert_eq(&actual);
 }
+
+
+#[test]
+fn and_or() {
+    // && should have tighter binding
+    let text = "false && true || true";
+    let expected = expect![["true"]];
+    let actual = ruby_wasm::run_ruby_program(text.to_owned());
+    expected.assert_eq(&actual);
+}
