@@ -307,6 +307,7 @@ fn unfolded_instr_to_doc(instr: &UnfoldedInstr) -> Doc {
         ArrayNewFixed { type_idx, len } => text(format!("array.new_fixed ${} {}", type_idx, len)),
         ArrayGet { ty } => text(format!("array.get ${}", ty)),
         ArrayGetU { ty } => text(format!("array.get_u ${}", ty)),
+        ArraySet { ty } => text(format!("array.set ${}", ty)),
         ArrayLen => text("array.len"),
         StructNew { ty } => text(format!("struct.new ${}", ty)),
         StructGet { ty, field } => text(format!("struct.get ${} ${}", ty, field)),

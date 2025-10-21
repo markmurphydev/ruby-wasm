@@ -191,6 +191,10 @@ fn parse_unfolded_instr(name: Ident, input: ParseInput) -> Result<TokenStream> {
             let ty = parse_name(input)?;
             quote![ #path::ArrayGetU { ty: #ty } ]
         }
+        "array_set" => {
+            let ty = parse_name(input)?;
+            quote![ #path::ArraySet { ty: #ty } ]
+        }
         "array_len" => quote![ #path::ArrayLen ],
         "struct_new" => {
             let ty = parse_name(input)?;

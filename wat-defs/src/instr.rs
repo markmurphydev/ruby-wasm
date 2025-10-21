@@ -131,6 +131,10 @@ pub enum UnfoldedInstr {
         ty: String,
     },
 
+    ArraySet {
+        ty: String,
+    },
+
     ArrayLen,
 
     StructNew {
@@ -217,6 +221,7 @@ impl Instr {
             || str == "array_new_fixed"
             || str == "array_get"
             || str == "array_get_u"
+            || str == "array_set"
             || str == "array_len"
             || str == "struct_new"
             || str == "struct_get"

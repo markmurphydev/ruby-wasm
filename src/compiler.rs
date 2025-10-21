@@ -50,7 +50,7 @@ fn compile_statements(ctx: &mut CompileCtx, statements: &Statements) -> Vec<Inst
         let mut stmts = vec![];
         for expr in body.iter() {
             if !stmts.is_empty() {
-                stmts.push(wat![ (drop) ].remove(0))
+                stmts.push(wat![(drop)].remove(0))
             }
             stmts.append(&mut compile_expr(ctx, expr));
         }
@@ -158,7 +158,9 @@ fn compile_single_quote_string(ctx: &mut CompileCtx, str: &String) -> Vec<Instr>
     };
     ctx.module.globals.push(global);
 
-    wat![(global_get, (global_id))]
+    wat! {
+       (global_get ,(global_id))
+    }
 }
 
 /// Add a global to the Module, setting its value to the write's rhs.
@@ -167,7 +169,7 @@ fn compile_global_variable_write(
     global_write: &GlobalVariableWrite,
 ) -> Vec<Instr> {
     let GlobalVariableWrite { name, expr } = global_write;
-    add_null_global_def(ctx, name);
+    add_nil_global_def(ctx, name);
 
     let rhs = compile_expr(ctx, expr);
     wat! {
@@ -176,19 +178,22 @@ fn compile_global_variable_write(
     }
 }
 
-fn compile_global_variable_read(ctx: &mut CompileCtx, global_read: &GlobalVariableRead) -> Vec<Instr> {
+fn compile_global_variable_read(
+    ctx: &mut CompileCtx,
+    global_read: &GlobalVariableRead,
+) -> Vec<Instr> {
     let GlobalVariableRead { name } = global_read;
-    add_null_global_def(ctx, name);
-    wat![ (ref_cast (ref eq) (global_get, (name.to_string()))) ]
+    add_nil_global_def(ctx, name);
+    wat![ (global_get, (name.to_string())) ]
 }
 
 /// If `ctx` has no global named `name`, add an empty definition.
-fn add_null_global_def(ctx: &mut CompileCtx, name: &str) {
+fn add_nil_global_def(ctx: &mut CompileCtx, name: &str) {
     if !ctx.module.globals.iter().any(|glob| glob.name == *name) {
         let global = wat! {
            (global ,(name)
-                   (mut (ref null eq))
-                   (ref_null eq))
+                   (mut (ref eq))
+                   ,(vec![i31_const(Unitype::NIL_BIT_PATTERN)]))
         };
         ctx.module.globals.push(global);
     }
@@ -285,6 +290,14 @@ fn compile_call_expr(ctx: &mut CompileCtx, call_expr: &Call) -> Vec<Instr> {
             assert_eq!(1, args.len());
             compile_binop(ctx, wat!($lt), receiver, &args[0])
         }
+        "[]" => {
+            assert_eq!(1, args.len());
+            compile_array_index(ctx, receiver, &args[0])
+        }
+        "[]=" => {
+            assert_eq!(2, args.len());
+            compile_array_index_assign(ctx, receiver, &args[0], &args[1])
+        }
         _ => {
             let name = corelib::global::string_identifier(name);
             let mut receiver = compile_expr(ctx, receiver);
@@ -312,6 +325,43 @@ fn compile_call_expr(ctx: &mut CompileCtx, call_expr: &Call) -> Vec<Instr> {
                     ,(wat_args))
             }
         }
+    }
+}
+
+fn compile_array_index(ctx: &mut CompileCtx, receiver: &Expr, idx: &Expr) -> Vec<Instr> {
+    let receiver = compile_expr(ctx, receiver);
+    let mut receiver = wat![ (ref_cast (ref $arr_unitype) ,(receiver)) ];
+    let idx = compile_expr(ctx, idx);
+    let mut idx = wat![ (i32_wrap_i64 (call $integer_to_i64 ,(idx))) ];
+    let wat_args = {
+        receiver.append(&mut idx);
+        receiver
+    };
+
+    wat! {
+        (array_get $arr_unitype ,(wat_args))
+    }
+}
+
+fn compile_array_index_assign(
+    ctx: &mut CompileCtx,
+    receiver: &Expr,
+    idx: &Expr,
+    val: &Expr,
+) -> Vec<Instr> {
+    let receiver = compile_expr(ctx, receiver);
+    let mut receiver = wat![ (ref_cast (ref $arr_unitype) ,(receiver)) ];
+    let idx = compile_expr(ctx, idx);
+    let mut idx = wat![ (i32_wrap_i64 (call $integer_to_i64 ,(idx))) ];
+    let mut val = compile_expr(ctx, val);
+    let wat_args = {
+        receiver.append(&mut idx);
+        receiver.append(&mut val);
+        receiver
+    };
+    wat! {
+        (array_set $arr_unitype ,(wat_args))
+        ,(i31_const(Unitype::NIL_BIT_PATTERN))
     }
 }
 
