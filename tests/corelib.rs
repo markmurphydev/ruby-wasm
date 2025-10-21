@@ -11,8 +11,8 @@ use wat_defs::ty::{NumType, ValType};
 use wat_macro::wat;
 
 fn run_helper(body: Vec<Instr>, result_ty: ValType) -> String {
-    let mut module = Module::new();
-    let mut ctx = CompileCtx::new(&mut module);
+    let module = Module::new();
+    let mut ctx = CompileCtx::new(module);
     add_core_items(&mut ctx);
 
     let main_fn = wat! {
@@ -23,7 +23,7 @@ fn run_helper(body: Vec<Instr>, result_ty: ValType) -> String {
     };
     ctx.module.funcs.push(main_fn);
 
-    ruby_wasm::run::run_module(&mut ctx)
+    ruby_wasm::run::compile_ctx_to_wat(&mut ctx)
 }
 
 /// Wraps `body` in a function definition, includes the corelib definitions,

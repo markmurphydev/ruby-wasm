@@ -9,17 +9,17 @@ use crate::corelib::class::Class;
 
 pub const RUBY_TOP_LEVEL_FUNCTION_NAME: &str = "__ruby_top_level_function";
 
-pub struct CompileCtx<'a> {
-    pub module: &'a mut Module,
+pub struct CompileCtx {
+    pub module: Module,
 }
 
-impl<'a> CompileCtx<'a> {
-    pub fn new(module: &'a mut Module) -> CompileCtx<'a> {
+impl CompileCtx {
+    pub fn new(module: Module) -> CompileCtx {
         CompileCtx { module }
     }
 }
 
-pub fn compile(ctx: &mut CompileCtx<'_>, program: &Program) {
+pub fn compile(ctx: &mut CompileCtx, program: &Program) {
     // TODO: exported.
     let stmts = compile_program(ctx, program);
     let top_level_func = wat! {
@@ -31,11 +31,11 @@ pub fn compile(ctx: &mut CompileCtx<'_>, program: &Program) {
     ctx.module.funcs.push(top_level_func);
 }
 
-fn compile_program(ctx: &mut CompileCtx<'_>, program: &Program) -> Vec<Instr> {
+fn compile_program(ctx: &mut CompileCtx, program: &Program) -> Vec<Instr> {
     compile_statements(ctx, &program.statements)
 }
 
-fn compile_statements(ctx: &mut CompileCtx<'_>, statements: &Statements) -> Vec<Instr> {
+fn compile_statements(ctx: &mut CompileCtx, statements: &Statements) -> Vec<Instr> {
     let Statements { body } = statements;
 
     // In Ruby, every expression returns a value or nil.
@@ -52,7 +52,7 @@ fn compile_statements(ctx: &mut CompileCtx<'_>, statements: &Statements) -> Vec<
     }
 }
 
-fn compile_expr(ctx: &mut CompileCtx<'_>, expr: &Expr) -> Vec<Instr> {
+fn compile_expr(ctx: &mut CompileCtx, expr: &Expr) -> Vec<Instr> {
     match expr {
         &Expr::Integer(n) => compile_integer(ctx, n),
         Expr::SingleQuoteString(s) => compile_single_quote_string(ctx, s),
@@ -78,7 +78,7 @@ fn compile_expr(ctx: &mut CompileCtx<'_>, expr: &Expr) -> Vec<Instr> {
     }
 }
 
-fn compile_arr_expr(ctx: &mut CompileCtx<'_>, arr_expr: &Array) -> Vec<Instr> {
+fn compile_arr_expr(ctx: &mut CompileCtx, arr_expr: &Array) -> Vec<Instr> {
     let Array { vals } = arr_expr;
     let vals: Vec<Instr> = vals.into_iter().map(|val| compile_expr(ctx, val)).flatten().collect();
     wat!{
@@ -88,7 +88,7 @@ fn compile_arr_expr(ctx: &mut CompileCtx<'_>, arr_expr: &Array) -> Vec<Instr> {
     }
 }
 
-fn compile_and_expr(ctx: &mut CompileCtx<'_>, and_expr: &And) -> Vec<Instr> {
+fn compile_and_expr(ctx: &mut CompileCtx, and_expr: &And) -> Vec<Instr> {
     let And { lhs, rhs } = and_expr;
     let wat_args = {
         let mut res = compile_expr(ctx, lhs);
@@ -98,7 +98,7 @@ fn compile_and_expr(ctx: &mut CompileCtx<'_>, and_expr: &And) -> Vec<Instr> {
     wat![ (call $and ,(wat_args)) ]
 }
 
-fn compile_or_expr(ctx: &mut CompileCtx<'_>, or_expr: &Or) -> Vec<Instr> {
+fn compile_or_expr(ctx: &mut CompileCtx, or_expr: &Or) -> Vec<Instr> {
     let Or { lhs, rhs } = or_expr;
     let wat_args = {
         let mut res = compile_expr(ctx, lhs);
@@ -109,7 +109,7 @@ fn compile_or_expr(ctx: &mut CompileCtx<'_>, or_expr: &Or) -> Vec<Instr> {
 }
 
 /// Convert the given integer into a Wasm fixnum or const global representation
-fn compile_integer(ctx: &mut CompileCtx<'_>, n: i64) -> Vec<Instr> {
+fn compile_integer(ctx: &mut CompileCtx, n: i64) -> Vec<Instr> {
     let unitype = Unitype::from_integer(n);
     match unitype {
         fixnum @ Unitype::Fixnum(_) => {
@@ -131,7 +131,7 @@ fn compile_integer(ctx: &mut CompileCtx<'_>, n: i64) -> Vec<Instr> {
     }
 }
 
-fn compile_single_quote_string(ctx: &mut CompileCtx<'_>, str: &String) -> Vec<Instr> {
+fn compile_single_quote_string(ctx: &mut CompileCtx, str: &String) -> Vec<Instr> {
     // TODO -- Dedup strings.
     let mut hasher = DefaultHasher::new();
     str.hash(&mut hasher);
@@ -151,7 +151,7 @@ fn compile_single_quote_string(ctx: &mut CompileCtx<'_>, str: &String) -> Vec<In
 
 /// Add a global to the Module, setting its value to the write's rhs.
 fn compile_global_variable_write(
-    ctx: &mut CompileCtx<'_>,
+    ctx: &mut CompileCtx,
     global_write: &GlobalVariableWrite,
 ) -> Vec<Instr> {
     let GlobalVariableWrite { name, expr } = global_write;
@@ -173,7 +173,7 @@ fn compile_global_variable_read(
 }
 
 fn compile_constant_read_expr(
-    ctx: &mut CompileCtx<'_>,
+    ctx: &mut CompileCtx,
     constant_read_expr: &ConstantRead,
 ) -> Vec<Instr> {
     // TODO -- Assuming all constants are classes.
@@ -183,7 +183,7 @@ fn compile_constant_read_expr(
 }
 
 fn compile_if_expr(
-    ctx: &mut CompileCtx<'_>,
+    ctx: &mut CompileCtx,
     if_expr: &If,
 ) -> Vec<Instr> {
     let If {
@@ -207,7 +207,7 @@ fn compile_if_expr(
 }
 
 fn compile_while_expr(
-    ctx: &mut CompileCtx<'_>,
+    ctx: &mut CompileCtx,
     while_expr: &While,
 ) -> Vec<Instr> {
     let While {
@@ -229,7 +229,7 @@ fn compile_while_expr(
 }
 
 fn compile_until_expr(
-    ctx: &mut CompileCtx<'_>,
+    ctx: &mut CompileCtx,
     until_expr: &Until,
 ) -> Vec<Instr> {
     // TODO -- It might be nicer to have an IR where `until` is lowered to `while`
@@ -248,7 +248,7 @@ fn compile_until_expr(
     }
 }
 
-fn compile_call_expr(ctx: &mut CompileCtx<'_>, call_expr: &Call) -> Vec<Instr> {
+fn compile_call_expr(ctx: &mut CompileCtx, call_expr: &Call) -> Vec<Instr> {
     let Call { receiver, name, args } = call_expr;
 
     match name.as_str() {
@@ -312,7 +312,7 @@ fn compile_binop(ctx: &mut CompileCtx, name: String, lhs: &Expr, rhs: &Expr) -> 
 /// A ruby Expr evaluates to a ruby-value (True, False, Nil, ...)
 /// To use as a Wasm predicate, we need to test whether the result is truthy or not.
 /// TODO -- right now we pretend that "truthy" is "not-false"
-fn compile_expr_to_wasm_predicate(ctx: &mut CompileCtx<'_>, expr: &Expr) -> Vec<Instr> {
+fn compile_expr_to_wasm_predicate(ctx: &mut CompileCtx, expr: &Expr) -> Vec<Instr> {
     let expr = compile_expr(ctx, expr);
     wat! {
         (i32_eqz (call $is_false ,(expr)))

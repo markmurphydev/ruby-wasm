@@ -2,8 +2,11 @@ use crate::compiler::RUBY_TOP_LEVEL_FUNCTION_NAME;
 use crate::lexeme::LexemeKind;
 use crate::lexer::Lexer;
 use crate::unitype::{Unitype, WasmtimeRefEq};
-use crate::{CompileCtx, print_wat};
+use crate::{compiler, print_wat, CompileCtx};
 use wasmtime::{Config, Engine, Instance, Module, Store};
+use wat_defs::module;
+use crate::corelib::add_core_items;
+use crate::parser::Parser;
 
 pub fn lex(text: &str) -> String {
     let mut res = String::new();
@@ -17,17 +20,26 @@ pub fn lex(text: &str) -> String {
     }
 }
 
+pub fn text_to_compile_ctx(text: String) -> CompileCtx {
+    let parser = Parser::new(Lexer::new(&text));
+    let program = parser.parse();
+    let module = module::Module::new();
+    let mut ctx = CompileCtx::new(module);
+    add_core_items(&mut ctx);
+    compiler::compile(&mut ctx, &program);
+    ctx
+}
+
 /// Writes out `module` as a .wat file, includes the corelib definitions,
 /// and runs it.
-pub fn run_module(ctx: &mut CompileCtx<'_>) -> String {
-    let wat = print_wat::module_to_pretty(ctx.module);
-    run_wat(wat)
+pub fn compile_ctx_to_wat(ctx: &CompileCtx) -> String {
+    print_wat::module_to_pretty(&ctx.module)
 }
 
 pub fn run_wat(wat: String) -> String {
     let mut config = Config::new();
     config.wasm_function_references(true).wasm_gc(true);
-    let mut engine = Engine::new(&config).unwrap();
+    let engine = Engine::new(&config).unwrap();
     let module = Module::new(&engine, wat).unwrap();
     // let mut linker = Linker::new(&engine);
     let mut store = Store::new(&engine, ());
@@ -53,11 +65,3 @@ pub fn run_wat(wat: String) -> String {
         panic!("Can't find RUBY_TOP_LEVEL_FUNCTION_NAME");
     }
 }
-
-// /// Takes a .wat file, and produces a version with corelib definitions included.
-// fn include_corelib_definitions(wat: &str) -> String {
-//     let corelib = include_str!(concat!(env!("CARGO_MANIFEST_DIR"), "/core_generated.wat"));
-//     let mut wat = wat.to_string();
-//     wat.push_str(corelib);
-//     wat
-// }

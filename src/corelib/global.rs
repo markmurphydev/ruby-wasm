@@ -12,7 +12,7 @@ use wat_defs::global::Global;
 use wat_defs::instr::Instr;
 use wat_macro::wat;
 
-pub fn add_globals(ctx: &mut CompileCtx<'_>) {
+pub fn add_globals(ctx: &mut CompileCtx) {
     let mut globals = vec![empty_args()];
     ctx.module.globals.append(&mut globals);
     add_string_defs(ctx);
@@ -31,25 +31,25 @@ fn empty_args() -> Global {
 /// Add string definitions from:
 /// - Class names
 /// - Method names
-fn add_string_defs(ctx: &mut CompileCtx<'_>) {
+fn add_string_defs(ctx: &mut CompileCtx) {
     add_class_string_defs(ctx);
     add_method_string_defs(ctx);
 }
 
-fn add_class_string_defs(ctx: &mut CompileCtx<'_>) {
+fn add_class_string_defs(ctx: &mut CompileCtx) {
     class::classes()
         .into_iter()
         .map(|c| c.name)
         .for_each(|s| add_string_def(ctx, s));
 }
 
-fn add_method_string_defs(ctx: &mut CompileCtx<'_>) {
+fn add_method_string_defs(ctx: &mut CompileCtx) {
     for method in method::methods() {
         add_string_def(ctx, method.name);
     }
 }
 
-fn add_string_def(ctx: &mut CompileCtx<'_>, string: String) {
+fn add_string_def(ctx: &mut CompileCtx, string: String) {
     let name = string_identifier(&string);
     let bytes: Vec<Instr> = string
         .as_bytes()

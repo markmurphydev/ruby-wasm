@@ -5,7 +5,6 @@ use ruby_wasm::parser::Parser;
 use ruby_wasm::print_wat::module_to_pretty;
 use ruby_wasm::{binary, html, run};
 use ruby_wasm::{compiler, CompileCtx};
-use ruby_wasm::lexeme::LexemeKind;
 use wat_defs::module::Module;
 
 #[derive(clap::Parser)]
@@ -83,46 +82,41 @@ fn main() {
         Command::Compile { text } => {
             let parser = Parser::new(Lexer::new(&text));
             let program = parser.parse();
-            let module = &mut Module::new();
+            let module = Module::new();
             let ctx = &mut CompileCtx::new(module);
             compiler::compile(ctx, &program);
-            println!("{:?}", module);
+            println!("{:?}", ctx.module);
         }
 
         Command::Wat { text } => {
-            let parser = Parser::new(Lexer::new(&text));
-            let program = parser.parse();
-            let module = &mut Module::new();
-            let ctx = &mut CompileCtx::new(module);
-            ruby_wasm::corelib::add_core_items(ctx);
-            compiler::compile(ctx, &program);
-            let wat = module_to_pretty(ctx.module);
+            let wat = run::compile_ctx_to_wat(&run::text_to_compile_ctx(text));
             println!("{}", wat);
         }
 
         Command::Wasm { text } => {
             let parser = Parser::new(Lexer::new(&text));
             let program = parser.parse();
-            let module = &mut Module::new();
+            let module = Module::new();
             let ctx = &mut CompileCtx::new(module);
             ruby_wasm::corelib::add_core_items(ctx);
             compiler::compile(ctx, &program);
-            let bytes = binary::module_to_binary(&module);
+            let bytes = binary::module_to_binary(&ctx.module);
             binary::print_bytes(&bytes);
         }
 
         Command::Run { text } => {
-            println!("{}", ruby_wasm::run_ruby_program(text))
+            let res = run::run_wat(run::compile_ctx_to_wat(&run::text_to_compile_ctx(text)));
+            println!("{}", res)
         }
 
         Command::Html { text } => {
             let parser = Parser::new(Lexer::new(&text));
             let program = parser.parse();
-            let module = &mut Module::new();
+            let module = Module::new();
             let ctx = &mut CompileCtx::new(module);
             ruby_wasm::corelib::add_core_items(ctx);
             compiler::compile(ctx, &program);
-            let bytes = binary::module_to_binary(&module);
+            let bytes = binary::module_to_binary(&ctx.module);
             let html = html::make_html_wrapper(&bytes);
             println!("{}", html);
         }

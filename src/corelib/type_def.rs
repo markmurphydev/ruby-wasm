@@ -7,7 +7,7 @@ pub const OBJECT_TYPE_IDENTIFIER: &str = "obj";
 pub const CLASS_TYPE_IDENTIFIER: &str = "class";
 pub const METHOD_TYPE_IDENTIFIER: &str = "method";
 
-pub fn add_type_defs(ctx: &mut CompileCtx<'_>) {
+pub fn add_type_defs(ctx: &mut CompileCtx) {
     let mut type_defs = vec![
         string(),
         boxnum(),

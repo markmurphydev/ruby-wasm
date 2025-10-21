@@ -8,7 +8,7 @@ use wat_defs::func::Func;
 use wat_defs::instr::Instr;
 use wat_macro::wat;
 
-pub fn add_functions(ctx: &mut CompileCtx<'_>) {
+pub fn add_functions(ctx: &mut CompileCtx) {
     add_start(ctx);
 
     for func in funcs() {
@@ -47,7 +47,7 @@ fn funcs() -> Vec<Func> {
 /// We use it to set up cyclic object references:
 /// - `Class.parent`
 /// - `Class.superclass`
-fn add_start(ctx: &mut CompileCtx<'_>) {
+fn add_start(ctx: &mut CompileCtx) {
     let mut instrs = vec![];
     let classes = class::classes();
     for class in classes {
