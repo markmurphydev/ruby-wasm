@@ -38,7 +38,8 @@ pub fn run_wat(wat: String) -> String {
     {
         // Ruby main is `() -> (ref eq)`
         let res = top_level.call(&mut store, ()).unwrap();
-        Unitype::parse_ref_eq(res, &mut engine, &mut store).to_pretty()
+
+        Unitype::parse_ref_eq(res, &mut store).to_pretty()
     } else if let Ok(top_level) =
         instance.get_typed_func::<(), i32>(&mut store, RUBY_TOP_LEVEL_FUNCTION_NAME)
     {

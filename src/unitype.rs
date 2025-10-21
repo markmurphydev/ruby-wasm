@@ -3,10 +3,10 @@
 
 use pretty::RcDoc;
 use serde::Serialize;
-use wasmtime::{AnyRef, Rooted};
+use wasmtime as WT;
+use wasmtime::{AnyRef, AsContextMut, ExternRef, OwnedRooted, RootScope, Rooted, RootedGcRef};
 use wat_defs::ty::RefType;
 use wat_macro::wat;
-use wasmtime as WT;
 
 /// `wasmtime`'s Rust-side representation of a Wasm `(ref eq)` value
 pub type WasmtimeRefEq = Rooted<AnyRef>;
@@ -20,6 +20,7 @@ pub enum Unitype {
     Fixnum(Fixnum),
     HeapNum(i64),
     String(String),
+    Array(Vec<Unitype>),
 }
 
 #[derive(Debug, Eq, PartialEq, Copy, Clone, Serialize)]
@@ -29,7 +30,7 @@ impl Unitype {
     /// Wasm-supertype of all Ruby values
     /// ≡ `(ref eq)`
     pub fn unitype() -> RefType {
-        wat![ (ref eq) ]
+        wat![(ref eq)]
     }
 
     /// `(ref i31)`
@@ -48,13 +49,13 @@ impl Unitype {
     //         heap_type: HeapType::Identifier(Self::STRING_TYPE_IDENTIFIER.to_string()),
     //     }
     // }
-    // 
+    //
     // /// Global<Unitype>
     // pub const GLOBAL_CONST_TYPE: GlobalType = GlobalType {
     //     mutable: Mutability::Const,
     //     val_type: Self::UNITYPE.into_val_type(),
     // };
-    // 
+    //
     // /// mut Global<Unitype>
     // pub const GLOBAL_MUT_TYPE: GlobalType = GlobalType {
     //     mutable: Mutability::Mut,
@@ -104,7 +105,7 @@ impl Unitype {
 
     /// Parse a Wasm `(ref eq)` value into a `UnitypeValue`.
     /// Used only for displaying `wasmtime` output.
-    pub fn parse_ref_eq(ref_eq: WasmtimeRefEq, engine: &mut WT::Engine, store: &mut WT::Store<()>) -> Self {
+    pub fn parse_ref_eq(ref_eq: impl RootedGcRef<AnyRef>, mut store: &mut impl AsContextMut) -> Self {
         let is_i31 = ref_eq.is_i31(&store).unwrap();
         if is_i31 {
             let value = ref_eq.unwrap_i31(&store).unwrap().get_u32() as i32;
@@ -114,27 +115,50 @@ impl Unitype {
                 arr if ref_eq.is_array(&store).unwrap() => {
                     // TODO -- assuming all arrays are string arrays
                     let arr = arr.as_array(&store).unwrap().unwrap();
-                    let bytes: Vec<u8> = arr
-                        .elems(store)
-                        .unwrap()
-                        .map(|byte| {
-                            // `arr.elems` zero-extends `i8` and `i16` into `Val::I32`
-                            let byte = byte.i32().unwrap();
-                            byte as u8
-                        })
-                        .collect();
-                    let string = String::from_utf8(bytes).unwrap();
-                    Unitype::String(string)
+                    let is_string =
+                        arr.ty(&store)
+                            .unwrap()
+                            .field_type()
+                            .matches(&wasmtime::FieldType::new(
+                                wasmtime::Mutability::Const,
+                                wasmtime::StorageType::I8,
+                            ));
+                    if is_string {
+                        let bytes: Vec<u8> = arr
+                            .elems(&mut store)
+                            .unwrap()
+                            .map(|byte| {
+                                // `arr.elems` zero-extends `i8` and `i16` into `Val::I32`
+                                let byte = byte.i32().unwrap();
+                                byte as u8
+                            })
+                            .collect();
+                        let string = String::from_utf8(bytes).unwrap();
+                        Unitype::String(string)
+                    } else {
+                        let mut unitype_elems = vec![];
+                        let len = arr.len(&store).unwrap();
+                        for idx in 0..len {
+                            let val = arr.get(&mut store, idx).unwrap();
+                            let val = val
+                                .unwrap_any_ref()
+                                .unwrap()
+                                .to_owned_rooted(&mut store)
+                                .unwrap();
+                            let res = Self::parse_ref_eq(val, store);
+                            unitype_elems.push(res);
+                        }
+                        Unitype::Array(unitype_elems)
+                    }
                 }
                 strukt if strukt.is_struct(&store).unwrap() => {
-
                     let strukt = strukt.as_struct(&store).unwrap().unwrap();
                     if let Some(n) = strukt.field(store, 0).ok().and_then(|f| f.i64()) {
                         Unitype::HeapNum(n)
                     } else {
                         todo!("Unknown struct type")
                     }
-                },
+                }
                 other => {
                     panic!("Unknown type: {:?}", other.ty(&store))
                 }
@@ -148,8 +172,9 @@ impl Unitype {
             Unitype::False => Self::FALSE_BIT_PATTERN,
             Unitype::Nil => Self::NIL_BIT_PATTERN,
             Unitype::Fixnum(Fixnum(val)) => val | Self::FIXNUM_MARKER,
-            Unitype::HeapNum(_) => panic!("Not an i31 value: {:?}", self),
-            Unitype::String(_) => panic!("Not an i31 value: {:?}", self),
+            Unitype::HeapNum(_) | Unitype::String(_) | Unitype::Array(_) => {
+                panic!("Not an i31 value: {:?}", self)
+            }
         }
     }
 
@@ -164,7 +189,7 @@ impl Unitype {
                 let extend_width = i32::BITS - Self::FIXNUM_BIT_WIDTH;
                 let val = (val << extend_width) >> extend_width;
                 Self::Fixnum(Fixnum(val))
-            },
+            }
             _ => panic!("Invalid i31 bit pattern 0b{:b}", value),
         }
     }
@@ -176,15 +201,19 @@ impl Unitype {
     }
 
     fn module_to_doc(self) -> RcDoc<'static> {
-        let text = match self {
-            Unitype::True => "true".to_owned(),
-            Unitype::False => "false".to_owned(),
-            Unitype::Nil => "nil".to_owned(),
-            Unitype::Fixnum(Fixnum(n)) => format!("{}", n),
-            Unitype::HeapNum(n) => format!("{}", n),
-            Unitype::String(s) => format!("\"{}\"", s),
-        };
-        RcDoc::text(text)
+        match self {
+            Unitype::True => RcDoc::text("true".to_owned()),
+            Unitype::False => RcDoc::text("false".to_owned()),
+            Unitype::Nil => RcDoc::text("nil".to_owned()),
+            Unitype::Fixnum(Fixnum(n)) => RcDoc::text(format!("{}", n)),
+            Unitype::HeapNum(n) => RcDoc::text(format!("{}", n)),
+            Unitype::String(s) => RcDoc::text(format!("\"{}\"", s)),
+            Unitype::Array(vals) => RcDoc::text("[")
+                .append(RcDoc::intersperse(vals.into_iter().map(Self::module_to_doc), RcDoc::text(",").append(RcDoc::line())))
+                .append(RcDoc::text("]"))
+                .nest(2)
+                .group()
+        }
     }
 }
 

@@ -79,7 +79,13 @@ fn compile_expr(ctx: &mut CompileCtx<'_>, expr: &Expr) -> Vec<Instr> {
 }
 
 fn compile_arr_expr(ctx: &mut CompileCtx<'_>, arr_expr: &Array) -> Vec<Instr> {
-    todo!()
+    let Array { vals } = arr_expr;
+    let vals: Vec<Instr> = vals.into_iter().map(|val| compile_expr(ctx, val)).flatten().collect();
+    wat!{
+        (array_new_fixed $arr_unitype ,(vals.len() as i64)
+            ,(vals)
+        )
+    }
 }
 
 fn compile_and_expr(ctx: &mut CompileCtx<'_>, and_expr: &And) -> Vec<Instr> {
