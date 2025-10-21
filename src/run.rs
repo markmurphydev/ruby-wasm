@@ -2,7 +2,7 @@ use crate::compiler::RUBY_TOP_LEVEL_FUNCTION_NAME;
 use crate::lexeme::LexemeKind;
 use crate::lexer::Lexer;
 use crate::unitype::{Unitype, WasmtimeRefEq};
-use crate::{compiler, print_wat, CompileCtx};
+use crate::{compiler, print_wat, run, CompileCtx};
 use wasmtime::{Config, Engine, Instance, Module, Store};
 use wat_defs::module;
 use crate::corelib::add_core_items;
@@ -18,6 +18,10 @@ pub fn lex(text: &str) -> String {
             return res;
         }
     }
+}
+
+pub fn run_text(text: String) -> String {
+    run_wat(compile_ctx_to_wat(&text_to_compile_ctx(text)))
 }
 
 pub fn text_to_compile_ctx(text: String) -> CompileCtx {

@@ -60,7 +60,7 @@ impl Lexeme {
     pub fn is_operator(&self) -> bool {
         use LexemeKind::*;
         match self.kind {
-            In | PipePipe | AmpersandAmpersand | Greater | GreaterEqual | Less | LessEqual
+            In | Equal | PipePipe | AmpersandAmpersand | Greater | GreaterEqual | Less | LessEqual
             | Dot | Minus | Plus | Slash | Star => true,
             _ => false,
         }
@@ -84,6 +84,7 @@ impl Lexeme {
         const BP_CALL: (u8, u8) = (50, 50);
         match &self.kind {
             In => BP_MATCH,
+            Equal => BP_ASSIGNMENT,
             PipePipe => BP_LOGICAL_OR,
             AmpersandAmpersand => BP_LOGICAL_AND,
             Greater | GreaterEqual | Less | LessEqual => BP_COMPARISON,

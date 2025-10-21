@@ -4,7 +4,7 @@
 //! - Runs correctly
 
 use ruby_wasm::corelib::add_core_items;
-use ruby_wasm::CompileCtx;
+use ruby_wasm::{run, CompileCtx};
 use wat_defs::instr::Instr;
 use wat_defs::module::Module;
 use wat_defs::ty::{NumType, ValType};
@@ -23,7 +23,7 @@ fn run_helper(body: Vec<Instr>, result_ty: ValType) -> String {
     };
     ctx.module.funcs.push(main_fn);
 
-    ruby_wasm::run::compile_ctx_to_wat(&mut ctx)
+    run::run_wat(run::compile_ctx_to_wat(&ctx))
 }
 
 /// Wraps `body` in a function definition, includes the corelib definitions,

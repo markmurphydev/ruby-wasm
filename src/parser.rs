@@ -43,6 +43,7 @@ impl<'text> Parser<'text> {
 
         while let Some(expr) = self.expr() {
             body.push(expr);
+            self.skip_newlines();
         }
 
         N::Statements { body }
@@ -87,7 +88,7 @@ impl<'text> Parser<'text> {
             LK::False => expect_simple_kw!(LK::False, N::Expr::False),
             LK::Nil => expect_simple_kw!(LK::Nil, N::Expr::Nil),
 
-            LK::GlobalVariable { .. } => Some(self.global_variable()),
+            LK::GlobalVariable { .. } => box_expr_variant!(self.global_variable(), N::Expr::GlobalVariableRead),
             LK::Constant { .. } => Some(self.constant()),
 
             // Control flow
@@ -129,6 +130,19 @@ impl<'text> Parser<'text> {
                         name,
                         args,
                     }))
+                }
+                LK::Equal => {
+                    match lhs {
+                        N::Expr::GlobalVariableRead(glob) => {
+                            let rhs = self.expr_bp(r_bp).unwrap();
+                            let N::GlobalVariableRead { name } = *glob;
+                            N::Expr::GlobalVariableWrite(Box::new(N::GlobalVariableWrite {
+                                name,
+                                expr: rhs,
+                            }))
+                        }
+                        _ => todo!("Unknown assignment lhs: {:?}", lhs),
+                    }
                 }
                 LK::AmpersandAmpersand => {
                     let rhs = self.expr_bp(r_bp).unwrap();
@@ -251,9 +265,9 @@ impl<'text> Parser<'text> {
         }
     }
 
-    /// Parse global variable into either a `GlobalWrite` or a `GlobalRead`
+    /// Parse global variable into a `GlobalRead`
     /// Pre: `self.lexer.next().kind == LexemeKind::GlobalVariable`
-    fn global_variable(&mut self) -> N::Expr {
+    fn global_variable(&mut self) -> N::GlobalVariableRead {
         let global = self.lexer.next();
         let Lexeme {
             kind: LK::GlobalVariable { text },
@@ -264,19 +278,7 @@ impl<'text> Parser<'text> {
         };
 
         let name = text.chars().skip(1).collect();
-
-        // Check whether this is `GlobalWrite`
-        // ```
-        // $asdf = 22
-        // ```
-        match self.lexer.peek().kind {
-            LK::Equal => {
-                self.lexer.next();
-                let rhs = self.expr().expect("Assignment with no RHS");
-                N::Expr::GlobalVariableWrite(Box::new(N::GlobalVariableWrite { name, expr: rhs }))
-            }
-            _ => N::Expr::GlobalVariableRead(Box::new(N::GlobalVariableRead { name })),
-        }
+        N::GlobalVariableRead { name }
     }
 
     /// Parse a constant into either `ConstantWrite` or `ConstantRead`
@@ -375,6 +377,12 @@ impl<'text> Parser<'text> {
         let lexeme = self.lexer.next();
         assert!(expected.contains(&lexeme.kind));
         lexeme
+    }
+
+    fn skip_newlines(&mut self) {
+        while let LK::Newline = self.lexer.peek().kind {
+            self.lexer.next();
+        }
     }
 }
 
@@ -668,6 +676,15 @@ mod tests {
             let actual = parse_to_sexpr(text);
             expected.assert_eq(&actual);
         }
+
+        #[test]
+        fn global_write_then_read() {
+            let text = "$asdf = 22
+            $asdf";
+            let expected = expect![[""]];
+            let actual = parse_to_sexpr(text);
+            expected.assert_eq(&actual);
+        }
     }
 
     mod constants {
@@ -686,8 +703,8 @@ mod tests {
     }
 
     mod arrays {
-        use expect_test::expect;
         use crate::parser::tests::parse_to_sexpr;
+        use expect_test::expect;
 
         #[test]
         fn empty_arr() {

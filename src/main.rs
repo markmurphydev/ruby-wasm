@@ -105,8 +105,7 @@ fn main() {
         }
 
         Command::Run { text } => {
-            let res = run::run_wat(run::compile_ctx_to_wat(&run::text_to_compile_ctx(text)));
-            println!("{}", res)
+            println!("{}", run::run_text(text))
         }
 
         Command::Html { text } => {
