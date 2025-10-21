@@ -126,6 +126,9 @@
     (ref.null $class)
     (global.get $str_Object)
     (array.new_fixed $alist_str_method 0)))
+(global $asdf
+  (mut (ref null eq))
+  )
 (func
   $method_new
   (type $method)
@@ -522,7 +525,7 @@
       (call $integer_to_i64
         (local.get $a))
       (call $integer_to_i64
-        (local.get $a)))))
+        (local.get $b)))))
 (func
   $gt
   (param $a (ref eq)) (param $b (ref eq))
@@ -532,14 +535,14 @@
       (call $integer_to_i64
         (local.get $a))
       (call $integer_to_i64
-        (local.get $a)))))
+        (local.get $b)))))
 (func
   $__ruby_top_level_function
   (export "__ruby_top_level_function")
   (result (ref eq))
-  (call $lt
+  (global.set $asdf
     (ref.i31
-      (i32.const 1073741825))
-    (ref.i31
-      (i32.const 1073741826))))
+      (i32.const 1073741868)))
+  (ref.i31
+    (i32.const 5)))
 (start $_start)

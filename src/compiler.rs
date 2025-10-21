@@ -1,11 +1,14 @@
-use std::hash::{DefaultHasher, Hash, Hasher};
-use wat_defs::instr::Instr;
-use crate::node::{And, Array, Call, ConstantRead, Expr, GlobalVariableRead, GlobalVariableWrite, If, Or, Program, Statements, Subsequent, Until, While};
-use crate::unitype::Unitype;
-use wat_defs::module::Module;
-use wat_macro::wat;
 use crate::corelib;
 use crate::corelib::class::Class;
+use crate::node::{
+    And, Array, Call, ConstantRead, Expr, GlobalVariableRead, GlobalVariableWrite, If, Or, Program,
+    Statements, Subsequent, Until, While,
+};
+use crate::unitype::Unitype;
+use std::hash::{DefaultHasher, Hash, Hasher};
+use wat_defs::instr::Instr;
+use wat_defs::module::Module;
+use wat_macro::wat;
 
 pub const RUBY_TOP_LEVEL_FUNCTION_NAME: &str = "__ruby_top_level_function";
 
@@ -42,10 +45,13 @@ fn compile_statements(ctx: &mut CompileCtx, statements: &Statements) -> Vec<Inst
     // If there are no statements, return nil.
     // Suppress all values except the last.
     if body.is_empty() {
-        i31_const(Unitype::NIL_BIT_PATTERN)
+        vec![i31_const(Unitype::NIL_BIT_PATTERN)]
     } else {
         let mut stmts = vec![];
         for expr in body.iter() {
+            if !stmts.is_empty() {
+                stmts.push(wat![ (drop) ].remove(0))
+            }
             stmts.append(&mut compile_expr(ctx, expr));
         }
         stmts
@@ -56,13 +62,11 @@ fn compile_expr(ctx: &mut CompileCtx, expr: &Expr) -> Vec<Instr> {
     match expr {
         &Expr::Integer(n) => compile_integer(ctx, n),
         Expr::SingleQuoteString(s) => compile_single_quote_string(ctx, s),
-        Expr::False => i31_const(Unitype::FALSE_BIT_PATTERN),
-        Expr::True => i31_const(Unitype::TRUE_BIT_PATTERN),
-        Expr::Nil => i31_const(Unitype::NIL_BIT_PATTERN),
+        Expr::False => vec![i31_const(Unitype::FALSE_BIT_PATTERN)],
+        Expr::True => vec![i31_const(Unitype::TRUE_BIT_PATTERN)],
+        Expr::Nil => vec![i31_const(Unitype::NIL_BIT_PATTERN)],
         Expr::GlobalVariableWrite(global_write) => compile_global_variable_write(ctx, global_write),
-        Expr::GlobalVariableRead(global_read) => {
-            compile_global_variable_read(global_read)
-        }
+        Expr::GlobalVariableRead(global_read) => compile_global_variable_read(ctx, global_read),
         Expr::ConstantWrite(_constant_write) => todo!(),
         Expr::ConstantRead(constant_read_expr) => {
             compile_constant_read_expr(ctx, &*constant_read_expr)
@@ -80,8 +84,12 @@ fn compile_expr(ctx: &mut CompileCtx, expr: &Expr) -> Vec<Instr> {
 
 fn compile_arr_expr(ctx: &mut CompileCtx, arr_expr: &Array) -> Vec<Instr> {
     let Array { vals } = arr_expr;
-    let vals: Vec<Instr> = vals.into_iter().map(|val| compile_expr(ctx, val)).flatten().collect();
-    wat!{
+    let vals: Vec<Instr> = vals
+        .into_iter()
+        .map(|val| compile_expr(ctx, val))
+        .flatten()
+        .collect();
+    wat! {
         (array_new_fixed $arr_unitype ,(vals.len() as i64)
             ,(vals)
         )
@@ -113,7 +121,7 @@ fn compile_integer(ctx: &mut CompileCtx, n: i64) -> Vec<Instr> {
     let unitype = Unitype::from_integer(n);
     match unitype {
         fixnum @ Unitype::Fixnum(_) => {
-            i31_const(fixnum.to_i31_bits())
+            vec![i31_const(fixnum.to_i31_bits())]
         }
         Unitype::HeapNum(heapnum) => {
             // `heapnum` is a constant value.
@@ -125,7 +133,7 @@ fn compile_integer(ctx: &mut CompileCtx, n: i64) -> Vec<Instr> {
             let global = wat![ (global ,(global_id) (ref eq) (const_i64 ,(heapnum))) ];
             ctx.module.globals.push(global);
 
-            wat![ (global_get ,(global_id)) ]
+            wat![(global_get, (global_id))]
         }
         _ => unreachable!(),
     }
@@ -137,7 +145,11 @@ fn compile_single_quote_string(ctx: &mut CompileCtx, str: &String) -> Vec<Instr>
     str.hash(&mut hasher);
     let global_id = format!("single_quote_string_{}", hasher.finish());
 
-    let bytes: Vec<_> = str.bytes().map(|b| wat![ (const_i32 ,(b as i64)) ]).flatten().collect();
+    let bytes: Vec<_> = str
+        .bytes()
+        .map(|b| wat![(const_i32, (b as i64))])
+        .flatten()
+        .collect();
     let len = bytes.len() as i64;
     let global = wat! {
         (global ,(global_id.clone()) (ref $str)
@@ -146,7 +158,7 @@ fn compile_single_quote_string(ctx: &mut CompileCtx, str: &String) -> Vec<Instr>
     };
     ctx.module.globals.push(global);
 
-    wat![ (global_get ,(global_id)) ]
+    wat![(global_get, (global_id))]
 }
 
 /// Add a global to the Module, setting its value to the write's rhs.
@@ -155,21 +167,31 @@ fn compile_global_variable_write(
     global_write: &GlobalVariableWrite,
 ) -> Vec<Instr> {
     let GlobalVariableWrite { name, expr } = global_write;
-
-    if !ctx.module.globals.iter().any(|glob| glob.name == *name) {
-        let global = wat![ (global ,(name) (mut (ref eq)) )];
-        ctx.module.globals.push(global);
-    }
+    add_null_global_def(ctx, name);
 
     let rhs = compile_expr(ctx, expr);
-    wat![ (global_set ,(name.to_string()) ,(rhs)) ]
+    wat! {
+       (global_set ,(name.to_string()) ,(rhs))
+       ,(i31_const(Unitype::NIL_BIT_PATTERN))
+    }
 }
 
-fn compile_global_variable_read(
-    global_read: &GlobalVariableRead,
-) -> Vec<Instr> {
+fn compile_global_variable_read(ctx: &mut CompileCtx, global_read: &GlobalVariableRead) -> Vec<Instr> {
     let GlobalVariableRead { name } = global_read;
-    wat![ (global_get ,(name.to_string())) ]
+    add_null_global_def(ctx, name);
+    wat![ (ref_cast (ref eq) (global_get, (name.to_string()))) ]
+}
+
+/// If `ctx` has no global named `name`, add an empty definition.
+fn add_null_global_def(ctx: &mut CompileCtx, name: &str) {
+    if !ctx.module.globals.iter().any(|glob| glob.name == *name) {
+        let global = wat! {
+           (global ,(name)
+                   (mut (ref null eq))
+                   (ref_null eq))
+        };
+        ctx.module.globals.push(global);
+    }
 }
 
 fn compile_constant_read_expr(
@@ -179,20 +201,17 @@ fn compile_constant_read_expr(
     // TODO -- Assuming all constants are classes.
     let ConstantRead { name } = constant_read_expr;
     let name = Class::name_to_identifier(name);
-    wat![ (global_get ,(name)) ]
+    wat![(global_get, (name))]
 }
 
-fn compile_if_expr(
-    ctx: &mut CompileCtx,
-    if_expr: &If,
-) -> Vec<Instr> {
+fn compile_if_expr(ctx: &mut CompileCtx, if_expr: &If) -> Vec<Instr> {
     let If {
         predicate,
         statements,
         subsequent,
     } = if_expr;
     let else_branch = match subsequent {
-        Subsequent::None => i31_const(Unitype::NIL_BIT_PATTERN),
+        Subsequent::None => vec![i31_const(Unitype::NIL_BIT_PATTERN)],
         Subsequent::Elsif(if_expr) => compile_if_expr(ctx, &if_expr),
         Subsequent::Else(else_expr) => compile_statements(ctx, &else_expr.statements),
     };
@@ -206,10 +225,7 @@ fn compile_if_expr(
     }
 }
 
-fn compile_while_expr(
-    ctx: &mut CompileCtx,
-    while_expr: &While,
-) -> Vec<Instr> {
+fn compile_while_expr(ctx: &mut CompileCtx, while_expr: &While) -> Vec<Instr> {
     let While {
         predicate,
         statements,
@@ -228,10 +244,7 @@ fn compile_while_expr(
     }
 }
 
-fn compile_until_expr(
-    ctx: &mut CompileCtx,
-    until_expr: &Until,
-) -> Vec<Instr> {
+fn compile_until_expr(ctx: &mut CompileCtx, until_expr: &Until) -> Vec<Instr> {
     // TODO -- It might be nicer to have an IR where `until` is lowered to `while`
     let Until {
         predicate,
@@ -249,13 +262,17 @@ fn compile_until_expr(
 }
 
 fn compile_call_expr(ctx: &mut CompileCtx, call_expr: &Call) -> Vec<Instr> {
-    let Call { receiver, name, args } = call_expr;
+    let Call {
+        receiver,
+        name,
+        args,
+    } = call_expr;
 
     match name.as_str() {
         "+" => {
             assert_eq!(1, args.len());
             compile_binop(ctx, wat!($add), receiver, &args[0])
-        },
+        }
         "-@" => {
             assert!(args.is_empty());
             wat![ (call $negate ,(compile_expr(ctx, receiver)))]
@@ -272,11 +289,15 @@ fn compile_call_expr(ctx: &mut CompileCtx, call_expr: &Call) -> Vec<Instr> {
             let name = corelib::global::string_identifier(name);
             let mut receiver = compile_expr(ctx, receiver);
 
-            let mut message = wat!{
+            let mut message = wat! {
                 (global_get ,(name))
             };
 
-            let args: Vec<_> = args.iter().map(|arg| compile_expr(ctx, arg)).flatten().collect();
+            let args: Vec<_> = args
+                .iter()
+                .map(|arg| compile_expr(ctx, arg))
+                .flatten()
+                .collect();
             let mut args = wat! {
                 (array_new_fixed $arr_unitype ,(args.len() as i64)
                     ,(args))
@@ -297,7 +318,7 @@ fn compile_call_expr(ctx: &mut CompileCtx, call_expr: &Call) -> Vec<Instr> {
 fn compile_binop(ctx: &mut CompileCtx, name: String, lhs: &Expr, rhs: &Expr) -> Vec<Instr> {
     let mut lhs = compile_expr(ctx, lhs);
     let mut rhs = compile_expr(ctx, rhs);
-    let wat_args ={
+    let wat_args = {
         lhs.append(&mut rhs);
         lhs
     };
@@ -319,6 +340,6 @@ fn compile_expr_to_wasm_predicate(ctx: &mut CompileCtx, expr: &Expr) -> Vec<Inst
     }
 }
 
-fn i31_const(bits: i32) -> Vec<Instr> {
-    wat![ (ref_i31 (const_i32 ,(bits.into()))) ]
+fn i31_const(bits: i32) -> Instr {
+    wat![(ref_i31(const_i32, (bits.into())))].remove(0)
 }

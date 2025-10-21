@@ -8,7 +8,7 @@ use pretty::RcDoc;
 use std::borrow::Cow;
 use wat_defs::func::{Exported, Func, Local, Param};
 use wat_defs::global::Global;
-use wat_defs::instr::UnfoldedInstr::{I32WrapI64, I64Add, I64Xor, RefAsNonNull, RefI31, Return};
+use wat_defs::instr::UnfoldedInstr::{I32WrapI64, I64Add, I64Xor, Nop, RefAsNonNull, RefI31, Return};
 use wat_defs::instr::{Instr, UnfoldedInstr};
 use wat_defs::module::{Module, TypeDef};
 use wat_defs::ty::{
@@ -247,6 +247,7 @@ fn unfolded_instr_to_doc(instr: &UnfoldedInstr) -> Doc {
     use UnfoldedInstr::*;
     match instr {
         Nop => text("nop"),
+        Drop => text("drop"),
         Const { ty, val } => const_to_doc(ty, *val),
         I32Eqz => text("i32.eqz"),
         I32Eq => text("i32.eq"),
@@ -288,15 +289,15 @@ fn unfolded_instr_to_doc(instr: &UnfoldedInstr) -> Doc {
             None => nil(),
         }),
         If { .. } => unreachable!(),
-        RefNull { ty } => text(format!("ref.null ${}", ty)),
+        RefNull { ty } => text("ref.null ").append(heap_type_to_doc(ty)),
         RefFunc { name } => text(format!("ref.func ${}", name)),
         RefI31 => text("ref.i31"),
         I31GetS => text("i31.get_s"),
         I31GetU => text("i31.get_u"),
         RefAsNonNull => text("ref.as_non_null"),
         RefEq => text("ref.eq"),
-        RefTest { ty } => text("ref.test").append(ref_type_to_doc(ty)),
-        RefCast { ty } => text("ref.cast").append(ref_type_to_doc(ty)),
+        RefTest { ty } => text("ref.test ").append(ref_type_to_doc(ty)),
+        RefCast { ty } => text("ref.cast ").append(ref_type_to_doc(ty)),
         Call { func } => text(format!("call ${}", func)),
         CallRef { type_idx } => text(format!("call_ref ${}", type_idx)),
         LocalGet { name } => text(format!("local.get ${}", name)),

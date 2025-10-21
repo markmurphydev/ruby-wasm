@@ -82,6 +82,7 @@ fn parse_unfolded_instr(name: Ident, input: ParseInput) -> Result<TokenStream> {
 
     let res = match name.as_str() {
         "nop" => quote!(wat_defs::instr::UnfoldedInstr::Nop),
+        "drop" => quote!(wat_defs::instr::UnfoldedInstr::Drop),
         "const_i32" => parse_const(NumType::I32, input)?,
         "i32_eqz" => quote![ #path::I32Eqz ],
         "i32_eq" => quote![ #path::I32Eq ],
@@ -128,7 +129,7 @@ fn parse_unfolded_instr(name: Ident, input: ParseInput) -> Result<TokenStream> {
         "loop" => parse_loop(input)?,
         "if" => return Err(error(input, "panic!: Can't parse unfolded if.")),
         "ref_null" => {
-            let ty = parse_name(input)?;
+            let ty = ty::parse_heap_type(input)?;
             quote![ #path::RefNull { ty: #ty } ]
         }
         "ref_func" => {

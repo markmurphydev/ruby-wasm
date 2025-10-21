@@ -244,7 +244,7 @@ pub fn parse_ref_type(input: ParseInput) -> Result<TokenStream> {
     })
 }
 
-fn parse_heap_type(input: ParseInput) -> Result<TokenStream> {
+pub fn parse_heap_type(input: ParseInput) -> Result<TokenStream> {
     let path = quote![wat_defs::ty::HeapType];
     if let Ok(res) = parse_abs_heap_type(input) {
         Ok(quote![ #path::Abs(#res) ])

@@ -681,7 +681,11 @@ mod tests {
         fn global_write_then_read() {
             let text = "$asdf = 22
             $asdf";
-            let expected = expect![[""]];
+            let expected = expect![[r#"
+                ((statements
+                  (body (GlobalVariableWrite (name . "asdf") (expr Integer . 22))
+                	(GlobalVariableRead (name . "asdf")))))
+            "#]];
             let actual = parse_to_sexpr(text);
             expected.assert_eq(&actual);
         }

@@ -1,8 +1,9 @@
-use crate::ty::{BlockType, NumType, RefType};
+use crate::ty::{BlockType, HeapType, NumType, RefType};
 
 #[derive(Debug)]
 pub enum UnfoldedInstr {
     Nop,
+    Drop,
     I32Eqz,
     I32Eq,
     I32LtS,
@@ -68,7 +69,7 @@ pub enum UnfoldedInstr {
     },
 
     RefNull {
-        ty: String,
+        ty: HeapType,
     },
 
     RefFunc {
@@ -158,6 +159,7 @@ pub struct Instr {
 impl Instr {
     pub fn is_instr(str: &str) -> bool {
         str == "nop"
+            || str == "drop"
             || str == "const_i32"
             || str == "const_i64"
             || str == "i32_eqz"
