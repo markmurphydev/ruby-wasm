@@ -1,6 +1,6 @@
 use std::hash::{DefaultHasher, Hash, Hasher};
 use wat_defs::instr::Instr;
-use crate::node::{And, Call, ConstantRead, Expr, GlobalVariableRead, GlobalVariableWrite, If, Or, Program, Statements, Subsequent, Until, While};
+use crate::node::{And, Array, Call, ConstantRead, Expr, GlobalVariableRead, GlobalVariableWrite, If, Or, Program, Statements, Subsequent, Until, While};
 use crate::unitype::Unitype;
 use wat_defs::module::Module;
 use wat_macro::wat;
@@ -74,7 +74,12 @@ fn compile_expr(ctx: &mut CompileCtx<'_>, expr: &Expr) -> Vec<Instr> {
         Expr::Call(call_expr) => compile_call_expr(ctx, &*call_expr),
         Expr::And(and_expr) => compile_and_expr(ctx, &*and_expr),
         Expr::Or(or_expr) => compile_or_expr(ctx, &*or_expr),
+        Expr::Array(arr_expr) => compile_arr_expr(ctx, &*arr_expr),
     }
+}
+
+fn compile_arr_expr(ctx: &mut CompileCtx<'_>, arr_expr: &Array) -> Vec<Instr> {
+    todo!()
 }
 
 fn compile_and_expr(ctx: &mut CompileCtx<'_>, and_expr: &And) -> Vec<Instr> {

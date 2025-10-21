@@ -76,6 +76,11 @@ impl<'text> Parser<'text> {
             // Literals
             LK::IntegerLiteral { .. } => self.integer_literal(),
             LK::SingleQuoteStringLiteral { .. } => self.single_quote_string_literal(),
+            LK::BracketLeftRight { .. } => {
+                self.lexer.next();
+                Some(N::Expr::Array(Box::new(N::Array { vals: vec![] })))
+            },
+            LK::BracketLeft { .. } => Some(N::Expr::Array(Box::new(self.array_literal()))),
 
             // Keywords
             LK::True => expect_simple_kw!(LK::True, N::Expr::True),
@@ -188,6 +193,23 @@ impl<'text> Parser<'text> {
 
         self.expect(&[LK::RightParen]);
         args
+    }
+
+    fn array_literal(&mut self) -> N::Array {
+        self.debug_expect(&[LK::BracketLeft]);
+
+        let mut vals = vec![];
+        loop {
+            vals.push(self.expr().unwrap());
+            match self.lexer.next().kind {
+                LK::Comma => {},
+                LK::BracketRight => break,
+                _ => panic!("Expected `,` or `]`")
+            }
+        }
+        N::Array {
+            vals,
+        }
     }
 
     /// Once we see "if", should be irrefutable.
@@ -589,7 +611,10 @@ mod tests {
     #[test]
     fn logical_ops() {
         let text = "false && true || false";
-        let expected = expect![[""]];
+        let expected = expect![[r#"
+            ((statements
+              (body (Or (lhs And (lhs . False) (rhs . True)) (rhs . False)))))
+        "#]];
         let actual = parse_to_sexpr(text);
         expected.assert_eq(&actual);
     }
@@ -597,7 +622,13 @@ mod tests {
     #[test]
     fn gt_lt() {
         let text = "1 < 2 && 3 < 4";
-        let expected = expect![[""]];
+        let expected = expect![[r#"
+            ((statements
+              (body
+               (And
+                (lhs Call (receiver Integer . 1) (name . "<") (args (Integer . 2)))
+                (rhs Call (receiver Integer . 3) (name . "<") (args (Integer . 4)))))))
+        "#]];
         let actual = parse_to_sexpr(text);
         expected.assert_eq(&actual);
     }
@@ -605,7 +636,10 @@ mod tests {
     #[test]
     fn call_brackets() {
         let text = "true.[](0)";
-        let expected = expect![[""]];
+        let expected = expect![[r#"
+            ((statements
+              (body (Call (receiver . True) (name . "[]") (args (Integer . 0))))))
+        "#]];
         let actual = parse_to_sexpr(text);
         expected.assert_eq(&actual);
     }
@@ -645,6 +679,32 @@ mod tests {
             let text = "Object";
             let expected = expect![[r#"
                 ((statements (body (ConstantRead (name . "Object")))))
+            "#]];
+            let actual = parse_to_sexpr(text);
+            expected.assert_eq(&actual);
+        }
+    }
+
+    mod arrays {
+        use expect_test::expect;
+        use crate::parser::tests::parse_to_sexpr;
+
+        #[test]
+        fn empty_arr() {
+            let text = "[]";
+            let expected = expect![[r#"
+                ((statements (body (Array (vals)))))
+            "#]];
+            let actual = parse_to_sexpr(text);
+            expected.assert_eq(&actual);
+        }
+
+        #[test]
+        fn non_empty_arr() {
+            let text = "[1, 2, 3]";
+            let expected = expect![[r#"
+                ((statements
+                  (body (Array (vals (Integer . 1) (Integer . 2) (Integer . 3))))))
             "#]];
             let actual = parse_to_sexpr(text);
             expected.assert_eq(&actual);
