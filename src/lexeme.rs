@@ -60,8 +60,8 @@ impl Lexeme {
     pub fn is_operator(&self) -> bool {
         use LexemeKind::*;
         match self.kind {
-            In | Equal | PipePipe | AmpersandAmpersand | Greater | GreaterEqual | Less | LessEqual
-            | Dot | Minus | Plus | Slash | Star => true,
+            In | Equal | PipePipe | AmpersandAmpersand | Greater | GreaterEqual | Less
+            | LessEqual | Minus | Plus | Slash | Star | BracketLeft | Dot => true,
             _ => false,
         }
     }
@@ -81,6 +81,7 @@ impl Lexeme {
 
         const BP_TERM: (u8, u8) = (38, 39);
         const BP_FACTOR: (u8, u8) = (40, 41);
+        const BP_INDEX: (u8, u8) = (48, 49);
         const BP_CALL: (u8, u8) = (50, 50);
         match &self.kind {
             In => BP_MATCH,
@@ -90,6 +91,7 @@ impl Lexeme {
             Greater | GreaterEqual | Less | LessEqual => BP_COMPARISON,
             Minus | Plus => BP_TERM,
             Slash | Star => BP_FACTOR,
+            BracketLeft => BP_INDEX,
             Dot => BP_CALL,
             other => panic!("Lexeme of kind {:?} has no binding power", other),
         }

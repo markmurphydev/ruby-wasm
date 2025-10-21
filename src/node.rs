@@ -29,7 +29,7 @@ pub enum Expr {
     Call(Box<Call>),
     And(Box<And>),
     Or(Box<Or>),
-    Array(Box<Array>)
+    Array(Box<Array>),
 }
 
 #[derive(Debug, Clone, PartialEq, Eq, Serialize)]

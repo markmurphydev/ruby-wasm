@@ -123,7 +123,8 @@ impl<'text> Parser<'text> {
                         _ => panic!("Expected identifier or `[]`."),
                     };
 
-                    let args = self.args();
+                    self.expect(&[LK::LeftParen]);
+                    let args = self.args(LK::RightParen);
 
                     N::Expr::Call(Box::new(N::Call {
                         receiver: lhs,
@@ -139,6 +140,14 @@ impl<'text> Parser<'text> {
                             N::Expr::GlobalVariableWrite(Box::new(N::GlobalVariableWrite {
                                 name,
                                 expr: rhs,
+                            }))
+                        }
+                        N::Expr::Call(call) if call.name == "[]" => {
+                            let rhs = self.expr_bp(r_bp).unwrap();
+                            N::Expr::Call(Box::new(N::Call {
+                                receiver: call.receiver,
+                                name: "[]=".to_string(),
+                                args: [call.args, vec![rhs]].concat(),
                             }))
                         }
                         _ => todo!("Unknown assignment lhs: {:?}", lhs),
@@ -172,6 +181,16 @@ impl<'text> Parser<'text> {
                         args: vec![rhs],
                     }))
                 }
+                LK::BracketLeft => {
+                    let args = self.args(LexemeKind::BracketRight);
+                    assert_eq!(1, args.len());
+
+                    N::Expr::Call(Box::new(N::Call {
+                        receiver: lhs,
+                        name: "[]".to_string(),
+                        args,
+                    }))
+                }
                 other => unreachable!("Lexeme kind {:?} is not an operator.", other),
             };
         }
@@ -188,10 +207,8 @@ impl<'text> Parser<'text> {
         })))
     }
 
-    /// Parse args inside parentheses.
-    fn args(&mut self) -> Vec<N::Expr> {
-        self.expect(&[LK::LeftParen]);
-
+    /// Parse args until terminator.
+    fn args(&mut self, terminator: LexemeKind) -> Vec<N::Expr> {
         let mut args = vec![];
         while let Some(arg) = self.expr() {
             args.push(arg);
@@ -200,12 +217,12 @@ impl<'text> Parser<'text> {
                 LK::Comma => {
                     self.lexer.next();
                 }
-                LK::RightParen => break,
+                lk if lk == terminator => break,
                 _ => panic!(),
             }
         }
 
-        self.expect(&[LK::RightParen]);
+        self.lexer.next();
         args
     }
 
@@ -709,6 +726,7 @@ mod tests {
     mod arrays {
         use crate::parser::tests::parse_to_sexpr;
         use expect_test::expect;
+        use crate::run;
 
         #[test]
         fn empty_arr() {
@@ -726,6 +744,40 @@ mod tests {
             let expected = expect![[r#"
                 ((statements
                   (body (Array (vals (Integer . 1) (Integer . 2) (Integer . 3))))))
+            "#]];
+            let actual = parse_to_sexpr(text);
+            expected.assert_eq(&actual);
+        }
+
+        #[test]
+        fn array_indexing() {
+            let text = "[1, 2, 3][1]";
+            let expected = expect![[r#"
+                ((statements
+                  (body
+                   (Call
+                    (receiver Array (vals (Integer . 1) (Integer . 2) (Integer . 3)))
+                    (name . "[]") (args (Integer . 1))))))
+            "#]];
+            let actual = parse_to_sexpr(text);
+            expected.assert_eq(&actual);
+        }
+
+        #[test]
+        fn array_index_assignment() {
+            let text = "$x = [1, 2, 3]
+                $x[1] = 0
+                $x";
+            let expected = expect![[r#"
+                ((statements
+                  (body
+                   (GlobalVariableWrite (name . "x")
+                			(expr Array
+                			      (vals (Integer . 1) (Integer . 2)
+                				    (Integer . 3))))
+                   (Call (receiver GlobalVariableRead (name . "x")) (name . "[]=")
+                	 (args (Integer . 1) (Integer . 0)))
+                   (GlobalVariableRead (name . "x")))))
             "#]];
             let actual = parse_to_sexpr(text);
             expected.assert_eq(&actual);
