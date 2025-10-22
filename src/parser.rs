@@ -155,7 +155,6 @@ impl<'text> Parser<'text> {
                 }
                 LK::AmpersandAmpersand => {
                     let rhs = self.expr_bp(r_bp).unwrap();
-
                     N::Expr::And(Box::new(N::And { lhs, rhs }))
                 }
                 LK::PipePipe => {
@@ -163,8 +162,9 @@ impl<'text> Parser<'text> {
 
                     N::Expr::Or(Box::new(N::Or { lhs, rhs }))
                 }
-                op @ (LK::Greater | LK::Less | LK::Minus | LK::Plus | LK::Slash | LK::Star) => {
+                op @ (LK::EqualEqual | LK::Greater | LK::Less | LK::Minus | LK::Plus | LK::Slash | LK::Star) => {
                     let name = match op {
+                        LK::EqualEqual => "==".to_string(),
                         LK::Greater => ">".to_string(),
                         LK::Less => "<".to_string(),
                         LK::Minus => "-".to_string(),
@@ -664,6 +664,42 @@ mod tests {
         let expected = expect![[r#"
             ((statements
               (body (Call (receiver . True) (name . "[]") (args (Integer . 0))))))
+        "#]];
+        let actual = parse_to_sexpr(text);
+        expected.assert_eq(&actual);
+    }
+
+    #[test]
+    fn parse_eq_eq() {
+        let text = "22 == 44";
+        let expected = expect![[r#"
+            ((statements
+              (body
+               (Call (receiver Integer . 22) (name . "==") (args (Integer . 44))))))
+        "#]];
+        let actual = parse_to_sexpr(text);
+        expected.assert_eq(&actual);
+    }
+
+    #[test]
+    fn parse_complicated_equal_equal() {
+        let text = "$a[44] + 2 * $b == $c[$d]";
+        let expected = expect![[r#"
+            ((statements
+              (body
+               (Call
+                (receiver Call
+            	      (receiver Call
+            			(receiver GlobalVariableRead (name . "a"))
+            			(name . "[]") (args (Integer . 44)))
+            	      (name . "+")
+            	      (args
+            	       (Call (receiver Integer . 2) (name . "*")
+            		     (args (GlobalVariableRead (name . "b"))))))
+                (name . "==")
+                (args
+                 (Call (receiver GlobalVariableRead (name . "c")) (name . "[]")
+            	   (args (GlobalVariableRead (name . "d")))))))))
         "#]];
         let actual = parse_to_sexpr(text);
         expected.assert_eq(&actual);
