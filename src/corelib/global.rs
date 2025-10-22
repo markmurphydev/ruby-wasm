@@ -1,10 +1,3 @@
-// use crate::CompileCtx;
-// use crate::corelib::{class, method};
-// use crate::corelib::array::array_unitype;
-// use crate::unitype::Unitype;
-// use crate::wasm::module::GlobalBuilder;
-// use crate::wasm::types::{Mutability, RefType};
-
 use crate::CompileCtx;
 use crate::corelib::{class, method};
 use crate::unitype::Unitype;
@@ -13,7 +6,7 @@ use wat_defs::instr::Instr;
 use wat_macro::wat;
 
 pub fn add_globals(ctx: &mut CompileCtx) {
-    let mut globals = vec![empty_args()];
+    let mut globals = vec![main(), empty_args()];
     ctx.module.globals.append(&mut globals);
     add_string_defs(ctx);
 }
@@ -24,6 +17,15 @@ fn empty_args() -> Global {
        (global $empty_args
                (ref $arr_unitype)
                (array_new_fixed $arr_unitype 0))
+    }
+}
+
+/// Top-level `main` object, instantiated in _start to `Object#new()`
+fn main() -> Global {
+    wat! {
+        (global $main
+                (mut (ref $obj))
+                (struct_new $obj (ref_null $class)))
     }
 }
 

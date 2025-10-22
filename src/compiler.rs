@@ -3,7 +3,7 @@ use crate::corelib::class::Class;
 use crate::corelib::method::Method;
 use crate::node::{
     And, Array, Call, ConstantRead, Def, Expr, GlobalVariableRead, GlobalVariableWrite, If,
-    LocalVariableRead, Or, Program, Statements, Subsequent, Until, While,
+    LocalVariableRead, LocalVariableWrite, Or, Program, Statements, Subsequent, Until, While,
 };
 use crate::unitype::Unitype;
 use std::hash::{DefaultHasher, Hash, Hasher};
@@ -90,7 +90,20 @@ fn compile_expr(ctx: &mut CompileCtx, expr: &Expr) -> Vec<Instr> {
         Expr::LocalVariableRead(local_variable_read_expr) => {
             compile_local_variable_read_expr(local_variable_read_expr)
         }
+        Expr::LocalVariableWrite(local_variable_write_expr) => {
+            compile_local_variable_write_expr(ctx, local_variable_write_expr)
+        }
         Expr::Def(def_expr) => compile_def_expr(ctx, def_expr),
+    }
+}
+
+fn compile_local_variable_write_expr(
+    ctx: &mut CompileCtx,
+    local_variable_write_expr: &LocalVariableWrite,
+) -> Vec<Instr> {
+    let LocalVariableWrite { name, val } = local_variable_write_expr;
+    wat! {
+        (local_set ,(name.to_string()) ,(compile_expr(ctx, val)) )
     }
 }
 
@@ -311,35 +324,38 @@ fn compile_call_expr(ctx: &mut CompileCtx, call_expr: &Call) -> Vec<Instr> {
     match name.as_str() {
         "==" => {
             assert_eq!(1, args.len());
-            compile_binop(ctx, wat!($eq_eq), receiver, &args[0])
+            compile_binop(ctx, wat!($eq_eq), receiver.as_ref().unwrap(), &args[0])
         }
         "+" => {
             assert_eq!(1, args.len());
-            compile_binop(ctx, wat!($add), receiver, &args[0])
+            compile_binop(ctx, wat!($add), receiver.as_ref().unwrap(), &args[0])
         }
         "-@" => {
             assert!(args.is_empty());
-            wat![ (call $negate ,(compile_expr(ctx, receiver)))]
+            wat![ (call $negate ,(compile_expr(ctx, receiver.as_ref().unwrap())))]
         }
         ">" => {
             assert_eq!(1, args.len());
-            compile_binop(ctx, wat!($gt), receiver, &args[0])
+            compile_binop(ctx, wat!($gt), receiver.as_ref().unwrap(), &args[0])
         }
         "<" => {
             assert_eq!(1, args.len());
-            compile_binop(ctx, wat!($lt), receiver, &args[0])
+            compile_binop(ctx, wat!($lt), receiver.as_ref().unwrap(), &args[0])
         }
         "[]" => {
             assert_eq!(1, args.len());
-            compile_array_index(ctx, receiver, &args[0])
+            compile_array_index(ctx, receiver.as_ref().unwrap(), &args[0])
         }
         "[]=" => {
             assert_eq!(2, args.len());
-            compile_array_index_assign(ctx, receiver, &args[0], &args[1])
+            compile_array_index_assign(ctx, receiver.as_ref().unwrap(), &args[0], &args[1])
         }
         _ => {
             let name = corelib::global::string_identifier(name);
-            let mut receiver = compile_expr(ctx, receiver);
+            let mut receiver = match receiver {
+                Some(receiver) => compile_expr(ctx, receiver),
+                None => wat! { (global_get $main) }
+            };
 
             let mut message = wat! {
                 (global_get ,(name))

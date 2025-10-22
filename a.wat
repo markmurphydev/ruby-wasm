@@ -25,6 +25,10 @@
   (type $alist_str_method (sub final (array (ref $alist_str_method_pair))))
   (type $alist_str_method_pair
     (sub final (struct (field $key (ref $str)) (field $val (ref $method))))))
+(global $main
+  (mut (ref $obj))
+  (struct.new $obj
+    (ref.null $class)))
 (global $empty_args
   (ref $arr_unitype)
   (array.new_fixed $arr_unitype 0))
@@ -68,10 +72,6 @@
     (i32.const 101)
     (i32.const 99)
     (i32.const 116)))
-(global $str_x
-  (ref $str)
-  (array.new_fixed $str 1
-    (i32.const 120)))
 (global $str_new
   (ref $str)
   (array.new_fixed $str 3
@@ -106,13 +106,7 @@
     (ref.null $class)
     (ref.null $class)
     (global.get $str_Class)
-    (array.new_fixed $alist_str_method 4
-      (struct.new $alist_str_method_pair
-        (global.get $str_new)
-        (ref.func $method_Class_new))
-      (struct.new $alist_str_method_pair
-        (global.get $str_name)
-        (ref.func $method_Class_name))
+    (array.new_fixed $alist_str_method 2
       (struct.new $alist_str_method_pair
         (global.get $str_new)
         (ref.func $method_Class_new))
@@ -132,13 +126,7 @@
     (ref.null $class)
     (ref.null $class)
     (global.get $str_Object)
-    (array.new_fixed $alist_str_method 3
-      (struct.new $alist_str_method_pair
-        (global.get $str_class)
-        (ref.func $method_Object_class))
-      (struct.new $alist_str_method_pair
-        (global.get $str_x)
-        (ref.func $method_Object_x))
+    (array.new_fixed $alist_str_method 1
       (struct.new $alist_str_method_pair
         (global.get $str_class)
         (ref.func $method_Object_class)))))
@@ -146,18 +134,16 @@
   $__ruby_top_level_function
   (export "__ruby_top_level_function")
   (result (ref eq))
-  (i32.const 5))
-(func
-  $method_Object_x
-  (type $method)
-  (param $self (ref $obj)) (param $args (ref $arr_unitype))
-  (result (ref eq))
-  (local $n (ref eq))
-  (local.set $n
-    (array.get $arr_unitype
-      (local.get $args)
-      (i32.const 0)))
-  (local.get $n))
+  (array.new_fixed $arr_unitype 3
+    (array.new_fixed $arr_unitype 1
+      (ref.i31
+        (i32.const 1073741825)))
+    (array.new_fixed $arr_unitype 1
+      (ref.i31
+        (i32.const 1073741826)))
+    (array.new_fixed $arr_unitype 1
+      (ref.i31
+        (i32.const 1073741827)))))
 (func
   $method_Class_new
   (type $method)
@@ -205,7 +191,12 @@
     (global.get $class_Class))
   (struct.set $class $superclass
     (global.get $class_Object)
-    (global.get $class_BasicObject)))
+    (global.get $class_BasicObject))
+  (global.set $main
+    (ref.cast (ref $obj)
+      (call $method_Class_new
+        (global.get $class_Object)
+        (global.get $empty_args)))))
 (func
   $str_eq
   (param $a (ref $str)) (param $b (ref $str))

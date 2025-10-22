@@ -159,7 +159,7 @@ impl Unitype {
                     if let Some(n) = strukt.field(store, 0).ok().and_then(|f| f.i64()) {
                         Unitype::HeapNum(n)
                     } else {
-                        todo!("Unknown struct type")
+                        todo!("Unknown struct type {:?}", strukt)
                     }
                 }
                 other => {

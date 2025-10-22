@@ -1,7 +1,6 @@
 use crate::CompileCtx;
 use crate::corelib::type_def::METHOD_TYPE_IDENTIFIER;
 use crate::node::RequiredParam;
-use std::mem;
 use wat_defs::func::{Func, Local};
 use wat_defs::instr::Instr;
 use wat_macro::wat;

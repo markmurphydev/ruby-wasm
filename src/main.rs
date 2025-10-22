@@ -1,3 +1,4 @@
+use std::fs;
 use clap::Parser as ParserTrait;
 use clap::Subcommand;
 use ruby_wasm::lexer::Lexer;
@@ -94,12 +95,7 @@ fn main() {
         }
 
         Command::Wasm { text } => {
-            let parser = Parser::new(Lexer::new(&text));
-            let program = parser.parse();
-            let module = Module::new();
-            let ctx = &mut CompileCtx::new(module);
-            ruby_wasm::corelib::add_core_items(ctx);
-            compiler::compile(ctx, &program);
+            let ctx = run::text_to_compile_ctx(text);
             let bytes = binary::module_to_binary(&ctx.module);
             binary::print_bytes(&bytes);
         }
@@ -109,36 +105,15 @@ fn main() {
         }
 
         Command::Html { text } => {
-            let parser = Parser::new(Lexer::new(&text));
-            let program = parser.parse();
-            let module = Module::new();
-            let ctx = &mut CompileCtx::new(module);
-            ruby_wasm::corelib::add_core_items(ctx);
-            compiler::compile(ctx, &program);
+            let ctx = run::text_to_compile_ctx(text);
             let bytes = binary::module_to_binary(&ctx.module);
             let html = html::make_html_wrapper(&bytes);
             println!("{}", html);
         }
 
         Command::Scratch => {
-            // let wat = fs::read_to_string("core_generated.wat").unwrap();
-            // let mut config = Config::new();
-            // config.wasm_function_references(true).wasm_gc(true);
-            // let engine = Engine::new(&config).unwrap();
-            // let module = wasmtime::Module::new(&engine, wat);
-            // let module = module.unwrap();
-            // // let mut linker = Linker::new(&engine);
-            // let mut store = Store::new(&engine, ());
-            // let instance = Instance::new(&mut store, &module, &[]);
-            //
-            // let top_level = instance
-            //     .unwrap()
-            //     .get_typed_func::<(), WasmtimeRefEq>(&mut store, RUBY_TOP_LEVEL_FUNCTION_NAME)
-            //     .unwrap();
-            // let res = top_level.call(&mut store, ()).unwrap();
-            //
-            // let output = Unitype::parse_ref_eq(res, &mut store).to_pretty();
-            // println!("{}", output);
+            let res = run::run_wat(fs::read_to_string("a.wat").unwrap());
+            println!("{}", res);
         }
     }
 }

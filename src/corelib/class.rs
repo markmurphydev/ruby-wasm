@@ -81,7 +81,7 @@ fn class() -> Class {
         name: "Class".to_string(),
         parent_name: "Class".to_string(),
         superclass_name: Some("Module".to_string()),
-        instance_methods: vec![method::class_new(), method::class_name()],
+        instance_methods: vec![],
     }
 }
 
@@ -96,12 +96,12 @@ fn basic_object() -> Class {
 }
 
 /// The `BasicObject` class.
-fn object() -> Class {
+pub fn object() -> Class {
     Class {
         name: "Object".to_string(),
         parent_name: "Class".to_string(),
         superclass_name: Some("BasicObject".to_string()),
-        instance_methods: vec![method::object_class()],
+        instance_methods: vec![],
     }
 }
 

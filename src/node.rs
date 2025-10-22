@@ -32,6 +32,14 @@ pub enum Expr {
     Array(Box<Array>),
     Def(Box<Def>),
     LocalVariableRead(Box<LocalVariableRead>),
+    LocalVariableWrite(Box<LocalVariableWrite>),
+}
+
+/// Method definition.
+#[derive(Debug, Clone, PartialEq, Eq, Serialize)]
+pub struct LocalVariableWrite {
+    pub name: String,
+    pub val: Expr,
 }
 
 /// Method definition.
@@ -113,7 +121,7 @@ pub struct Until {
 
 #[derive(Debug, Clone, PartialEq, Eq, Serialize)]
 pub struct Call {
-    pub receiver: Expr,
+    pub receiver: Option<Expr>,
     pub name: String,
     pub args: Vec<Expr>,
 }

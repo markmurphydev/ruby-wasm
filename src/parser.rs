@@ -1,11 +1,10 @@
 //! Ruby text -> AST parser
 
+use crate::lexeme::{Lexeme, LexemeKind as LK, LexemeKind};
 use crate::lexer::Lexer;
 use crate::node as N;
 use std::str::FromStr;
 use std::vec;
-
-use crate::lexeme::{Lexeme, LexemeKind as LK, LexemeKind};
 
 /// Strategy:
 /// - Lex on-demand
@@ -82,7 +81,7 @@ impl<'text> Parser<'text> {
                 self.lexer.next();
                 Some(N::Expr::Array(Box::new(N::Array { vals: vec![] })))
             }
-            LK::BracketLeft { .. } => Some(N::Expr::Array(Box::new(self.array_literal()))),
+            LK::BracketLeft { .. } => box_expr_variant!(self.array_literal(), N::Expr::Array),
 
             // Keywords
             LK::True => expect_simple_kw!(LK::True, N::Expr::True),
@@ -93,9 +92,7 @@ impl<'text> Parser<'text> {
                 box_expr_variant!(self.global_variable(), N::Expr::GlobalVariableRead)
             }
             LK::Constant { .. } => Some(self.constant()),
-            LK::Identifier { .. } => {
-                box_expr_variant!(self.local_variable_read_expr(), N::Expr::LocalVariableRead)
-            }
+            LK::Identifier { .. } => Some(self.parse_ident(min_bp)),
 
             // Control flow
             LK::If => box_expr_variant!(self.if_expr(), N::Expr::If),
@@ -135,7 +132,7 @@ impl<'text> Parser<'text> {
                     let args = self.args(LK::RightParen);
 
                     N::Expr::Call(Box::new(N::Call {
-                        receiver: lhs,
+                        receiver: Some(lhs),
                         name,
                         args,
                     }))
@@ -188,17 +185,17 @@ impl<'text> Parser<'text> {
                     let rhs = self.expr_bp(r_bp).unwrap();
 
                     N::Expr::Call(Box::new(N::Call {
-                        receiver: lhs,
+                        receiver: Some(lhs),
                         name,
                         args: vec![rhs],
                     }))
                 }
                 LK::BracketLeft => {
-                    let args = self.args(LexemeKind::BracketRight);
+                    let args = self.args(LK::BracketRight);
                     assert_eq!(1, args.len());
 
                     N::Expr::Call(Box::new(N::Call {
-                        receiver: lhs,
+                        receiver: Some(lhs),
                         name: "[]".to_string(),
                         args,
                     }))
@@ -209,11 +206,30 @@ impl<'text> Parser<'text> {
         Some(lhs)
     }
 
-    fn local_variable_read_expr(&mut self) -> N::LocalVariableRead {
+    fn parse_ident(&mut self, min_bp: u8) -> N::Expr {
         let LK::Identifier { text: name } = self.lexer.next().kind else {
             unreachable!()
         };
-        N::LocalVariableRead { name }
+        match self.lexer.peek().kind {
+            LK::LeftParen => {
+                self.lexer.next();
+                let args = self.args(LK::RightParen);
+                N::Expr::Call(Box::new(N::Call {
+                    receiver: None,
+                    name,
+                    args,
+                }))
+            }
+            LK::Equal => {
+                let (l_bp, r_bp) = LK::Equal.binding_power();
+                if l_bp < min_bp {
+                    return N::Expr::LocalVariableRead(Box::new(N::LocalVariableRead { name }));
+                }
+                let rhs = self.expr_bp(r_bp).unwrap();
+                N::Expr::LocalVariableWrite(Box::new(N::LocalVariableWrite { name, val: rhs }))
+            }
+            _ => N::Expr::LocalVariableRead(Box::new(N::LocalVariableRead { name })),
+        }
     }
 
     fn def_expr(&mut self) -> N::Def {
@@ -258,13 +274,14 @@ impl<'text> Parser<'text> {
         self.expect(&[LK::Minus]);
         let lhs = self.expr_bp(Lexeme::UNARY_MINUS_BINDING_POWER).unwrap();
         Some(N::Expr::Call(Box::new(N::Call {
-            receiver: lhs,
+            receiver: Some(lhs),
             name: "-@".to_string(),
             args: vec![],
         })))
     }
 
     /// Parse args until terminator.
+    /// Pre: Opening `(` has been consumed
     fn args(&mut self, terminator: LexemeKind) -> Vec<N::Expr> {
         let mut args = vec![];
         while let Some(arg) = self.expr() {
@@ -545,7 +562,7 @@ mod tests {
         let expected = expect![[r#"
             ((statements
               (body
-               (Call (receiver Integer . 1) (name . "+") (args (Integer . 2))))))
+               (Call (receiver (Integer . 1)) (name . "+") (args (Integer . 2))))))
         "#]];
         let actual = parse_to_sexpr(text);
         expected.assert_eq(&actual);
@@ -558,8 +575,8 @@ mod tests {
             ((statements
               (body
                (Call
-                (receiver Call (receiver Integer . 1) (name . "+")
-            	      (args (Integer . 2)))
+                (receiver
+                 (Call (receiver (Integer . 1)) (name . "+") (args (Integer . 2))))
                 (name . "+") (args (Integer . 3))))))
         "#]];
         let actual = parse_to_sexpr(text);
@@ -573,13 +590,14 @@ mod tests {
             ((statements
               (body
                (Call
-                (receiver Call (receiver Integer . 1) (name . "+")
-            	      (args (Integer . 2)))
+                (receiver
+                 (Call (receiver (Integer . 1)) (name . "+") (args (Integer . 2))))
                 (name . "-")
                 (args
                  (Call
-                  (receiver Call (receiver Integer . 3) (name . "*")
-            		(args (Integer . 4)))
+                  (receiver
+                   (Call (receiver (Integer . 3)) (name . "*")
+            	     (args (Integer . 4))))
                   (name . "/") (args (Integer . 5))))))))
         "#]];
         let actual = parse_to_sexpr(text);
@@ -598,12 +616,14 @@ mod tests {
             ((statements
               (body
                (Call
-                (receiver Call (receiver Integer . 1) (name . "+")
-            	      (args
-            	       (Call
-            		(receiver Call (receiver Integer . 2) (name . "*")
-            			  (args (Integer . 3)))
-            		(name . "*") (args (Integer . 4)))))
+                (receiver
+                 (Call (receiver (Integer . 1)) (name . "+")
+            	   (args
+            	    (Call
+            	     (receiver
+            	      (Call (receiver (Integer . 2)) (name . "*")
+            		    (args (Integer . 3))))
+            	     (name . "*") (args (Integer . 4))))))
                 (name . "+") (args (Integer . 5))))))
         "#]];
         let actual = parse_to_sexpr(text);
@@ -616,7 +636,7 @@ mod tests {
         let expected = expect![[r#"
             ((statements
               (body
-               (Call (receiver GlobalVariableRead (name . "foo")) (name . "bar")
+               (Call (receiver (GlobalVariableRead (name . "foo"))) (name . "bar")
             	 (args)))))
         "#]];
         let actual = parse_to_sexpr(text);
@@ -629,7 +649,7 @@ mod tests {
         let expected = expect![[r#"
             ((statements
               (body
-               (Call (receiver GlobalVariableRead (name . "foo")) (name . "bar")
+               (Call (receiver (GlobalVariableRead (name . "foo"))) (name . "bar")
             	 (args (Integer . 1) (Integer . 2) (Integer . 3))))))
         "#]];
         let actual = parse_to_sexpr(text);
@@ -643,13 +663,14 @@ mod tests {
             ((statements
               (body
                (Call
-                (receiver Call (receiver Integer . 1) (name . "+")
-            	      (args
-            	       (Call
-            		(receiver Call
-            			  (receiver GlobalVariableRead (name . "foo"))
-            			  (name . "bar") (args))
-            		(name . "*") (args (Integer . 2)))))
+                (receiver
+                 (Call (receiver (Integer . 1)) (name . "+")
+            	   (args
+            	    (Call
+            	     (receiver
+            	      (Call (receiver (GlobalVariableRead (name . "foo")))
+            		    (name . "bar") (args)))
+            	     (name . "*") (args (Integer . 2))))))
                 (name . "+") (args (Integer . 3))))))
         "#]];
         let actual = parse_to_sexpr(text);
@@ -660,7 +681,8 @@ mod tests {
     fn unary_minus() {
         let text = "-1";
         let expected = expect![[r#"
-            ((statements (body (Call (receiver Integer . 1) (name . "-@") (args)))))
+            ((statements
+              (body (Call (receiver (Integer . 1)) (name . "-@") (args)))))
         "#]];
         let actual = parse_to_sexpr(text);
         expected.assert_eq(&actual);
@@ -671,7 +693,7 @@ mod tests {
         let text = "-9999";
         let expected = expect![[r#"
             ((statements
-              (body (Call (receiver Integer . 9999) (name . "-@") (args)))))
+              (body (Call (receiver (Integer . 9999)) (name . "-@") (args)))))
         "#]];
         let actual = parse_to_sexpr(text);
         expected.assert_eq(&actual);
@@ -695,8 +717,10 @@ mod tests {
             ((statements
               (body
                (And
-                (lhs Call (receiver Integer . 1) (name . "<") (args (Integer . 2)))
-                (rhs Call (receiver Integer . 3) (name . "<") (args (Integer . 4)))))))
+                (lhs Call (receiver (Integer . 1)) (name . "<")
+            	 (args (Integer . 2)))
+                (rhs Call (receiver (Integer . 3)) (name . "<")
+            	 (args (Integer . 4)))))))
         "#]];
         let actual = parse_to_sexpr(text);
         expected.assert_eq(&actual);
@@ -707,7 +731,7 @@ mod tests {
         let text = "true.[](0)";
         let expected = expect![[r#"
             ((statements
-              (body (Call (receiver . True) (name . "[]") (args (Integer . 0))))))
+              (body (Call (receiver True) (name . "[]") (args (Integer . 0))))))
         "#]];
         let actual = parse_to_sexpr(text);
         expected.assert_eq(&actual);
@@ -719,7 +743,7 @@ mod tests {
         let expected = expect![[r#"
             ((statements
               (body
-               (Call (receiver Integer . 22) (name . "==") (args (Integer . 44))))))
+               (Call (receiver (Integer . 22)) (name . "==") (args (Integer . 44))))))
         "#]];
         let actual = parse_to_sexpr(text);
         expected.assert_eq(&actual);
@@ -732,17 +756,18 @@ mod tests {
             ((statements
               (body
                (Call
-                (receiver Call
-            	      (receiver Call
-            			(receiver GlobalVariableRead (name . "a"))
-            			(name . "[]") (args (Integer . 44)))
-            	      (name . "+")
-            	      (args
-            	       (Call (receiver Integer . 2) (name . "*")
-            		     (args (GlobalVariableRead (name . "b"))))))
+                (receiver
+                 (Call
+                  (receiver
+                   (Call (receiver (GlobalVariableRead (name . "a")))
+            	     (name . "[]") (args (Integer . 44))))
+                  (name . "+")
+                  (args
+                   (Call (receiver (Integer . 2)) (name . "*")
+            	     (args (GlobalVariableRead (name . "b")))))))
                 (name . "==")
                 (args
-                 (Call (receiver GlobalVariableRead (name . "c")) (name . "[]")
+                 (Call (receiver (GlobalVariableRead (name . "c"))) (name . "[]")
             	   (args (GlobalVariableRead (name . "d")))))))))
         "#]];
         let actual = parse_to_sexpr(text);
@@ -794,8 +819,37 @@ mod tests {
                (Def (name . "x") (params ((name . "a")) ((name . "b")))
             	(body
             	 (body
-            	  (Call (receiver LocalVariableRead (name . "a")) (name . "+")
-            		(args (LocalVariableRead (name . "b"))))))))))
+            	  (Call (receiver (LocalVariableRead (name . "a")))
+            		(name . "+") (args (LocalVariableRead (name . "b"))))))))))
+        "#]];
+        let actual = parse_to_sexpr(text);
+        expected.assert_eq(&actual);
+    }
+
+    #[test]
+    fn method_call_no_receiver() {
+        let text = "x()";
+        let expected = expect![[r#"
+            ((statements (body (Call (receiver) (name . "x") (args)))))
+        "#]];
+        let actual = parse_to_sexpr(text);
+        expected.assert_eq(&actual);
+    }
+
+    #[test]
+    fn def_then_call() {
+        let text = "
+            def x(n)
+                n
+            end
+            x(22)
+        ";
+        let expected = expect![[r#"
+            ((statements
+              (body
+               (Def (name . "x") (params ((name . "n")))
+            	(body (body (LocalVariableRead (name . "n")))))
+               (Call (receiver) (name . "x") (args (Integer . 22))))))
         "#]];
         let actual = parse_to_sexpr(text);
         expected.assert_eq(&actual);
@@ -857,7 +911,7 @@ mod tests {
 
     mod arrays {
         use crate::parser::tests::parse_to_sexpr;
-        use crate::run;
+
         use expect_test::expect;
 
         #[test]
@@ -888,7 +942,7 @@ mod tests {
                 ((statements
                   (body
                    (Call
-                    (receiver Array (vals (Integer . 1) (Integer . 2) (Integer . 3)))
+                    (receiver (Array (vals (Integer . 1) (Integer . 2) (Integer . 3))))
                     (name . "[]") (args (Integer . 1))))))
             "#]];
             let actual = parse_to_sexpr(text);
@@ -907,7 +961,7 @@ mod tests {
                 			(expr Array
                 			      (vals (Integer . 1) (Integer . 2)
                 				    (Integer . 3))))
-                   (Call (receiver GlobalVariableRead (name . "x")) (name . "[]=")
+                   (Call (receiver (GlobalVariableRead (name . "x"))) (name . "[]=")
                 	 (args (Integer . 1) (Integer . 0)))
                    (GlobalVariableRead (name . "x")))))
             "#]];

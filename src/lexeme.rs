@@ -1,4 +1,7 @@
-use crate::lexeme::LexemeKind::{Greater, GreaterEqual, Less, LessEqual};
+use crate::lexeme::LexemeKind::{
+    AmpersandAmpersand, BracketLeft, Dot, Equal, EqualEqual, Greater, GreaterEqual, In, Less,
+    LessEqual, Minus, PipePipe, Plus, Slash, Star,
+};
 use serde::Serialize;
 use std::ops::{Add, AddAssign};
 
@@ -69,33 +72,7 @@ impl Lexeme {
     pub const UNARY_MINUS_BINDING_POWER: u8 = 42;
     /// Gets `(lhs_binding_power, rhs_binding_power)`
     pub fn binding_power(&self) -> (u8, u8) {
-        use LexemeKind::*;
-        // Copied from Prism `prism.c` `pm_binding_power_t`
-        // Higher rhs binding power makes it left-associative.
-        const BP_MATCH: (u8, u8) = (12, 13);
-        const BP_ASSIGNMENT: (u8, u8) = (18, 18);
-        const BP_LOGICAL_OR: (u8, u8) = (24, 25);
-        const BP_LOGICAL_AND: (u8, u8) = (26, 27);
-        const BP_EQUALITY: (u8, u8) = (28, 29);
-        const BP_COMPARISON: (u8, u8) = (30, 31);
-
-        const BP_TERM: (u8, u8) = (38, 39);
-        const BP_FACTOR: (u8, u8) = (40, 41);
-        const BP_INDEX: (u8, u8) = (48, 49);
-        const BP_CALL: (u8, u8) = (50, 50);
-        match &self.kind {
-            In => BP_MATCH,
-            Equal => BP_ASSIGNMENT,
-            PipePipe => BP_LOGICAL_OR,
-            AmpersandAmpersand => BP_LOGICAL_AND,
-            EqualEqual => BP_EQUALITY,
-            Greater | GreaterEqual | Less | LessEqual => BP_COMPARISON,
-            Minus | Plus => BP_TERM,
-            Slash | Star => BP_FACTOR,
-            BracketLeft => BP_INDEX,
-            Dot => BP_CALL,
-            other => panic!("Lexeme of kind {:?} has no binding power", other),
-        }
+        self.kind.binding_power()
     }
 }
 
@@ -323,4 +300,36 @@ pub enum LexemeKind {
     UnderscoreFile,
     /// "__LINE__"
     UnderscoreLine,
+}
+
+impl LexemeKind {
+    pub fn binding_power(&self) -> (u8, u8) {
+        use LexemeKind::*;
+        // Copied from Prism `prism.c` `pm_binding_power_t`
+        // Higher rhs binding power makes it left-associative.
+        const BP_MATCH: (u8, u8) = (12, 13);
+        const BP_ASSIGNMENT: (u8, u8) = (18, 18);
+        const BP_LOGICAL_OR: (u8, u8) = (24, 25);
+        const BP_LOGICAL_AND: (u8, u8) = (26, 27);
+        const BP_EQUALITY: (u8, u8) = (28, 29);
+        const BP_COMPARISON: (u8, u8) = (30, 31);
+
+        const BP_TERM: (u8, u8) = (38, 39);
+        const BP_FACTOR: (u8, u8) = (40, 41);
+        const BP_INDEX: (u8, u8) = (48, 49);
+        const BP_CALL: (u8, u8) = (50, 50);
+        match self {
+            In => BP_MATCH,
+            Equal => BP_ASSIGNMENT,
+            PipePipe => BP_LOGICAL_OR,
+            AmpersandAmpersand => BP_LOGICAL_AND,
+            EqualEqual => BP_EQUALITY,
+            Greater | GreaterEqual | Less | LessEqual => BP_COMPARISON,
+            Minus | Plus => BP_TERM,
+            Slash | Star => BP_FACTOR,
+            BracketLeft => BP_INDEX,
+            Dot => BP_CALL,
+            other => panic!("Lexeme of kind {:?} has no binding power", other),
+        }
+    }
 }

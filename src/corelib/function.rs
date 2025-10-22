@@ -1,6 +1,6 @@
 use crate::CompileCtx;
 use crate::corelib::alist::AListTypeDef;
-use crate::corelib::class;
+use crate::corelib::{class, method};
 use crate::corelib::class::Class;
 use crate::corelib::helpers::i64_neg;
 use crate::unitype::Unitype;
@@ -73,6 +73,15 @@ fn add_start(ctx: &mut CompileCtx) {
             })
         }
     }
+
+    // Instantiate global $main object
+    instrs.append(&mut wat! {
+        (global_set $main
+            (ref_cast (ref $obj)
+                (call ,(method::class_new().identifier()) // ($self, $args) -> ...
+                      (global_get ,(class::object().identifier()))
+                      (global_get $empty_args))))
+    });
 
     let start_fn = wat! {
         (func $_start
