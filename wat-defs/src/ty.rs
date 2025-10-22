@@ -1,24 +1,24 @@
 use crate::func::Param;
 
-#[derive(Debug)]
+#[derive(Debug, Clone)]
 pub enum Mutable {
     Const,
     Mutable,
 }
 
-#[derive(Debug)]
+#[derive(Debug, Clone)]
 pub struct GlobalType {
     pub mutable: Mutable,
     pub val_type: ValType,
 }
 
-#[derive(Debug)]
+#[derive(Debug, Clone)]
 pub enum NumType {
     I32,
     I64,
 }
 
-#[derive(Debug)]
+#[derive(Debug, Clone)]
 pub enum AbsHeapType {
     Func,
     Extern,
@@ -34,19 +34,19 @@ pub enum AbsHeapType {
     NoExn,
 }
 
-#[derive(Debug)]
+#[derive(Debug, Clone)]
 pub enum HeapType {
     Abs(AbsHeapType),
     TypeIdx(String),
 }
 
-#[derive(Debug)]
+#[derive(Debug, Clone)]
 pub enum Nullable {
     NonNullable,
     Nullable,
 }
 
-#[derive(Debug)]
+#[derive(Debug, Clone)]
 pub struct RefType {
     pub null: Nullable,
     pub heap_type: HeapType,
@@ -61,19 +61,19 @@ impl RefType {
     }
 }
 
-#[derive(Debug)]
+#[derive(Debug, Clone)]
 pub enum ValType {
     Num(NumType),
     Ref(RefType),
 }
 
-#[derive(Debug)]
+#[derive(Debug, Clone)]
 pub enum BlockType {
     Result(ValType),
     TypeUse(String),
 }
 
-#[derive(Debug)]
+#[derive(Debug, Clone)]
 pub enum Final {
     NotFinal,
     Final,
@@ -86,55 +86,55 @@ pub enum Final {
 /// <SUBTYPE> ::= (sub final? supertypes:<TYPEIDX>* <COMPTYPE>)
 ///             | (sub final <COMPTYPE>)                // Final subtype with no supertype
 /// ```
-#[derive(Debug)]
+#[derive(Debug, Clone)]
 pub struct SubType {
     pub is_final: Final,
     pub supertypes: Vec<String>,
     pub comp_type: CompType,
 }
 
-#[derive(Debug)]
+#[derive(Debug, Clone)]
 pub enum CompType {
     Struct(StructType),
     Array(ArrayType),
     Func(FuncType),
 }
 
-#[derive(Debug)]
+#[derive(Debug, Clone)]
 pub struct StructType {
     pub fields: Vec<Field>,
 }
 
-#[derive(Debug)]
+#[derive(Debug, Clone)]
 pub struct Field {
     pub name: String,
     pub ty: FieldType,
 }
 
-#[derive(Debug)]
+#[derive(Debug, Clone)]
 pub struct FieldType {
     pub mutable: Mutable,
     pub ty: StorageType,
 }
 
-#[derive(Debug)]
+#[derive(Debug, Clone)]
 pub enum StorageType {
     Val(ValType),
     Pack(PackType),
 }
 
-#[derive(Debug)]
+#[derive(Debug, Clone)]
 pub enum PackType {
     I8,
     I16,
 }
 
-#[derive(Debug)]
+#[derive(Debug, Clone)]
 pub struct ArrayType {
     pub field_type: FieldType,
 }
 
-#[derive(Debug)]
+#[derive(Debug, Clone)]
 pub struct FuncType {
     pub params: Vec<Param>,
     pub results: Vec<ValType>,

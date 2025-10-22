@@ -50,7 +50,7 @@ fn funcs() -> Vec<Func> {
 /// - `Class.superclass`
 fn add_start(ctx: &mut CompileCtx) {
     let mut instrs = vec![];
-    let classes = class::classes();
+    let classes = class::corelib_classes();
     for class in classes {
         let class_identifier = class.identifier();
         let parent_identifier = Class::name_to_identifier(&class.parent_name);

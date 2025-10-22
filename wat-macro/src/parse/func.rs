@@ -89,7 +89,7 @@ fn parse_locals(input: ParseInput) -> Result<TokenStream> {
     parse_while_ok(input, parse_local)
 }
 
-fn parse_local(input: ParseInput) -> Result<TokenStream> {
+pub fn parse_local(input: ParseInput) -> Result<TokenStream> {
     match expect_open_paren_named(&["local"], input) {
         Ok((mut input, _)) => {
             let input = &mut input;

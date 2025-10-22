@@ -1,6 +1,6 @@
 use crate::ty::{BlockType, HeapType, NumType, RefType};
 
-#[derive(Debug)]
+#[derive(Debug, Clone)]
 pub enum UnfoldedInstr {
     Nop,
     Drop,
@@ -154,7 +154,7 @@ pub enum UnfoldedInstr {
     Unreachable,
 }
 
-#[derive(Debug)]
+#[derive(Debug, Clone)]
 pub struct Instr {
     pub unfolded_instr: UnfoldedInstr,
     pub folded_instrs: Vec<Instr>,

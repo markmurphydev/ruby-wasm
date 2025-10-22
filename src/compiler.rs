@@ -1,8 +1,9 @@
 use crate::corelib;
 use crate::corelib::class::Class;
+use crate::corelib::method::Method;
 use crate::node::{
-    And, Array, Call, ConstantRead, Expr, GlobalVariableRead, GlobalVariableWrite, If, Or, Program,
-    Statements, Subsequent, Until, While,
+    And, Array, Call, ConstantRead, Def, Expr, GlobalVariableRead, GlobalVariableWrite, If,
+    LocalVariableRead, Or, Program, Statements, Subsequent, Until, While,
 };
 use crate::unitype::Unitype;
 use std::hash::{DefaultHasher, Hash, Hasher};
@@ -14,11 +15,18 @@ pub const RUBY_TOP_LEVEL_FUNCTION_NAME: &str = "__ruby_top_level_function";
 
 pub struct CompileCtx {
     pub module: Module,
+    // Uh, additional objects that need to be considered when generating corelib...
+    pub methods: Vec<Method>,
+    pub classes: Vec<Class>,
 }
 
 impl CompileCtx {
     pub fn new(module: Module) -> CompileCtx {
-        CompileCtx { module }
+        CompileCtx {
+            module,
+            methods: vec![],
+            classes: vec![],
+        }
     }
 }
 
@@ -79,9 +87,34 @@ fn compile_expr(ctx: &mut CompileCtx, expr: &Expr) -> Vec<Instr> {
         Expr::And(and_expr) => compile_and_expr(ctx, &*and_expr),
         Expr::Or(or_expr) => compile_or_expr(ctx, &*or_expr),
         Expr::Array(arr_expr) => compile_arr_expr(ctx, &*arr_expr),
-        Expr::LocalVariableRead(_) => todo!("LocalVariableRead not yet implemented."),
-        Expr::Def(def_expr) => todo!("Method definitions not yet implemented."),
+        Expr::LocalVariableRead(local_variable_read_expr) => {
+            compile_local_variable_read_expr(local_variable_read_expr)
+        }
+        Expr::Def(def_expr) => compile_def_expr(ctx, def_expr),
     }
+}
+
+fn compile_local_variable_read_expr(local_variable_read_expr: &LocalVariableRead) -> Vec<Instr> {
+    let LocalVariableRead { name } = local_variable_read_expr;
+    wat! {
+        (local_get ,(name.to_string()))
+    }
+}
+
+fn compile_def_expr(ctx: &mut CompileCtx, def_expr: &Def) -> Vec<Instr> {
+    let Def { name, params, body } = def_expr;
+
+    let method_def =
+        corelib::method::make_method_def("Object", name, params, compile_statements(ctx, body));
+
+    let method = Method {
+        class: "Object".to_string(),
+        name: name.to_string(),
+        method_def,
+    };
+    ctx.methods.push(method);
+
+    wat! { (ref_i31 (const_i32 ,(Unitype::NIL_BIT_PATTERN as i64))) }
 }
 
 fn compile_arr_expr(ctx: &mut CompileCtx, arr_expr: &Array) -> Vec<Instr> {

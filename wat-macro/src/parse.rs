@@ -1,4 +1,4 @@
-use crate::parse::func::parse_func;
+use crate::parse::func::{parse_func, parse_local};
 use crate::parse::global::parse_global;
 use crate::parse::instr::parse_instr_seq;
 use crate::parse::parse_stream::ParseStream;
@@ -39,6 +39,8 @@ pub fn parse_item(input: TokenStream) -> Result<TokenStream> {
             parse_type_def(input)
         } else if peek_open_paren_named(&["global"], input).is_some() {
             parse_global(input)
+        } else if peek_open_paren_named(&["local"], input).is_some() {
+            parse_local(input)
         } else if peek_open_paren_named(&["func"], input).is_some() {
             parse_func(input)
         } else if peek_open_paren_named(&["ref"], input).is_some() {

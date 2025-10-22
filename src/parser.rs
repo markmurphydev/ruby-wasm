@@ -93,7 +93,9 @@ impl<'text> Parser<'text> {
                 box_expr_variant!(self.global_variable(), N::Expr::GlobalVariableRead)
             }
             LK::Constant { .. } => Some(self.constant()),
-            LK::Identifier { .. } => box_expr_variant!(self.local_variable_read_expr(), N::Expr::LocalVariableRead),
+            LK::Identifier { .. } => {
+                box_expr_variant!(self.local_variable_read_expr(), N::Expr::LocalVariableRead)
+            }
 
             // Control flow
             LK::If => box_expr_variant!(self.if_expr(), N::Expr::If),
@@ -208,10 +210,10 @@ impl<'text> Parser<'text> {
     }
 
     fn local_variable_read_expr(&mut self) -> N::LocalVariableRead {
-        let LK::Identifier { text: name } = self.lexer.next().kind else { unreachable!() };
-        N::LocalVariableRead {
-            name,
-        }
+        let LK::Identifier { text: name } = self.lexer.next().kind else {
+            unreachable!()
+        };
+        N::LocalVariableRead { name }
     }
 
     fn def_expr(&mut self) -> N::Def {
@@ -226,11 +228,7 @@ impl<'text> Parser<'text> {
         self.skip_newlines();
         self.expect(&[LK::End]);
 
-        N::Def {
-            name,
-            params,
-            body
-        }
+        N::Def { name, params, body }
     }
 
     fn params(&mut self) -> Vec<N::RequiredParam> {
@@ -506,17 +504,6 @@ mod tests {
         let N::Program { statements } = program;
         assert_eq!(1, statements.body.len());
         assert_eq!(N::Expr::Integer(22), statements.body[0]);
-
-        // let text = "-22_222";
-        // let parser = Parser::new(Lexer::new(text));
-        // let program = parser.parse();
-        //
-        // match program {
-        //     Program { statements } => {
-        //         assert_eq!(1, statements.body.len());
-        //         assert_eq!(Expr::Integer(-22_222), statements.body[0]);
-        //     }
-        // }
     }
 
     #[test]

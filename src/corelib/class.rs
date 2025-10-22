@@ -81,7 +81,7 @@ fn class() -> Class {
         name: "Class".to_string(),
         parent_name: "Class".to_string(),
         superclass_name: Some("Module".to_string()),
-        instance_methods: vec![method::class(), method::new(), method::name()],
+        instance_methods: vec![method::class_new(), method::class_name()],
     }
 }
 
@@ -101,17 +101,27 @@ fn object() -> Class {
         name: "Object".to_string(),
         parent_name: "Class".to_string(),
         superclass_name: Some("BasicObject".to_string()),
-        instance_methods: vec![],
+        instance_methods: vec![method::object_class()],
     }
 }
 
 /// A Vec of all classes defined in `corelib`.
-pub fn classes() -> Vec<Class> {
+pub fn corelib_classes() -> Vec<Class> {
     vec![module(), class(), basic_object(), object()]
 }
 
 pub fn add_class_defs(ctx: &mut CompileCtx) {
-    for class in classes() {
+    assert!(!ctx.classes.is_empty());
+    let mut classes: Vec<_> = ctx.classes.drain(..).collect();
+    for method in &ctx.methods {
+        add_instance_method(&mut classes, method)
+    }
+    for class in classes {
         ctx.module.globals.push(class.def())
     }
+}
+
+fn add_instance_method(classes: &mut Vec<Class>, method: &Method) {
+    let class = classes.iter_mut().find(|c| c.name == method.class).unwrap();
+    class.instance_methods.push(method.clone())
 }

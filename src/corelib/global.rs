@@ -16,7 +16,6 @@ pub fn add_globals(ctx: &mut CompileCtx) {
     let mut globals = vec![empty_args()];
     ctx.module.globals.append(&mut globals);
     add_string_defs(ctx);
-    class::add_class_defs(ctx);
 }
 
 // (GLOBAL $EMPTY-ARGS (REF $ARR-UNITYPE) (ARRAY.NEW_FIXED $ARR-UNITYPE 0))
@@ -37,19 +36,20 @@ fn add_string_defs(ctx: &mut CompileCtx) {
 }
 
 fn add_class_string_defs(ctx: &mut CompileCtx) {
-    class::classes()
-        .into_iter()
-        .map(|c| c.name)
-        .for_each(|s| add_string_def(ctx, s));
-}
-
-fn add_method_string_defs(ctx: &mut CompileCtx) {
-    for method in method::methods() {
-        add_string_def(ctx, method.name);
+    let class_names: Vec<_> = ctx.classes.iter().map(|c| c.name.clone()).collect();
+    for name in class_names {
+        add_string_def(ctx, name);
     }
 }
 
-fn add_string_def(ctx: &mut CompileCtx, string: String) {
+fn add_method_string_defs(ctx: &mut CompileCtx) {
+    let method_names: Vec<_> = ctx.methods.iter().map(|m| m.name.clone()).collect();
+    for name in method_names {
+        add_string_def(ctx, name);
+    }
+}
+
+pub fn add_string_def(ctx: &mut CompileCtx, string: String) {
     let name = string_identifier(&string);
     let bytes: Vec<Instr> = string
         .as_bytes()

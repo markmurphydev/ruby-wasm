@@ -43,3 +43,22 @@ pub fn func_method() {
     ]];
     expected.assert_eq(actual);
 }
+
+#[test]
+pub fn func_method_with_locals() {
+    let name = "method".to_string();
+    let local_name = "n".to_string();
+    let actual = wat! {
+        (func ,(name)
+            (type $method)
+            (param $self (ref $obj))
+            (param $args (ref $arr_unitype))
+            (local ,(local_name) (ref eq))
+            (result (ref eq)))
+    };
+    let actual = &format!("{:?}", actual);
+    let expected = expect![[
+        r#"Func { name: "method", exported: NotExported, type_use: Some("method"), params: [Param { name: "self", ty: Ref(RefType { null: NonNullable, heap_type: TypeIdx("obj") }) }, Param { name: "args", ty: Ref(RefType { null: NonNullable, heap_type: TypeIdx("arr_unitype") }) }], results: [], locals: [Local { name: "n", ty: Ref(RefType { null: NonNullable, heap_type: Abs(Eq) }) }], instrs: [] }"#
+    ]];
+    expected.assert_eq(actual);
+}

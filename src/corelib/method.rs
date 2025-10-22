@@ -1,6 +1,8 @@
 use crate::CompileCtx;
 use crate::corelib::type_def::METHOD_TYPE_IDENTIFIER;
-use wat_defs::func::Func;
+use crate::node::RequiredParam;
+use std::mem;
+use wat_defs::func::{Func, Local};
 use wat_defs::instr::Instr;
 use wat_macro::wat;
 
@@ -8,29 +10,38 @@ use wat_macro::wat;
 /// - Definition of function type `$<METHOD_FUNC_NAME>`
 ///     with signature `(self: Object, args: Array Unitype) -> Unitype`
 /// - Definition of global string `$<METHOD_NAME>`
+#[derive(Debug, Clone)]
 pub struct Method {
+    pub class: String,
     pub name: String,
-    pub method_def: fn() -> Func,
+    pub method_def: Func,
 }
 
 impl Method {
     pub fn identifier(&self) -> String {
-        format!("{}_{}", METHOD_TYPE_IDENTIFIER, self.name)
+        method_identifier(&self.class, &self.name)
     }
+}
+
+pub fn method_identifier(class: &str, name: &str) -> String {
+    format!("{}_{}_{}", METHOD_TYPE_IDENTIFIER, class, name)
 }
 
 const NEW_NAME: &str = "new";
 
-pub fn new() -> Method {
+pub fn class_new() -> Method {
     Method {
+        class: "Class".to_string(),
         name: NEW_NAME.to_string(),
-        method_def: new_method_def,
+        method_def: new_method_def("Class"),
     }
 }
 
-fn new_method_def() -> Func {
-    make_method(
-        new().identifier(),
+fn new_method_def(class: &str) -> Func {
+    make_method_def(
+        class,
+        "new",
+        &vec![],
         wat! {
             (struct_new $obj
               // .class
@@ -41,16 +52,19 @@ fn new_method_def() -> Func {
 
 const NAME_NAME: &str = "name";
 
-pub fn name() -> Method {
+pub fn class_name() -> Method {
     Method {
+        class: "Class".to_string(),
         name: NAME_NAME.to_string(),
-        method_def: name_method_def,
+        method_def: name_method_def("Class"),
     }
 }
 
-fn name_method_def() -> Func {
-    make_method(
-        name().identifier(),
+fn name_method_def(class: &str) -> Func {
+    make_method_def(
+        class,
+        "name",
+        &vec![],
         wat! {
             (struct_get $class $name
               (ref_cast (ref $class) (local_get $self)))
@@ -60,40 +74,89 @@ fn name_method_def() -> Func {
 
 const CLASS_NAME: &str = "class";
 
-pub fn class() -> Method {
+pub fn object_class() -> Method {
     Method {
+        class: "Object".to_string(),
         name: CLASS_NAME.to_string(),
-        method_def: class_method_def,
+        method_def: class_method_def("Object"),
     }
 }
 
-fn class_method_def() -> Func {
-    make_method(
-        class().identifier(),
+fn class_method_def(class: &str) -> Func {
+    make_method_def(
+        class,
+        "class",
+        &vec![],
         wat! {
-            (local_get $self)
-            (struct_get $obj $parent)
-            (ref_cast (ref eq))
+            (ref_cast (ref eq)
+                (struct_get $obj $parent (local_get $self)))
         },
     )
 }
 
-fn make_method(name: String, body: Vec<Instr>) -> Func {
-    wat! {
-        (func ,(name)
+pub fn make_method_def(
+    class: &str,
+    name: &str,
+    params: &Vec<RequiredParam>,
+    body: Vec<Instr>,
+) -> Func {
+    let local_defs: Vec<Local> = params
+        .iter()
+        .map(|p| {
+            wat! { (local ,(p.name.to_string()) (ref eq)) }
+        })
+        .collect();
+    let local_setters: Vec<Instr> = params
+        .iter()
+        .enumerate()
+        .map(|(idx, p)| {
+            wat! {
+                (local_set ,(p.name.clone())
+                    (array_get $arr_unitype (local_get $args) (const_i32 ,(idx as i64))))
+            }
+        })
+        .flatten()
+        .collect();
+    let instrs = [local_setters, body].concat();
+
+    // TODO: Ughhh quasiquoting is broken.
+
+    let no_locals = wat! {
+        (func ,(method_identifier(class, name))
             (type $method)
-            (param $self (ref $obj)) (param $args (ref $arr_unitype))
+            (param $self (ref $obj))
+            (param $args (ref $arr_unitype))
             (result (ref eq))
-            ,(body))
+            ,(instrs))
+    };
+    let Func {
+        name,
+        exported,
+        type_use,
+        params,
+        results,
+        locals: _locals,
+        instrs,
+    } = no_locals;
+    Func {
+        name,
+        exported,
+        type_use,
+        params,
+        results,
+        locals: local_defs,
+        instrs,
     }
 }
 
-pub fn methods() -> Vec<Method> {
-    vec![new(), class(), name()]
+pub fn corelib_methods() -> Vec<Method> {
+    vec![class_new(), object_class(), class_name()]
 }
 
 pub fn add_method_defs(compile_ctx: &mut CompileCtx) {
-    for method in methods() {
-        compile_ctx.module.funcs.push((method.method_def)())
+    assert!(!compile_ctx.methods.is_empty());
+    let methods = compile_ctx.methods.drain(..);
+    for method in methods {
+        compile_ctx.module.funcs.push(method.method_def)
     }
 }

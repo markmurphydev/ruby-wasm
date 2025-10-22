@@ -29,8 +29,8 @@ pub fn text_to_compile_ctx(text: String) -> CompileCtx {
     let program = parser.parse();
     let module = module::Module::new();
     let mut ctx = CompileCtx::new(module);
-    add_core_items(&mut ctx);
     compiler::compile(&mut ctx, &program);
+    add_core_items(&mut ctx);
     ctx
 }
 

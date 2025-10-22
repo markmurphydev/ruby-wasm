@@ -68,6 +68,10 @@
     (i32.const 101)
     (i32.const 99)
     (i32.const 116)))
+(global $str_x
+  (ref $str)
+  (array.new_fixed $str 1
+    (i32.const 120)))
 (global $str_new
   (ref $str)
   (array.new_fixed $str 3
@@ -102,16 +106,19 @@
     (ref.null $class)
     (ref.null $class)
     (global.get $str_Class)
-    (array.new_fixed $alist_str_method 3
-      (struct.new $alist_str_method_pair
-        (global.get $str_class)
-        (ref.func $method_class))
+    (array.new_fixed $alist_str_method 4
       (struct.new $alist_str_method_pair
         (global.get $str_new)
-        (ref.func $method_new))
+        (ref.func $method_Class_new))
       (struct.new $alist_str_method_pair
         (global.get $str_name)
-        (ref.func $method_name)))))
+        (ref.func $method_Class_name))
+      (struct.new $alist_str_method_pair
+        (global.get $str_new)
+        (ref.func $method_Class_new))
+      (struct.new $alist_str_method_pair
+        (global.get $str_name)
+        (ref.func $method_Class_name)))))
 (global $class_BasicObject
   (ref $class)
   (struct.new $class
@@ -125,13 +132,34 @@
     (ref.null $class)
     (ref.null $class)
     (global.get $str_Object)
-    (array.new_fixed $alist_str_method 0)))
-(global $x
-  (mut (ref eq))
-  (ref.i31
-    (i32.const 5)))
+    (array.new_fixed $alist_str_method 3
+      (struct.new $alist_str_method_pair
+        (global.get $str_class)
+        (ref.func $method_Object_class))
+      (struct.new $alist_str_method_pair
+        (global.get $str_x)
+        (ref.func $method_Object_x))
+      (struct.new $alist_str_method_pair
+        (global.get $str_class)
+        (ref.func $method_Object_class)))))
 (func
-  $method_new
+  $__ruby_top_level_function
+  (export "__ruby_top_level_function")
+  (result (ref eq))
+  (i32.const 5))
+(func
+  $method_Object_x
+  (type $method)
+  (param $self (ref $obj)) (param $args (ref $arr_unitype))
+  (result (ref eq))
+  (local $n (ref eq))
+  (local.set $n
+    (array.get $arr_unitype
+      (local.get $args)
+      (i32.const 0)))
+  (local.get $n))
+(func
+  $method_Class_new
   (type $method)
   (param $self (ref $obj)) (param $args (ref $arr_unitype))
   (result (ref eq))
@@ -139,15 +167,15 @@
     (ref.cast (ref $class)
       (local.get $self))))
 (func
-  $method_class
+  $method_Object_class
   (type $method)
   (param $self (ref $obj)) (param $args (ref $arr_unitype))
   (result (ref eq))
-  (local.get $self)
-  (struct.get $obj $parent)
-  (ref.cast (ref eq)))
+  (ref.cast (ref eq)
+    (struct.get $obj $parent
+      (local.get $self))))
 (func
-  $method_name
+  $method_Class_name
   (type $method)
   (param $self (ref $obj)) (param $args (ref $arr_unitype))
   (result (ref eq))
@@ -538,73 +566,13 @@
       (call $integer_to_i64
         (local.get $b)))))
 (func
-  $__ruby_top_level_function
-  (export "__ruby_top_level_function")
+  $eq_eq
+  (param $a (ref eq)) (param $b (ref eq))
   (result (ref eq))
-  (global.set $x
-    (array.new_fixed $arr_unitype 3
-      (ref.i31
-        (i32.const 1073741825))
-      (ref.i31
-        (i32.const 1073741826))
-      (ref.i31
-        (i32.const 1073741827))))
-  (ref.i31
-    (i32.const 5))
-  (drop)
-  (array.set $arr_unitype
-    (ref.cast (ref $arr_unitype)
-      (global.get $x))
-    (i32.wrap_i64
+  (call $to_bool
+    (i64.eq
       (call $integer_to_i64
-        (ref.i31
-          (i32.const 1073741824))))
-    (ref.i31
-      (i32.const 1073741828)))
-  (ref.i31
-    (i32.const 5))
-  (drop)
-  (array.set $arr_unitype
-    (ref.cast (ref $arr_unitype)
-      (global.get $x))
-    (i32.wrap_i64
+        (local.get $a))
       (call $integer_to_i64
-        (ref.i31
-          (i32.const 1073741825))))
-    (ref.i31
-      (i32.const 1073741829)))
-  (ref.i31
-    (i32.const 5))
-  (drop)
-  (array.set $arr_unitype
-    (ref.cast (ref $arr_unitype)
-      (global.get $x))
-    (i32.wrap_i64
-      (call $integer_to_i64
-        (ref.i31
-          (i32.const 1073741826))))
-    (ref.i31
-      (i32.const 1073741830)))
-  (ref.i31
-    (i32.const 5))
-  (drop)
-  (array.new_fixed $arr_unitype 3
-    (array.get $arr_unitype
-      (global.get $x)
-      (i32.wrap_i64
-        (call $integer_to_i64
-          (ref.i31
-            (i32.const 1073741824)))))
-    (array.get $arr_unitype
-      (global.get $x)
-      (i32.wrap_i64
-        (call $integer_to_i64
-          (ref.i31
-            (i32.const 1073741825)))))
-    (array.get $arr_unitype
-      (global.get $x)
-      (i32.wrap_i64
-        (call $integer_to_i64
-          (ref.i31
-            (i32.const 1073741826)))))))
+        (local.get $b)))))
 (start $_start)
