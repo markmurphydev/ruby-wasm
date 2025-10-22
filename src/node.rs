@@ -30,6 +30,20 @@ pub enum Expr {
     And(Box<And>),
     Or(Box<Or>),
     Array(Box<Array>),
+    Def(Box<Def>),
+}
+
+/// Method definition.
+#[derive(Debug, Clone, PartialEq, Eq, Serialize)]
+pub struct Def {
+    name: String,
+    params: Vec<RequiredParam>,
+    body: Statements,
+}
+
+#[derive(Debug, Clone, PartialEq, Eq, Serialize)]
+pub struct RequiredParam {
+    name: String,
 }
 
 #[derive(Debug, Clone, PartialEq, Eq, Serialize)]
