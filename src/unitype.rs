@@ -105,7 +105,10 @@ impl Unitype {
 
     /// Parse a Wasm `(ref eq)` value into a `UnitypeValue`.
     /// Used only for displaying `wasmtime` output.
-    pub fn parse_ref_eq(ref_eq: impl RootedGcRef<AnyRef>, mut store: &mut impl AsContextMut) -> Self {
+    pub fn parse_ref_eq(
+        ref_eq: impl RootedGcRef<AnyRef>,
+        mut store: &mut impl AsContextMut,
+    ) -> Self {
         let is_i31 = ref_eq.is_i31(&store).unwrap();
         if is_i31 {
             let value = ref_eq.unwrap_i31(&store).unwrap().get_u32() as i32;
@@ -209,10 +212,13 @@ impl Unitype {
             Unitype::HeapNum(n) => RcDoc::text(format!("{}", n)),
             Unitype::String(s) => RcDoc::text(format!("\"{}\"", s)),
             Unitype::Array(vals) => RcDoc::text("[")
-                .append(RcDoc::intersperse(vals.into_iter().map(Self::module_to_doc), RcDoc::text(",").append(RcDoc::line())))
+                .append(RcDoc::intersperse(
+                    vals.into_iter().map(Self::module_to_doc),
+                    RcDoc::text(",").append(RcDoc::line()),
+                ))
                 .append(RcDoc::text("]"))
                 .nest(2)
-                .group()
+                .group(),
         }
     }
 }

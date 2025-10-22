@@ -1,13 +1,13 @@
 use crate::parse::parse_stream::{ParseInput, ParseStream};
 use crate::result::{Error, Result};
-use proc_macro2::{Delimiter, Ident, Punct, TokenTree, TokenStream};
+use proc_macro2::{Delimiter, Ident, Punct, TokenStream, TokenTree};
 use quote::quote;
 
 macro_rules! check_quasi_quote {
     ($input:expr => $exp:expr) => {
         match crate::parse::util::expect_quasi_quote($input) {
             Ok(stream) => Ok(stream),
-            Err(_) => $exp
+            Err(_) => $exp,
         }
     };
 }
@@ -21,7 +21,10 @@ pub fn parse_name(input: ParseInput) -> Result<TokenStream> {
     })
 }
 
-pub fn parse_while_ok(input: ParseInput, f: fn(ParseInput) -> Result<TokenStream>) -> Result<TokenStream> {
+pub fn parse_while_ok(
+    input: ParseInput,
+    f: fn(ParseInput) -> Result<TokenStream>,
+) -> Result<TokenStream> {
     let mut res = Vec::new();
     loop {
         match f(input) {
@@ -38,17 +41,19 @@ pub fn expect_quasi_quote(input: ParseInput) -> Result<TokenStream> {
             input.next();
             input.next();
             Ok(stream)
-        },
-        None => Err(error(input, "Expected quasi-quote of the form ,(...)"))
+        }
+        None => Err(error(input, "Expected quasi-quote of the form ,(...)")),
     }
 }
 
 pub fn peek_quasi_quote(input: ParseInput) -> Option<TokenStream> {
     match input.peek2() {
-        Some((TokenTree::Punct(punct), TokenTree::Group(group))) if punct.as_char() == ',' && group.delimiter() == Delimiter::Parenthesis => {
+        Some((TokenTree::Punct(punct), TokenTree::Group(group)))
+            if punct.as_char() == ',' && group.delimiter() == Delimiter::Parenthesis =>
+        {
             Some(group.stream())
         }
-        _ => None
+        _ => None,
     }
 }
 
@@ -177,10 +182,9 @@ pub fn peek_int_literal(input: ParseInput) -> Option<i64> {
 /// Post: On failure, does not mutate `input`.
 pub fn peek_string_literal(input: ParseInput) -> Option<String> {
     match input.peek() {
-        Some(TokenTree::Literal(lit))
-            if lit.to_string().chars().next() == Some('"') => {
+        Some(TokenTree::Literal(lit)) if lit.to_string().chars().next() == Some('"') => {
             Some(lit.to_string().trim_matches('"').to_string())
-        },
+        }
         _ => None,
     }
 }

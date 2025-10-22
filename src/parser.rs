@@ -41,6 +41,7 @@ impl<'text> Parser<'text> {
     fn statements(&mut self) -> N::Statements {
         let mut body = vec![];
 
+        self.skip_newlines();
         while let Some(expr) = self.expr() {
             body.push(expr);
             self.skip_newlines();
@@ -80,7 +81,7 @@ impl<'text> Parser<'text> {
             LK::BracketLeftRight { .. } => {
                 self.lexer.next();
                 Some(N::Expr::Array(Box::new(N::Array { vals: vec![] })))
-            },
+            }
             LK::BracketLeft { .. } => Some(N::Expr::Array(Box::new(self.array_literal()))),
 
             // Keywords
@@ -88,8 +89,11 @@ impl<'text> Parser<'text> {
             LK::False => expect_simple_kw!(LK::False, N::Expr::False),
             LK::Nil => expect_simple_kw!(LK::Nil, N::Expr::Nil),
 
-            LK::GlobalVariable { .. } => box_expr_variant!(self.global_variable(), N::Expr::GlobalVariableRead),
+            LK::GlobalVariable { .. } => {
+                box_expr_variant!(self.global_variable(), N::Expr::GlobalVariableRead)
+            }
             LK::Constant { .. } => Some(self.constant()),
+            LK::Identifier { .. } => box_expr_variant!(self.local_variable_read_expr(), N::Expr::LocalVariableRead),
 
             // Control flow
             LK::If => box_expr_variant!(self.if_expr(), N::Expr::If),
@@ -97,6 +101,8 @@ impl<'text> Parser<'text> {
             LK::Until => box_expr_variant!(self.until_expr(), N::Expr::Until),
 
             LK::Minus => self.unary_minus(),
+
+            LK::Def => box_expr_variant!(self.def_expr(), N::Expr::Def),
 
             _ => None,
         };
@@ -132,27 +138,25 @@ impl<'text> Parser<'text> {
                         args,
                     }))
                 }
-                LK::Equal => {
-                    match lhs {
-                        N::Expr::GlobalVariableRead(glob) => {
-                            let rhs = self.expr_bp(r_bp).unwrap();
-                            let N::GlobalVariableRead { name } = *glob;
-                            N::Expr::GlobalVariableWrite(Box::new(N::GlobalVariableWrite {
-                                name,
-                                expr: rhs,
-                            }))
-                        }
-                        N::Expr::Call(call) if call.name == "[]" => {
-                            let rhs = self.expr_bp(r_bp).unwrap();
-                            N::Expr::Call(Box::new(N::Call {
-                                receiver: call.receiver,
-                                name: "[]=".to_string(),
-                                args: [call.args, vec![rhs]].concat(),
-                            }))
-                        }
-                        _ => todo!("Unknown assignment lhs: {:?}", lhs),
+                LK::Equal => match lhs {
+                    N::Expr::GlobalVariableRead(glob) => {
+                        let rhs = self.expr_bp(r_bp).unwrap();
+                        let N::GlobalVariableRead { name } = *glob;
+                        N::Expr::GlobalVariableWrite(Box::new(N::GlobalVariableWrite {
+                            name,
+                            expr: rhs,
+                        }))
                     }
-                }
+                    N::Expr::Call(call) if call.name == "[]" => {
+                        let rhs = self.expr_bp(r_bp).unwrap();
+                        N::Expr::Call(Box::new(N::Call {
+                            receiver: call.receiver,
+                            name: "[]=".to_string(),
+                            args: [call.args, vec![rhs]].concat(),
+                        }))
+                    }
+                    _ => todo!("Unknown assignment lhs: {:?}", lhs),
+                },
                 LK::AmpersandAmpersand => {
                     let rhs = self.expr_bp(r_bp).unwrap();
                     N::Expr::And(Box::new(N::And { lhs, rhs }))
@@ -162,7 +166,13 @@ impl<'text> Parser<'text> {
 
                     N::Expr::Or(Box::new(N::Or { lhs, rhs }))
                 }
-                op @ (LK::EqualEqual | LK::Greater | LK::Less | LK::Minus | LK::Plus | LK::Slash | LK::Star) => {
+                op @ (LK::EqualEqual
+                | LK::Greater
+                | LK::Less
+                | LK::Minus
+                | LK::Plus
+                | LK::Slash
+                | LK::Star) => {
                     let name = match op {
                         LK::EqualEqual => "==".to_string(),
                         LK::Greater => ">".to_string(),
@@ -195,6 +205,55 @@ impl<'text> Parser<'text> {
             };
         }
         Some(lhs)
+    }
+
+    fn local_variable_read_expr(&mut self) -> N::LocalVariableRead {
+        let LK::Identifier { text: name } = self.lexer.next().kind else { unreachable!() };
+        N::LocalVariableRead {
+            name,
+        }
+    }
+
+    fn def_expr(&mut self) -> N::Def {
+        self.lexer.next();
+        let LK::Identifier { text: name } = self.lexer.next().kind else {
+            panic!("Expected method name after `def`.")
+        };
+        self.expect(&[LK::LeftParen]);
+        let params = self.params();
+        self.skip_newlines();
+        let body = self.statements();
+        self.skip_newlines();
+        self.expect(&[LK::End]);
+
+        N::Def {
+            name,
+            params,
+            body
+        }
+    }
+
+    fn params(&mut self) -> Vec<N::RequiredParam> {
+        let mut params = vec![];
+        loop {
+            match self.lexer.peek().kind {
+                LK::Identifier { text } => {
+                    self.lexer.next();
+                    params.push(N::RequiredParam { name: text });
+                    match self.lexer.next().kind {
+                        LK::Comma => continue,
+                        LK::RightParen => break,
+                        _ => panic!("Expected `,` or `)`."),
+                    }
+                }
+                LK::RightParen => {
+                    self.lexer.next();
+                    break;
+                }
+                _ => panic!("Expected identifier or `)`."),
+            }
+        }
+        params
     }
 
     fn unary_minus(&mut self) -> Option<N::Expr> {
@@ -233,14 +292,12 @@ impl<'text> Parser<'text> {
         loop {
             vals.push(self.expr().unwrap());
             match self.lexer.next().kind {
-                LK::Comma => {},
+                LK::Comma => {}
                 LK::BracketRight => break,
-                _ => panic!("Expected `,` or `]`")
+                _ => panic!("Expected `,` or `]`"),
             }
         }
-        N::Array {
-            vals,
-        }
+        N::Array { vals }
     }
 
     /// Once we see "if", should be irrefutable.
@@ -705,6 +762,58 @@ mod tests {
         expected.assert_eq(&actual);
     }
 
+    #[test]
+    fn parse_def() {
+        let text = "
+            def x(n)
+                n
+            end
+        ";
+        let expected = expect![[r#"
+            ((statements
+              (body
+               (Def (name . "x") (params ((name . "n")))
+            	(body (body (LocalVariableRead (name . "n"))))))))
+        "#]];
+        let actual = parse_to_sexpr(text);
+        expected.assert_eq(&actual);
+    }
+
+    #[test]
+    fn def_no_args() {
+        let text = "
+            def x()
+                22
+            end
+        ";
+        let expected = expect![[r#"
+            ((statements
+              (body (Def (name . "x") (params) (body (body (Integer . 22)))))))
+        "#]];
+        let actual = parse_to_sexpr(text);
+        expected.assert_eq(&actual);
+    }
+
+    #[test]
+    fn def_multiple_args() {
+        let text = "
+            def x(a, b)
+                a + b
+            end
+        ";
+        let expected = expect![[r#"
+            ((statements
+              (body
+               (Def (name . "x") (params ((name . "a")) ((name . "b")))
+            	(body
+            	 (body
+            	  (Call (receiver LocalVariableRead (name . "a")) (name . "+")
+            		(args (LocalVariableRead (name . "b"))))))))))
+        "#]];
+        let actual = parse_to_sexpr(text);
+        expected.assert_eq(&actual);
+    }
+
     mod globals {
         use crate::parser::tests::parse_to_sexpr;
         use expect_test::expect;
@@ -761,8 +870,8 @@ mod tests {
 
     mod arrays {
         use crate::parser::tests::parse_to_sexpr;
-        use expect_test::expect;
         use crate::run;
+        use expect_test::expect;
 
         #[test]
         fn empty_arr() {

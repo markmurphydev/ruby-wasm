@@ -33,7 +33,7 @@ pub fn helper_for_in(alist_type_def: AListTypeDef, body: Vec<Instr>) -> Vec<Inst
 ///     (because `-1 = 0b1111_...`)
 pub fn i32_not(mut body: Vec<Instr>) -> Instr {
     let wat_args = {
-        let mut res = wat![(const_i32 ,(-1))];
+        let mut res = wat![(const_i32, (-1))];
         res.append(&mut body);
         res
     };
@@ -48,21 +48,22 @@ pub fn i32_not(mut body: Vec<Instr>) -> Instr {
 pub fn i32_neg(body: Vec<Instr>) -> Instr {
     wat! {
         (i32_add (const_i32 1) ,(i32_not(body)))
-    }.remove(0)
+    }
+    .remove(0)
 }
 
 /// `(i32.not x) ≡ (i32.xor x -1)`
 ///     (because `-1 = 0b1111_...`)
 pub fn i64_not(mut body: Vec<Instr>) -> Instr {
     let wat_args = {
-        let mut res = wat![(const_i64 ,(-1))];
+        let mut res = wat![(const_i64, (-1))];
         res.append(&mut body);
         res
     };
     wat! {
         (i64_xor ,(wat_args))
     }
-        .remove(0)
+    .remove(0)
 }
 
 /// 2's comp negation of `i32`:
@@ -70,5 +71,6 @@ pub fn i64_not(mut body: Vec<Instr>) -> Instr {
 pub fn i64_neg(body: Vec<Instr>) -> Instr {
     wat! {
         (i64_add (const_i64 1) ,(i64_not(body)))
-    }.remove(0)
+    }
+    .remove(0)
 }

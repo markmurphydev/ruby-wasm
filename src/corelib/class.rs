@@ -1,10 +1,10 @@
+use crate::CompileCtx;
+use crate::corelib::global::string_identifier;
+use crate::corelib::method;
 use crate::corelib::method::Method;
 use wat_defs::global::Global;
 use wat_defs::instr::Instr;
 use wat_macro::wat;
-use crate::CompileCtx;
-use crate::corelib::global::string_identifier;
-use crate::corelib::method;
 
 /// A Ruby class. Compiles to:
 /// - Definition of global string `$<CLASS_NAME>`
@@ -44,16 +44,24 @@ impl Class {
     }
 
     fn methods_arr(&self) -> Instr {
-        let struct_defs: Vec<_> = self.instance_methods.iter().map(|method| wat! {
-            (struct_new $alist_str_method_pair
-                (global_get ,(string_identifier(&method.name)))
-                (ref_func ,(method.identifier())))
-        }).flatten().collect();
+        let struct_defs: Vec<_> = self
+            .instance_methods
+            .iter()
+            .map(|method| {
+                wat! {
+                    (struct_new $alist_str_method_pair
+                        (global_get ,(string_identifier(&method.name)))
+                        (ref_func ,(method.identifier())))
+                }
+            })
+            .flatten()
+            .collect();
         let len: i64 = struct_defs.len().try_into().unwrap();
         wat! {
             (array_new_fixed $alist_str_method ,(len)
                              ,(struct_defs))
-        }.remove(0)
+        }
+        .remove(0)
     }
 }
 

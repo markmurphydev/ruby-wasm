@@ -9,13 +9,13 @@ use crate::parse::util::{parse_name, peek_sym};
 use crate::result::Result;
 use proc_macro2::TokenStream;
 
+mod func;
+mod global;
 mod instr;
 mod parse_stream;
 mod ty;
-mod util;
-mod global;
-mod func;
 mod type_def;
+mod util;
 
 // TODO: Parse typed
 // pub trait Parse: Sized {

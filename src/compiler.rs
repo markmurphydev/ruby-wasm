@@ -79,7 +79,8 @@ fn compile_expr(ctx: &mut CompileCtx, expr: &Expr) -> Vec<Instr> {
         Expr::And(and_expr) => compile_and_expr(ctx, &*and_expr),
         Expr::Or(or_expr) => compile_or_expr(ctx, &*or_expr),
         Expr::Array(arr_expr) => compile_arr_expr(ctx, &*arr_expr),
-        Expr::Def(def_expr) => todo!("Method definitions not yet implemented.")
+        Expr::LocalVariableRead(_) => todo!("LocalVariableRead not yet implemented."),
+        Expr::Def(def_expr) => todo!("Method definitions not yet implemented."),
     }
 }
 
@@ -185,7 +186,7 @@ fn compile_global_variable_read(
 ) -> Vec<Instr> {
     let GlobalVariableRead { name } = global_read;
     add_nil_global_def(ctx, name);
-    wat![ (global_get, (name.to_string())) ]
+    wat![(global_get, (name.to_string()))]
 }
 
 /// If `ctx` has no global named `name`, add an empty definition.

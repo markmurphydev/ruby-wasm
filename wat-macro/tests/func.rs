@@ -38,6 +38,8 @@ pub fn func_method() {
             (result (ref eq)))
     };
     let actual = &format!("{:?}", actual);
-    let expected = expect![[r#"Func { name: "method", exported: NotExported, type_use: Some("method"), params: [Param { name: "self", ty: Ref(RefType { null: NonNullable, heap_type: TypeIdx("obj") }) }, Param { name: "args", ty: Ref(RefType { null: NonNullable, heap_type: TypeIdx("arr_unitype") }) }], results: [Ref(RefType { null: NonNullable, heap_type: Abs(Eq) })], locals: [], instrs: [] }"#]];
+    let expected = expect![[
+        r#"Func { name: "method", exported: NotExported, type_use: Some("method"), params: [Param { name: "self", ty: Ref(RefType { null: NonNullable, heap_type: TypeIdx("obj") }) }, Param { name: "args", ty: Ref(RefType { null: NonNullable, heap_type: TypeIdx("arr_unitype") }) }], results: [Ref(RefType { null: NonNullable, heap_type: Abs(Eq) })], locals: [], instrs: [] }"#
+    ]];
     expected.assert_eq(actual);
 }

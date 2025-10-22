@@ -14,7 +14,9 @@ pub fn nop() {
 pub fn nop_with_folded_instrs() {
     let actual = wat! { (nop (nop) (nop (nop)) (nop)) };
     let actual = &format!("{:?}", actual);
-    let expected = expect!["[Instr { unfolded_instr: Nop, folded_instrs: [Instr { unfolded_instr: Nop, folded_instrs: [] }, Instr { unfolded_instr: Nop, folded_instrs: [Instr { unfolded_instr: Nop, folded_instrs: [] }] }, Instr { unfolded_instr: Nop, folded_instrs: [] }] }]"];
+    let expected = expect![
+        "[Instr { unfolded_instr: Nop, folded_instrs: [Instr { unfolded_instr: Nop, folded_instrs: [] }, Instr { unfolded_instr: Nop, folded_instrs: [Instr { unfolded_instr: Nop, folded_instrs: [] }] }, Instr { unfolded_instr: Nop, folded_instrs: [] }] }]"
+    ];
     expected.assert_eq(actual);
 }
 
@@ -38,11 +40,12 @@ pub fn nop_quasi_quote_wat() {
     expected.assert_eq(actual);
 }
 
-
 #[test]
 pub fn array_new_fixed() {
     let actual: Vec<Instr> = wat![ (array_new_fixed $arr_unitype 0) ];
     let actual = &format!("{:?}", actual);
-    let expected = expect![[r#"[Instr { unfolded_instr: ArrayNewFixed { type_idx: "arr_unitype", len: 0 }, folded_instrs: [] }]"#]];
+    let expected = expect![[
+        r#"[Instr { unfolded_instr: ArrayNewFixed { type_idx: "arr_unitype", len: 0 }, folded_instrs: [] }]"#
+    ]];
     expected.assert_eq(actual);
 }

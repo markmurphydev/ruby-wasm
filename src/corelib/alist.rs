@@ -94,7 +94,7 @@ impl AListTypeDef {
         match val_type {
             StorageType::Val(ValType::Ref(RefType {
                 null: Nullable::NonNullable,
-                heap_type: HeapType::TypeIdx(name)
+                heap_type: HeapType::TypeIdx(name),
             })) => name,
             StorageType::Val(ValType::Ref(RefType {
                 null: Nullable::NonNullable,

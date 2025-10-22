@@ -3,8 +3,8 @@ use clap::Subcommand;
 use ruby_wasm::lexer::Lexer;
 use ruby_wasm::parser::Parser;
 use ruby_wasm::print_wat::module_to_pretty;
+use ruby_wasm::{CompileCtx, compiler};
 use ruby_wasm::{binary, html, run};
-use ruby_wasm::{compiler, CompileCtx};
 use wat_defs::module::Module;
 
 #[derive(clap::Parser)]
@@ -71,7 +71,7 @@ fn main() {
 
     match cli.command {
         Command::Lex { text } => {
-            run::lex(&text);
+            println!("{:?}", run::lex(&text));
         }
 
         Command::Parse { text } => {

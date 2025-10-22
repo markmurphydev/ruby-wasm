@@ -31,24 +31,31 @@ pub enum Expr {
     Or(Box<Or>),
     Array(Box<Array>),
     Def(Box<Def>),
+    LocalVariableRead(Box<LocalVariableRead>),
+}
+
+/// Method definition.
+#[derive(Debug, Clone, PartialEq, Eq, Serialize)]
+pub struct LocalVariableRead {
+    pub name: String,
 }
 
 /// Method definition.
 #[derive(Debug, Clone, PartialEq, Eq, Serialize)]
 pub struct Def {
-    name: String,
-    params: Vec<RequiredParam>,
-    body: Statements,
+    pub name: String,
+    pub params: Vec<RequiredParam>,
+    pub body: Statements,
 }
 
 #[derive(Debug, Clone, PartialEq, Eq, Serialize)]
 pub struct RequiredParam {
-    name: String,
+    pub name: String,
 }
 
 #[derive(Debug, Clone, PartialEq, Eq, Serialize)]
 pub struct Array {
-    pub vals: Vec<Expr>
+    pub vals: Vec<Expr>,
 }
 
 #[derive(Debug, Clone, PartialEq, Eq, Serialize)]

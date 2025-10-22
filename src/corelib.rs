@@ -5,12 +5,12 @@
 
 mod alist;
 mod array;
-pub mod type_def;
 pub mod class;
-pub mod global;
-mod method;
 mod function;
+pub mod global;
 pub mod helpers;
+mod method;
+pub mod type_def;
 
 use crate::CompileCtx;
 

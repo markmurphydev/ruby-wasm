@@ -27,7 +27,6 @@ fn add_neg_neg() {
     expected.assert_eq(&actual);
 }
 
-
 #[test]
 fn and_or() {
     // && should have tighter binding

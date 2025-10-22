@@ -54,7 +54,7 @@ fn add_string_def(ctx: &mut CompileCtx, string: String) {
     let bytes: Vec<Instr> = string
         .as_bytes()
         .iter()
-        .map(|b| wat![ (const_i32 ,(*b as i64)) ])
+        .map(|b| wat![(const_i32, (*b as i64))])
         .flatten()
         .collect();
     let len = bytes.len();

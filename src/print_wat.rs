@@ -8,7 +8,9 @@ use pretty::RcDoc;
 use std::borrow::Cow;
 use wat_defs::func::{Exported, Func, Local, Param};
 use wat_defs::global::Global;
-use wat_defs::instr::UnfoldedInstr::{I32WrapI64, I64Add, I64Xor, Nop, RefAsNonNull, RefI31, Return};
+use wat_defs::instr::UnfoldedInstr::{
+    I32WrapI64, I64Add, I64Xor, Nop, RefAsNonNull, RefI31, Return,
+};
 use wat_defs::instr::{Instr, UnfoldedInstr};
 use wat_defs::module::{Module, TypeDef};
 use wat_defs::ty::{

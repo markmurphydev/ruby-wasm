@@ -285,14 +285,18 @@ mod test {
     use quote::quote;
 
     fn parse_to_string(input: TokenStream) -> String {
-        parse_instr(&mut ParseStream::new(input)).unwrap().to_string()
+        parse_instr(&mut ParseStream::new(input))
+            .unwrap()
+            .to_string()
     }
 
     #[test]
     pub fn _if() {
         let input: TokenStream = quote! { (if $label (const_i32 1) (then (nop)) ) };
         let actual = parse_to_string(input);
-        let expected = expect![[r#"wat_defs :: instr :: Instr { unfolded_instr : wat_defs :: instr :: UnfoldedInstr :: If { label : Some ("label" . to_string ()) , block_type : None , then_block : vec ! [wat_defs :: instr :: Instr { unfolded_instr : wat_defs :: instr :: UnfoldedInstr :: Nop , folded_instrs : vec ! [] , }] , else_block : Vec :: new () , } , folded_instrs : vec ! [wat_defs :: instr :: Instr { unfolded_instr : wat_defs :: instr :: UnfoldedInstr :: Const { ty : wat_defs :: ty :: NumType :: I32 , val : 1i64 } , folded_instrs : vec ! [] , }] , }"#]];
+        let expected = expect![[
+            r#"wat_defs :: instr :: Instr { unfolded_instr : wat_defs :: instr :: UnfoldedInstr :: If { label : Some ("label" . to_string ()) , block_type : None , then_block : vec ! [wat_defs :: instr :: Instr { unfolded_instr : wat_defs :: instr :: UnfoldedInstr :: Nop , folded_instrs : vec ! [] , }] , else_block : Vec :: new () , } , folded_instrs : vec ! [wat_defs :: instr :: Instr { unfolded_instr : wat_defs :: instr :: UnfoldedInstr :: Const { ty : wat_defs :: ty :: NumType :: I32 , val : 1i64 } , folded_instrs : vec ! [] , }] , }"#
+        ]];
         expected.assert_eq(&actual);
     }
 
@@ -306,7 +310,9 @@ mod test {
                 (else (const_i32 0)))
         };
         let actual = parse_to_string(input);
-        let expected = expect![[r#"wat_defs :: instr :: Instr { unfolded_instr : wat_defs :: instr :: UnfoldedInstr :: If { label : None , block_type : Some (wat_defs :: ty :: BlockType :: Result (wat_defs :: ty :: ValType :: Num (wat_defs :: ty :: NumType :: I32))) , then_block : vec ! [wat_defs :: instr :: Instr { unfolded_instr : wat_defs :: instr :: UnfoldedInstr :: I32And , folded_instrs : vec ! [wat_defs :: instr :: Instr { unfolded_instr : wat_defs :: instr :: UnfoldedInstr :: Const { ty : wat_defs :: ty :: NumType :: I32 , val : Unitype :: FIXNUM_MARKER } , folded_instrs : vec ! [] , } , wat_defs :: instr :: Instr { unfolded_instr : wat_defs :: instr :: UnfoldedInstr :: I31GetU , folded_instrs : vec ! [wat_defs :: instr :: Instr { unfolded_instr : wat_defs :: instr :: UnfoldedInstr :: RefCast { ty : wat_defs :: ty :: RefType { null : wat_defs :: ty :: Nullable :: NonNullable , heap_type : wat_defs :: ty :: HeapType :: Abs (wat_defs :: ty :: AbsHeapType :: I31) , } } , folded_instrs : vec ! [wat_defs :: instr :: Instr { unfolded_instr : wat_defs :: instr :: UnfoldedInstr :: LocalGet { name : "n" . to_string () } , folded_instrs : vec ! [] , }] , }] , }] , }] , else_block : vec ! [wat_defs :: instr :: Instr { unfolded_instr : wat_defs :: instr :: UnfoldedInstr :: Const { ty : wat_defs :: ty :: NumType :: I32 , val : 0i64 } , folded_instrs : vec ! [] , }] , } , folded_instrs : vec ! [wat_defs :: instr :: Instr { unfolded_instr : wat_defs :: instr :: UnfoldedInstr :: RefTest { ty : wat_defs :: ty :: RefType { null : wat_defs :: ty :: Nullable :: NonNullable , heap_type : wat_defs :: ty :: HeapType :: Abs (wat_defs :: ty :: AbsHeapType :: I31) , } } , folded_instrs : vec ! [wat_defs :: instr :: Instr { unfolded_instr : wat_defs :: instr :: UnfoldedInstr :: LocalGet { name : "n" . to_string () } , folded_instrs : vec ! [] , }] , }] , }"#]];
+        let expected = expect![[
+            r#"wat_defs :: instr :: Instr { unfolded_instr : wat_defs :: instr :: UnfoldedInstr :: If { label : None , block_type : Some (wat_defs :: ty :: BlockType :: Result (wat_defs :: ty :: ValType :: Num (wat_defs :: ty :: NumType :: I32))) , then_block : vec ! [wat_defs :: instr :: Instr { unfolded_instr : wat_defs :: instr :: UnfoldedInstr :: I32And , folded_instrs : vec ! [wat_defs :: instr :: Instr { unfolded_instr : wat_defs :: instr :: UnfoldedInstr :: Const { ty : wat_defs :: ty :: NumType :: I32 , val : Unitype :: FIXNUM_MARKER } , folded_instrs : vec ! [] , } , wat_defs :: instr :: Instr { unfolded_instr : wat_defs :: instr :: UnfoldedInstr :: I31GetU , folded_instrs : vec ! [wat_defs :: instr :: Instr { unfolded_instr : wat_defs :: instr :: UnfoldedInstr :: RefCast { ty : wat_defs :: ty :: RefType { null : wat_defs :: ty :: Nullable :: NonNullable , heap_type : wat_defs :: ty :: HeapType :: Abs (wat_defs :: ty :: AbsHeapType :: I31) , } } , folded_instrs : vec ! [wat_defs :: instr :: Instr { unfolded_instr : wat_defs :: instr :: UnfoldedInstr :: LocalGet { name : "n" . to_string () } , folded_instrs : vec ! [] , }] , }] , }] , }] , else_block : vec ! [wat_defs :: instr :: Instr { unfolded_instr : wat_defs :: instr :: UnfoldedInstr :: Const { ty : wat_defs :: ty :: NumType :: I32 , val : 0i64 } , folded_instrs : vec ! [] , }] , } , folded_instrs : vec ! [wat_defs :: instr :: Instr { unfolded_instr : wat_defs :: instr :: UnfoldedInstr :: RefTest { ty : wat_defs :: ty :: RefType { null : wat_defs :: ty :: Nullable :: NonNullable , heap_type : wat_defs :: ty :: HeapType :: Abs (wat_defs :: ty :: AbsHeapType :: I31) , } } , folded_instrs : vec ! [wat_defs :: instr :: Instr { unfolded_instr : wat_defs :: instr :: UnfoldedInstr :: LocalGet { name : "n" . to_string () } , folded_instrs : vec ! [] , }] , }] , }"#
+        ]];
         expected.assert_eq(&actual);
     }
 }

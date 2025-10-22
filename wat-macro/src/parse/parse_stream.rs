@@ -133,7 +133,7 @@ impl ParseStream {
                         self.peeked = PeekVal::None;
                         None
                     }
-                    _ => unreachable!()
+                    _ => unreachable!(),
                 }
             }
             PeekVal::One(first) => {

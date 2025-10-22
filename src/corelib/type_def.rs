@@ -1,20 +1,14 @@
-use wat_defs::module::TypeDef;
-use wat_macro::wat;
 use crate::CompileCtx;
 use crate::corelib::{alist, array};
+use wat_defs::module::TypeDef;
+use wat_macro::wat;
 
 pub const OBJECT_TYPE_IDENTIFIER: &str = "obj";
 pub const CLASS_TYPE_IDENTIFIER: &str = "class";
 pub const METHOD_TYPE_IDENTIFIER: &str = "method";
 
 pub fn add_type_defs(ctx: &mut CompileCtx) {
-    let mut type_defs = vec![
-        string(),
-        boxnum(),
-        obj(),
-        method(),
-        class(),
-    ];
+    let mut type_defs = vec![string(), boxnum(), obj(), method(), class()];
     type_defs.append(&mut array::array_type_defs());
     type_defs.append(&mut alist::alist_type_defs());
 
@@ -33,7 +27,6 @@ pub fn add_type_defs(ctx: &mut CompileCtx) {
 fn string() -> TypeDef {
     wat![ (type $str (array i8)) ]
 }
-
 
 fn boxnum() -> TypeDef {
     wat![ (type $boxnum (struct (field $val i64))) ]
@@ -71,4 +64,3 @@ fn method() -> TypeDef {
                       (result (ref eq)))))
     }
 }
-

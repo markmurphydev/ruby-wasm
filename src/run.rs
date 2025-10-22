@@ -1,12 +1,12 @@
 use crate::compiler::RUBY_TOP_LEVEL_FUNCTION_NAME;
+use crate::corelib::add_core_items;
 use crate::lexeme::LexemeKind;
 use crate::lexer::Lexer;
+use crate::parser::Parser;
 use crate::unitype::{Unitype, WasmtimeRefEq};
-use crate::{compiler, print_wat, run, CompileCtx};
+use crate::{CompileCtx, compiler, print_wat, run};
 use wasmtime::{Config, Engine, Instance, Module, Store};
 use wat_defs::module;
-use crate::corelib::add_core_items;
-use crate::parser::Parser;
 
 pub fn lex(text: &str) -> String {
     let mut res = String::new();
@@ -62,7 +62,8 @@ pub fn run_wat(wat: String) -> String {
         let res = top_level.call(&mut store, ()).unwrap();
         format!("{}", res)
     } else if let Ok(top_level) =
-        instance.get_typed_func::<(), i64>(&mut store, RUBY_TOP_LEVEL_FUNCTION_NAME) {
+        instance.get_typed_func::<(), i64>(&mut store, RUBY_TOP_LEVEL_FUNCTION_NAME)
+    {
         let res = top_level.call(&mut store, ()).unwrap();
         format!("{}", res)
     } else {

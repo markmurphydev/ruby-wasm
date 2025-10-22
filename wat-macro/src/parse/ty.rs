@@ -335,7 +335,9 @@ mod test {
             .unwrap()
             .to_string();
         let actual = &format!("{}", actual);
-        let expected = expect!["wat_defs :: ty :: RefType { null : wat_defs :: ty :: Nullable :: NonNullable , heap_type : wat_defs :: ty :: HeapType :: Abs (wat_defs :: ty :: AbsHeapType :: Eq) , }"];
+        let expected = expect![
+            "wat_defs :: ty :: RefType { null : wat_defs :: ty :: Nullable :: NonNullable , heap_type : wat_defs :: ty :: HeapType :: Abs (wat_defs :: ty :: AbsHeapType :: Eq) , }"
+        ];
         expected.assert_eq(actual);
     }
 
@@ -346,7 +348,9 @@ mod test {
             .unwrap()
             .to_string();
         let actual = &format!("{}", actual);
-        let expected = expect![[r#"wat_defs :: ty :: RefType { null : wat_defs :: ty :: Nullable :: NonNullable , heap_type : wat_defs :: ty :: HeapType :: TypeIdx ("obj" . to_string ()) , }"#]];
+        let expected = expect![[
+            r#"wat_defs :: ty :: RefType { null : wat_defs :: ty :: Nullable :: NonNullable , heap_type : wat_defs :: ty :: HeapType :: TypeIdx ("obj" . to_string ()) , }"#
+        ]];
         expected.assert_eq(actual);
     }
 
@@ -357,16 +361,22 @@ mod test {
             .unwrap()
             .to_string();
         let actual = &format!("{}", actual);
-        let expected = expect!["wat_defs :: ty :: CompType :: Array (wat_defs :: ty :: ArrayType { field_type : wat_defs :: ty :: FieldType { mutable : wat_defs :: ty :: Mutable :: Const , ty : wat_defs :: ty :: StorageType :: Val (wat_defs :: ty :: ValType :: Ref (wat_defs :: ty :: RefType { null : wat_defs :: ty :: Nullable :: NonNullable , heap_type : wat_defs :: ty :: HeapType :: Abs (wat_defs :: ty :: AbsHeapType :: Eq) , })) , } })"];
+        let expected = expect![
+            "wat_defs :: ty :: CompType :: Array (wat_defs :: ty :: ArrayType { field_type : wat_defs :: ty :: FieldType { mutable : wat_defs :: ty :: Mutable :: Const , ty : wat_defs :: ty :: StorageType :: Val (wat_defs :: ty :: ValType :: Ref (wat_defs :: ty :: RefType { null : wat_defs :: ty :: Nullable :: NonNullable , heap_type : wat_defs :: ty :: HeapType :: Abs (wat_defs :: ty :: AbsHeapType :: Eq) , })) , } })"
+        ];
         expected.assert_eq(actual);
     }
 
     #[test]
     pub fn test_comp_type_array() {
         let input = quote! { (array i8) };
-        let actual = parse_comp_type(&mut ParseStream::new(input)).unwrap().to_string();
+        let actual = parse_comp_type(&mut ParseStream::new(input))
+            .unwrap()
+            .to_string();
         let actual = &format!("{}", actual);
-        let expected = expect!["wat_defs :: ty :: CompType :: Array (wat_defs :: ty :: ArrayType { field_type : wat_defs :: ty :: FieldType { mutable : wat_defs :: ty :: Mutable :: Const , ty : wat_defs :: ty :: StorageType :: Pack (wat_defs :: ty :: PackType :: I8) , } })"];
+        let expected = expect![
+            "wat_defs :: ty :: CompType :: Array (wat_defs :: ty :: ArrayType { field_type : wat_defs :: ty :: FieldType { mutable : wat_defs :: ty :: Mutable :: Const , ty : wat_defs :: ty :: StorageType :: Pack (wat_defs :: ty :: PackType :: I8) , } })"
+        ];
         expected.assert_eq(actual);
     }
 
@@ -374,9 +384,13 @@ mod test {
     pub fn test_sub_type_array_abbreviated() {
         // When we call
         let input = quote! { (array i8) };
-        let actual = parse_sub_type(&mut ParseStream::new(input)).unwrap().to_string();
+        let actual = parse_sub_type(&mut ParseStream::new(input))
+            .unwrap()
+            .to_string();
         let actual = &format!("{}", actual);
-        let expected = expect!["wat_defs :: ty :: SubType { is_final : wat_defs :: ty :: Final :: Final , supertypes : vec ! [] , comp_type : wat_defs :: ty :: CompType :: Array (wat_defs :: ty :: ArrayType { field_type : wat_defs :: ty :: FieldType { mutable : wat_defs :: ty :: Mutable :: Const , ty : wat_defs :: ty :: StorageType :: Pack (wat_defs :: ty :: PackType :: I8) , } }) , }"];
+        let expected = expect![
+            "wat_defs :: ty :: SubType { is_final : wat_defs :: ty :: Final :: Final , supertypes : vec ! [] , comp_type : wat_defs :: ty :: CompType :: Array (wat_defs :: ty :: ArrayType { field_type : wat_defs :: ty :: FieldType { mutable : wat_defs :: ty :: Mutable :: Const , ty : wat_defs :: ty :: StorageType :: Pack (wat_defs :: ty :: PackType :: I8) , } }) , }"
+        ];
         expected.assert_eq(actual);
     }
 }

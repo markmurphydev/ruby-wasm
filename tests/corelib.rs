@@ -4,7 +4,7 @@
 //! - Runs correctly
 
 use ruby_wasm::corelib::add_core_items;
-use ruby_wasm::{run, CompileCtx};
+use ruby_wasm::{CompileCtx, run};
 use wat_defs::instr::Instr;
 use wat_defs::module::Module;
 use wat_defs::ty::{NumType, ValType};
@@ -30,7 +30,7 @@ fn run_helper(body: Vec<Instr>, result_ty: ValType) -> String {
 /// and runs the file.
 /// `body` must be the body of a wasm function `() -> (ref eq)`
 fn run_main_fn_ref_eq(body: Vec<Instr>) -> String {
-    run_helper(body, ValType::Ref(wat![ (ref eq) ]))
+    run_helper(body, ValType::Ref(wat![(ref eq)]))
 }
 
 fn run_main_fn_i64(body: Vec<Instr>) -> String {
@@ -164,10 +164,10 @@ mod function {
     }
 
     mod add {
+        use crate::run_main_fn_ref_eq;
         use expect_test::expect;
         use ruby_wasm::unitype::Unitype;
         use wat_macro::wat;
-        use crate::run_main_fn_ref_eq;
 
         #[test]
         pub fn test_max_plus_one() {
@@ -183,11 +183,11 @@ mod function {
     }
 
     mod negate {
+        use crate::{run_main_fn_i64, run_main_fn_ref_eq};
         use expect_test::expect;
         use ruby_wasm::corelib::helpers;
         use ruby_wasm::unitype::Unitype;
         use wat_macro::wat;
-        use crate::{run_main_fn_i64, run_main_fn_ref_eq};
 
         #[test]
         pub fn i64_neg() {
@@ -212,10 +212,10 @@ mod function {
     }
 
     mod eq_eq {
+        use crate::run_main_fn_ref_eq;
         use expect_test::expect;
         use ruby_wasm::unitype::Unitype;
         use wat_macro::wat;
-        use crate::run_main_fn_ref_eq;
 
         #[test]
         pub fn equal() {

@@ -1,12 +1,11 @@
-use proc_macro2::TokenStream;
-use quote::{quote};
-use crate::parse::{instr, ty};
 use crate::parse::parse_stream::ParseInput;
 use crate::parse::util::*;
+use crate::parse::{instr, ty};
 use crate::result::Result;
+use proc_macro2::TokenStream;
+use quote::quote;
 
 pub fn parse_func(input: ParseInput) -> Result<TokenStream> {
-
     // (func $<name>
     //  (export \"<name>\")
     //  (type <sym>)?
@@ -24,7 +23,7 @@ pub fn parse_func(input: ParseInput) -> Result<TokenStream> {
                 let name = expect_string_literal(&mut input)?;
                 quote![ wat_defs::func::Exported::Exported(#name) ]
             }
-            Err(_) => quote![ wat_defs::func::Exported::NotExported ],
+            Err(_) => quote![wat_defs::func::Exported::NotExported],
         }
     };
 
@@ -32,8 +31,8 @@ pub fn parse_func(input: ParseInput) -> Result<TokenStream> {
         Ok((mut input, _)) => {
             let name = parse_name(&mut input)?;
             quote![ Some(#name) ]
-        },
-        Err(_) => quote![ None ],
+        }
+        Err(_) => quote![None],
     };
     let params = parse_params(input)?;
     let results = parse_results(input)?;
@@ -71,7 +70,7 @@ fn parse_param(input: ParseInput) -> Result<TokenStream> {
                 }
             })
         }
-        Err(_) => Err(error(input, "Expected `(param ...)"))
+        Err(_) => Err(error(input, "Expected `(param ...)")),
     }
 }
 
@@ -82,7 +81,7 @@ pub fn parse_results(input: ParseInput) -> Result<TokenStream> {
 fn parse_result(input: ParseInput) -> Result<TokenStream> {
     match expect_open_paren_named(&["result"], input) {
         Ok((mut input, _)) => ty::parse_val_type(&mut input),
-        Err(_) => Err(error(input, "Expected `(result ...)"))
+        Err(_) => Err(error(input, "Expected `(result ...)")),
     }
 }
 
@@ -104,18 +103,18 @@ fn parse_local(input: ParseInput) -> Result<TokenStream> {
                 }
             })
         }
-        Err(_) => Err(error(input, "Expected `(param ...)"))
+        Err(_) => Err(error(input, "Expected `(param ...)")),
     }
 }
 
-// 
+//
 // #[cfg(test)]
 // mod test {
 //     use crate::parse::ParseStream;
 //     use expect_test::expect;
 //     use quote::quote;
 //     use super::*;
-// 
+//
 //     #[test]
 //     pub fn _func() {
 //         let input: TokenStream = quote! {
@@ -127,4 +126,4 @@ fn parse_local(input: ParseInput) -> Result<TokenStream> {
 //         expected.assert_eq(&actual);
 //     }
 // }
-// 
+//

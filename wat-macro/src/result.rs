@@ -19,10 +19,7 @@ pub struct ErrorMessage {
 impl Error {
     pub fn new(span: Span, message: String) -> Self {
         Self {
-            messages: vec![ErrorMessage {
-                span,
-                message,
-            }]
+            messages: vec![ErrorMessage { span, message }],
         }
     }
 
@@ -80,7 +77,6 @@ impl ErrorMessage {
             }),
         ])
     }
-
 }
 
 impl Debug for Error {

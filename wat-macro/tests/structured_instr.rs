@@ -14,7 +14,9 @@ pub fn _loop() {
 pub fn if_label_then() {
     let actual = wat! { (if $label (then (nop)) ) };
     let actual = &format!("{:?}", actual);
-    let expected = expect![[r#"[Instr { unfolded_instr: If { label: Some("label"), block_type: None, then_block: [Instr { unfolded_instr: Nop, folded_instrs: [] }], else_block: [] }, folded_instrs: [] }]"#]];
+    let expected = expect![[
+        r#"[Instr { unfolded_instr: If { label: Some("label"), block_type: None, then_block: [Instr { unfolded_instr: Nop, folded_instrs: [] }], else_block: [] }, folded_instrs: [] }]"#
+    ]];
     expected.assert_eq(actual);
 }
 
@@ -26,7 +28,9 @@ pub fn if_label_then_else() {
            (else (nop)))
     };
     let actual = &format!("{:?}", actual);
-    let expected = expect![[r#"[Instr { unfolded_instr: If { label: Some("label"), block_type: None, then_block: [Instr { unfolded_instr: Nop, folded_instrs: [] }], else_block: [Instr { unfolded_instr: Nop, folded_instrs: [] }] }, folded_instrs: [] }]"#]];
+    let expected = expect![[
+        r#"[Instr { unfolded_instr: If { label: Some("label"), block_type: None, then_block: [Instr { unfolded_instr: Nop, folded_instrs: [] }], else_block: [Instr { unfolded_instr: Nop, folded_instrs: [] }] }, folded_instrs: [] }]"#
+    ]];
     expected.assert_eq(actual);
 }
 
@@ -40,7 +44,9 @@ pub fn if_label_type_then_else() {
            (else (const_i32 0)))
     };
     let actual = &format!("{:?}", actual);
-    let expected = expect![[r#"[Instr { unfolded_instr: If { label: Some("lab"), block_type: Some(Result(Num(I32))), then_block: [Instr { unfolded_instr: Const { ty: I32, val: 1 }, folded_instrs: [] }], else_block: [Instr { unfolded_instr: Const { ty: I32, val: 0 }, folded_instrs: [] }] }, folded_instrs: [Instr { unfolded_instr: Const { ty: I32, val: 1 }, folded_instrs: [] }] }]"#]];
+    let expected = expect![[
+        r#"[Instr { unfolded_instr: If { label: Some("lab"), block_type: Some(Result(Num(I32))), then_block: [Instr { unfolded_instr: Const { ty: I32, val: 1 }, folded_instrs: [] }], else_block: [Instr { unfolded_instr: Const { ty: I32, val: 0 }, folded_instrs: [] }] }, folded_instrs: [Instr { unfolded_instr: Const { ty: I32, val: 1 }, folded_instrs: [] }] }]"#
+    ]];
     expected.assert_eq(actual);
 }
 
@@ -55,6 +61,8 @@ pub fn if_no_label_type_then_else() {
             (else (const_i32 0)))
     };
     let actual = &format!("{:?}", actual);
-    let expected = expect![[r#"[Instr { unfolded_instr: If { label: None, block_type: Some(Result(Num(I32))), then_block: [Instr { unfolded_instr: I32And, folded_instrs: [Instr { unfolded_instr: Const { ty: I32, val: 1 }, folded_instrs: [] }, Instr { unfolded_instr: I31GetU, folded_instrs: [Instr { unfolded_instr: RefCast { ty: RefType { null: NonNullable, heap_type: Abs(I31) } }, folded_instrs: [Instr { unfolded_instr: LocalGet { name: "n" }, folded_instrs: [] }] }] }] }], else_block: [Instr { unfolded_instr: Const { ty: I32, val: 0 }, folded_instrs: [] }] }, folded_instrs: [Instr { unfolded_instr: RefTest { ty: RefType { null: NonNullable, heap_type: Abs(I31) } }, folded_instrs: [Instr { unfolded_instr: LocalGet { name: "n" }, folded_instrs: [] }] }] }]"#]];
+    let expected = expect![[
+        r#"[Instr { unfolded_instr: If { label: None, block_type: Some(Result(Num(I32))), then_block: [Instr { unfolded_instr: I32And, folded_instrs: [Instr { unfolded_instr: Const { ty: I32, val: 1 }, folded_instrs: [] }, Instr { unfolded_instr: I31GetU, folded_instrs: [Instr { unfolded_instr: RefCast { ty: RefType { null: NonNullable, heap_type: Abs(I31) } }, folded_instrs: [Instr { unfolded_instr: LocalGet { name: "n" }, folded_instrs: [] }] }] }] }], else_block: [Instr { unfolded_instr: Const { ty: I32, val: 0 }, folded_instrs: [] }] }, folded_instrs: [Instr { unfolded_instr: RefTest { ty: RefType { null: NonNullable, heap_type: Abs(I31) } }, folded_instrs: [Instr { unfolded_instr: LocalGet { name: "n" }, folded_instrs: [] }] }] }]"#
+    ]];
     expected.assert_eq(actual);
 }

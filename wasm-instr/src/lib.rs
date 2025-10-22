@@ -11,12 +11,12 @@ use self::proc_macro::TokenStream;
 use heck::ToSnakeCase;
 use proc_macro2::Span;
 use quote::quote;
+use syn::DeriveInput;
+use syn::Error;
 use syn::ext::IdentExt;
 use syn::parse::{Parse, ParseStream};
 use syn::punctuated::Punctuated;
-use syn::DeriveInput;
-use syn::Error;
-use syn::{parse_macro_input, Result, Token};
+use syn::{Result, Token, parse_macro_input};
 
 #[proc_macro_attribute]
 pub fn wasm_instr(_attr: TokenStream, input: TokenStream) -> TokenStream {

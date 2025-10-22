@@ -1044,7 +1044,6 @@ mod tests {
         expected.assert_eq(&actual);
     }
 
-
     #[test]
     fn object_new() {
         let text = "Object.new()";

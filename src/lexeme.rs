@@ -60,8 +60,8 @@ impl Lexeme {
     pub fn is_operator(&self) -> bool {
         use LexemeKind::*;
         match self.kind {
-            In | Equal | PipePipe | AmpersandAmpersand | EqualEqual | Greater | GreaterEqual | Less
-            | LessEqual | Minus | Plus | Slash | Star | BracketLeft | Dot => true,
+            In | Equal | PipePipe | AmpersandAmpersand | EqualEqual | Greater | GreaterEqual
+            | Less | LessEqual | Minus | Plus | Slash | Star | BracketLeft | Dot => true,
             _ => false,
         }
     }
