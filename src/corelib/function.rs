@@ -40,6 +40,7 @@ fn funcs() -> Vec<Func> {
         or(),
         lt(),
         gt(),
+        eq_eq(),
     ]
 }
 
@@ -443,5 +444,20 @@ fn gt() -> Func {
             (call $to_bool
                 (i64_gt_s (call $integer_to_i64 (local_get $a))
                           (call $integer_to_i64 (local_get $b)))))
+    }
+}
+
+/// `==` for Integers only.
+/// Assumes that all inputs are Integers.
+fn eq_eq() -> Func {
+    wat! {
+        (func $eq_eq
+            (param $a (ref eq))
+            (param $b (ref eq))
+            (result (ref eq))
+
+            (call $to_bool
+                (i64_eq (call $integer_to_i64 (local_get $a))
+                        (call $integer_to_i64 (local_get $b)))))
     }
 }

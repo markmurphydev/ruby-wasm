@@ -274,6 +274,10 @@ fn compile_call_expr(ctx: &mut CompileCtx, call_expr: &Call) -> Vec<Instr> {
     } = call_expr;
 
     match name.as_str() {
+        "==" => {
+            assert_eq!(1, args.len());
+            compile_binop(ctx, wat!($eq_eq), receiver, &args[0])
+        }
         "+" => {
             assert_eq!(1, args.len());
             compile_binop(ctx, wat!($add), receiver, &args[0])

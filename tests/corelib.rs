@@ -210,4 +210,33 @@ mod function {
             expected.assert_eq(&actual);
         }
     }
+
+    mod eq_eq {
+        use expect_test::expect;
+        use ruby_wasm::unitype::Unitype;
+        use wat_macro::wat;
+        use crate::run_main_fn_ref_eq;
+
+        #[test]
+        pub fn equal() {
+            let input = wat! {
+                (call $eq_eq (ref_i31 (const_i32 ,(Unitype::from_integer(22).to_i31_bits() as i64)))
+                             (ref_i31 (const_i32 ,(Unitype::from_integer(22).to_i31_bits() as i64))))
+            };
+            let actual = run_main_fn_ref_eq(input);
+            let expected = expect![["true"]];
+            expected.assert_eq(&actual);
+        }
+
+        #[test]
+        pub fn not_equal() {
+            let input = wat! {
+                (call $eq_eq (ref_i31 (const_i32 ,(Unitype::from_integer(22).to_i31_bits() as i64)))
+                             (ref_i31 (const_i32 ,(Unitype::from_integer(44).to_i31_bits() as i64))))
+            };
+            let actual = run_main_fn_ref_eq(input);
+            let expected = expect![["false"]];
+            expected.assert_eq(&actual);
+        }
+    }
 }
