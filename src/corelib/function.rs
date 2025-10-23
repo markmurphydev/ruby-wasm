@@ -470,3 +470,12 @@ fn eq_eq() -> Func {
                         (call $integer_to_i64 (local_get $b)))))
     }
 }
+
+fn call_ruby() -> Func {
+    wat! {
+        (func $call_ruby
+            (export ,("call_ruby".to_string()))
+            (param )
+        )
+    }
+}
