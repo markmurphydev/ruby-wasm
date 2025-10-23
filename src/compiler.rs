@@ -7,8 +7,10 @@ use crate::node::{
 };
 use crate::unitype::Unitype;
 use std::hash::{DefaultHasher, Hash, Hasher};
+use wat_defs::func::{Exported, Func, Param};
 use wat_defs::instr::Instr;
 use wat_defs::module::Module;
+use wat_defs::ty::{NumType, ValType};
 use wat_macro::wat;
 
 pub const RUBY_TOP_LEVEL_FUNCTION_NAME: &str = "__ruby_top_level_function";
@@ -116,6 +118,31 @@ fn compile_local_variable_read_expr(local_variable_read_expr: &LocalVariableRead
 
 fn compile_def_expr(ctx: &mut CompileCtx, def_expr: &Def) -> Vec<Instr> {
     let Def { name, params, body } = def_expr;
+
+    let export_fn_name = [name, "_export"].concat();
+    let export_params = params.iter().map(|p| {
+        Param {
+            name: p.name.to_string(),
+            ty: ValType::Num(NumType::I32),
+        }
+    }).collect();
+    let args = params.iter().map(|p| {
+        wat! { (ref_i31 (local_get ,(p.name.to_string()))) }
+    }).flatten().collect();
+    ctx.module.funcs.push(Func {
+        name: export_fn_name,
+        exported: Exported::Exported(name.to_string()),
+        type_use: None,
+        params: export_params,
+        results: vec![ValType::Ref(wat! { (ref eq) })],
+        locals: vec![],
+        instrs: wat! {
+            (call ,(corelib::method::method_identifier("Object", name))
+                (global_get $main)
+                (array_new_fixed $arr_unitype ,(params.len() as i64)
+                    ,(args)))
+        }
+    });
 
     let method_def =
         corelib::method::make_method_def("Object", name, params, compile_statements(ctx, body));

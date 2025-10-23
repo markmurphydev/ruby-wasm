@@ -1,11 +1,10 @@
+use std::fs;
 use clap::Parser as ParserTrait;
 use clap::Subcommand;
 use ruby_wasm::lexer::Lexer;
 use ruby_wasm::parser::Parser;
-use ruby_wasm::print_wat::module_to_pretty;
-use ruby_wasm::{CompileCtx, compiler};
 use ruby_wasm::{binary, html, run};
-use std::fs;
+use ruby_wasm::{compiler, CompileCtx};
 use wat_defs::module::Module;
 
 #[derive(clap::Parser)]
@@ -62,6 +61,10 @@ enum Command {
         text: String,
     },
 
+    WatToWasm {
+        file: String,
+    },
+
     /// Scratch area to test Rust language.
     /// TODO: Delete
     Scratch,
@@ -109,6 +112,12 @@ fn main() {
             let bytes = binary::module_to_binary(&ctx.module);
             let html = html::make_html_wrapper(&bytes);
             println!("{}", html);
+        }
+
+        Command::WatToWasm { file } => {
+            let wat = fs::read_to_string(file).unwrap();
+            let bytes = wat::parse_str(wat).unwrap();
+            binary::print_bytes(&bytes);
         }
 
         Command::Scratch => {

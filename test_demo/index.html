@@ -9,9 +9,17 @@
 </body>
 <script>
     let compile_run_wasm = () => {
-        WebAssembly.instantiateStreaming(fetch("ruby.wasm")).then(
+        const imports = {
+            arr: {
+                new: () => [],
+                push: (arr, x) => arr.push(x)
+            }
+        }
+        WebAssembly.instantiateStreaming(fetch("test.wasm"), imports).then(
             (obj) => {
-                console.log(obj.instance.exports.get_cells());
+                // obj.instance.exports.__ruby_top_level_function();
+                // console.log(obj.instance.exports.get_cells());
+                console.log(obj.instance.exports.fn(22));
             }
         );
     }

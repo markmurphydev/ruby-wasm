@@ -25,6 +25,10 @@
   (type $alist_str_method (sub final (array (ref $alist_str_method_pair))))
   (type $alist_str_method_pair
     (sub final (struct (field $key (ref $str)) (field $val (ref $method))))))
+(global $cells
+  (mut (ref eq))
+  (ref.i31
+    (i32.const 5)))
 (global $main
   (mut (ref $obj))
   (struct.new $obj
@@ -72,12 +76,18 @@
     (i32.const 101)
     (i32.const 99)
     (i32.const 116)))
-(global $str_sum
+(global $str_get_cells
   (ref $str)
-  (array.new_fixed $str 3
-    (i32.const 115)
-    (i32.const 117)
-    (i32.const 109)))
+  (array.new_fixed $str 9
+    (i32.const 103)
+    (i32.const 101)
+    (i32.const 116)
+    (i32.const 95)
+    (i32.const 99)
+    (i32.const 101)
+    (i32.const 108)
+    (i32.const 108)
+    (i32.const 115)))
 (global $str_new
   (ref $str)
   (array.new_fixed $str 3
@@ -134,40 +144,245 @@
     (global.get $str_Object)
     (array.new_fixed $alist_str_method 2
       (struct.new $alist_str_method_pair
-        (global.get $str_sum)
-        (ref.func $method_Object_sum))
+        (global.get $str_get_cells)
+        (ref.func $method_Object_get_cells))
       (struct.new $alist_str_method_pair
         (global.get $str_class)
         (ref.func $method_Object_class)))))
 (func
+  $get_cells_export
+  (export "get_cells")
+  (result (ref eq))
+  (call $method_Object_get_cells
+    (global.get $main)
+    (array.new_fixed $arr_unitype 0)))
+(func
   $__ruby_top_level_function
   (export "__ruby_top_level_function")
   (result (ref eq))
+  (global.set $cells
+    (array.new_fixed $arr_unitype 10
+      (array.new_fixed $arr_unitype 10
+        (ref.i31
+          (i32.const 1073741824))
+        (ref.i31
+          (i32.const 1073741824))
+        (ref.i31
+          (i32.const 1073741824))
+        (ref.i31
+          (i32.const 1073741824))
+        (ref.i31
+          (i32.const 1073741824))
+        (ref.i31
+          (i32.const 1073741824))
+        (ref.i31
+          (i32.const 1073741824))
+        (ref.i31
+          (i32.const 1073741824))
+        (ref.i31
+          (i32.const 1073741824))
+        (ref.i31
+          (i32.const 1073741824)))
+      (array.new_fixed $arr_unitype 10
+        (ref.i31
+          (i32.const 1073741824))
+        (ref.i31
+          (i32.const 1073741824))
+        (ref.i31
+          (i32.const 1073741824))
+        (ref.i31
+          (i32.const 1073741824))
+        (ref.i31
+          (i32.const 1073741824))
+        (ref.i31
+          (i32.const 1073741824))
+        (ref.i31
+          (i32.const 1073741824))
+        (ref.i31
+          (i32.const 1073741824))
+        (ref.i31
+          (i32.const 1073741824))
+        (ref.i31
+          (i32.const 1073741824)))
+      (array.new_fixed $arr_unitype 10
+        (ref.i31
+          (i32.const 1073741824))
+        (ref.i31
+          (i32.const 1073741824))
+        (ref.i31
+          (i32.const 1073741824))
+        (ref.i31
+          (i32.const 1073741824))
+        (ref.i31
+          (i32.const 1073741824))
+        (ref.i31
+          (i32.const 1073741824))
+        (ref.i31
+          (i32.const 1073741824))
+        (ref.i31
+          (i32.const 1073741824))
+        (ref.i31
+          (i32.const 1073741824))
+        (ref.i31
+          (i32.const 1073741824)))
+      (array.new_fixed $arr_unitype 10
+        (ref.i31
+          (i32.const 1073741824))
+        (ref.i31
+          (i32.const 1073741824))
+        (ref.i31
+          (i32.const 1073741824))
+        (ref.i31
+          (i32.const 1073741824))
+        (ref.i31
+          (i32.const 1073741824))
+        (ref.i31
+          (i32.const 1073741824))
+        (ref.i31
+          (i32.const 1073741824))
+        (ref.i31
+          (i32.const 1073741824))
+        (ref.i31
+          (i32.const 1073741824))
+        (ref.i31
+          (i32.const 1073741824)))
+      (array.new_fixed $arr_unitype 10
+        (ref.i31
+          (i32.const 1073741824))
+        (ref.i31
+          (i32.const 1073741824))
+        (ref.i31
+          (i32.const 1073741824))
+        (ref.i31
+          (i32.const 1073741824))
+        (ref.i31
+          (i32.const 1073741824))
+        (ref.i31
+          (i32.const 1073741824))
+        (ref.i31
+          (i32.const 1073741824))
+        (ref.i31
+          (i32.const 1073741824))
+        (ref.i31
+          (i32.const 1073741824))
+        (ref.i31
+          (i32.const 1073741824)))
+      (array.new_fixed $arr_unitype 10
+        (ref.i31
+          (i32.const 1073741824))
+        (ref.i31
+          (i32.const 1073741824))
+        (ref.i31
+          (i32.const 1073741824))
+        (ref.i31
+          (i32.const 1073741824))
+        (ref.i31
+          (i32.const 1073741824))
+        (ref.i31
+          (i32.const 1073741824))
+        (ref.i31
+          (i32.const 1073741824))
+        (ref.i31
+          (i32.const 1073741824))
+        (ref.i31
+          (i32.const 1073741824))
+        (ref.i31
+          (i32.const 1073741824)))
+      (array.new_fixed $arr_unitype 10
+        (ref.i31
+          (i32.const 1073741824))
+        (ref.i31
+          (i32.const 1073741824))
+        (ref.i31
+          (i32.const 1073741824))
+        (ref.i31
+          (i32.const 1073741824))
+        (ref.i31
+          (i32.const 1073741824))
+        (ref.i31
+          (i32.const 1073741824))
+        (ref.i31
+          (i32.const 1073741824))
+        (ref.i31
+          (i32.const 1073741824))
+        (ref.i31
+          (i32.const 1073741824))
+        (ref.i31
+          (i32.const 1073741824)))
+      (array.new_fixed $arr_unitype 10
+        (ref.i31
+          (i32.const 1073741824))
+        (ref.i31
+          (i32.const 1073741824))
+        (ref.i31
+          (i32.const 1073741824))
+        (ref.i31
+          (i32.const 1073741824))
+        (ref.i31
+          (i32.const 1073741824))
+        (ref.i31
+          (i32.const 1073741824))
+        (ref.i31
+          (i32.const 1073741824))
+        (ref.i31
+          (i32.const 1073741824))
+        (ref.i31
+          (i32.const 1073741824))
+        (ref.i31
+          (i32.const 1073741824)))
+      (array.new_fixed $arr_unitype 10
+        (ref.i31
+          (i32.const 1073741824))
+        (ref.i31
+          (i32.const 1073741824))
+        (ref.i31
+          (i32.const 1073741824))
+        (ref.i31
+          (i32.const 1073741824))
+        (ref.i31
+          (i32.const 1073741824))
+        (ref.i31
+          (i32.const 1073741824))
+        (ref.i31
+          (i32.const 1073741824))
+        (ref.i31
+          (i32.const 1073741824))
+        (ref.i31
+          (i32.const 1073741824))
+        (ref.i31
+          (i32.const 1073741824)))
+      (array.new_fixed $arr_unitype 10
+        (ref.i31
+          (i32.const 1073741824))
+        (ref.i31
+          (i32.const 1073741824))
+        (ref.i31
+          (i32.const 1073741824))
+        (ref.i31
+          (i32.const 1073741824))
+        (ref.i31
+          (i32.const 1073741824))
+        (ref.i31
+          (i32.const 1073741824))
+        (ref.i31
+          (i32.const 1073741824))
+        (ref.i31
+          (i32.const 1073741824))
+        (ref.i31
+          (i32.const 1073741824))
+        (ref.i31
+          (i32.const 1073741824)))))
+  (ref.i31
+    (i32.const 5))
+  (drop)
   (ref.i31
     (i32.const 5)))
 (func
-  $method_Object_sum
+  $method_Object_get_cells
   (type $method)
   (param $self (ref $obj)) (param $args (ref $arr_unitype))
   (result (ref eq))
-  (local $n (ref eq))
-  (local.set $n
-    (array.get $arr_unitype
-      (local.get $args)
-      (i32.const 0)))
-  (if
-    (result (ref eq))
-    (call $from_bool
-      (call $eq_eq
-        (local.get $n)
-        (ref.i31
-          (i32.const 1073741824))))
-    (then
-      (ref.i31
-        (i32.const 1073741824)))
-    (else
-      (ref.i31
-        (i32.const 1073742823)))))
+  (global.get $cells))
 (func
   $method_Class_new
   (type $method)
