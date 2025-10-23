@@ -263,6 +263,7 @@ fn compile_if_expr(ctx: &mut CompileCtx, if_expr: &If) -> Vec<Instr> {
         statements,
         subsequent,
     } = if_expr;
+    let predicate = compile_expr(ctx, predicate);
     let else_branch = match subsequent {
         Subsequent::None => vec![i31_const(Unitype::NIL_BIT_PATTERN)],
         Subsequent::Elsif(if_expr) => compile_if_expr(ctx, &if_expr),
@@ -271,7 +272,7 @@ fn compile_if_expr(ctx: &mut CompileCtx, if_expr: &If) -> Vec<Instr> {
 
     wat! {
         (if (result (ref eq))
-            ,(compile_expr_to_wasm_predicate(ctx, predicate))
+            (call $from_bool ,(predicate))
             (then ,(compile_statements(ctx, statements)))
             (else ,(else_branch))
         )
@@ -283,13 +284,13 @@ fn compile_while_expr(ctx: &mut CompileCtx, while_expr: &While) -> Vec<Instr> {
         predicate,
         statements,
     } = while_expr;
-    let predicate = compile_expr_to_wasm_predicate(ctx, predicate);
+    let predicate = compile_expr(ctx, predicate);
     let stmts = compile_statements(ctx, statements);
 
     wat! {
         (loop $while
             (if (result (ref eq))
-                ,(predicate)
+                (call $from_bool ,(predicate))
                 (then ,(stmts))
                 (else (br $while))
             )
@@ -441,7 +442,7 @@ fn compile_binop(ctx: &mut CompileCtx, name: String, lhs: &Expr, rhs: &Expr) -> 
 fn compile_expr_to_wasm_predicate(ctx: &mut CompileCtx, expr: &Expr) -> Vec<Instr> {
     let expr = compile_expr(ctx, expr);
     wat! {
-        (i32_eqz (call $is_false ,(expr)))
+        (call $from_bool ,(expr))
     }
 }
 

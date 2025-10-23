@@ -388,9 +388,9 @@ fn to_bool() -> Func {
 fn from_bool() -> Func {
     wat! {
         (func $from_bool
-            (param $b (ref i31))
+            (param $b (ref eq))
             (result i32)
-            (ref_eq (local_get $b)
+            (ref_eq (ref_cast (ref i31) (local_get $b))
                     (ref_i31 (const_i32 ,(Unitype::TRUE_BIT_PATTERN as i64)))))
     }
 }

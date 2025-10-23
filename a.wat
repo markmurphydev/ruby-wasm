@@ -72,6 +72,12 @@
     (i32.const 101)
     (i32.const 99)
     (i32.const 116)))
+(global $str_sum
+  (ref $str)
+  (array.new_fixed $str 3
+    (i32.const 115)
+    (i32.const 117)
+    (i32.const 109)))
 (global $str_new
   (ref $str)
   (array.new_fixed $str 3
@@ -126,7 +132,10 @@
     (ref.null $class)
     (ref.null $class)
     (global.get $str_Object)
-    (array.new_fixed $alist_str_method 1
+    (array.new_fixed $alist_str_method 2
+      (struct.new $alist_str_method_pair
+        (global.get $str_sum)
+        (ref.func $method_Object_sum))
       (struct.new $alist_str_method_pair
         (global.get $str_class)
         (ref.func $method_Object_class)))))
@@ -134,16 +143,31 @@
   $__ruby_top_level_function
   (export "__ruby_top_level_function")
   (result (ref eq))
-  (array.new_fixed $arr_unitype 3
-    (array.new_fixed $arr_unitype 1
+  (ref.i31
+    (i32.const 5)))
+(func
+  $method_Object_sum
+  (type $method)
+  (param $self (ref $obj)) (param $args (ref $arr_unitype))
+  (result (ref eq))
+  (local $n (ref eq))
+  (local.set $n
+    (array.get $arr_unitype
+      (local.get $args)
+      (i32.const 0)))
+  (if
+    (result (ref eq))
+    (call $from_bool
+      (call $eq_eq
+        (local.get $n)
+        (ref.i31
+          (i32.const 1073741824))))
+    (then
       (ref.i31
-        (i32.const 1073741825)))
-    (array.new_fixed $arr_unitype 1
+        (i32.const 1073741824)))
+    (else
       (ref.i31
-        (i32.const 1073741826)))
-    (array.new_fixed $arr_unitype 1
-      (ref.i31
-        (i32.const 1073741827)))))
+        (i32.const 1073742823)))))
 (func
   $method_Class_new
   (type $method)
@@ -495,10 +519,11 @@
         (i32.const 1)))))
 (func
   $from_bool
-  (param $b (ref i31))
+  (param $b (ref eq))
   (result i32)
   (ref.eq
-    (local.get $b)
+    (ref.cast (ref i31)
+      (local.get $b))
     (ref.i31
       (i32.const 3))))
 (func
