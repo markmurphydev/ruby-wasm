@@ -807,7 +807,7 @@ fn is_identifier_start(c: char) -> bool {
 }
 
 fn is_identifier_char(c: char) -> bool {
-    c.is_alphanumeric() || c == '?'
+    c.is_alphanumeric() || c == '?' || c == '_'
 }
 
 /// Peekable iterator over `(CharIdx, char)`

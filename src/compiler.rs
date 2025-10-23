@@ -355,7 +355,7 @@ fn compile_call_expr(ctx: &mut CompileCtx, call_expr: &Call) -> Vec<Instr> {
             let name = corelib::global::string_identifier(name);
             let mut receiver = match receiver {
                 Some(receiver) => compile_expr(ctx, receiver),
-                None => wat! { (global_get $main) }
+                None => wat! { (global_get $main) },
             };
 
             let mut message = wat! {

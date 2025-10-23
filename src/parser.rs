@@ -72,6 +72,8 @@ impl<'text> Parser<'text> {
             ))
         );
 
+        self.skip_newlines();
+
         let lexeme = self.lexer.peek();
         let lhs = match lexeme.kind {
             // Literals
@@ -306,6 +308,7 @@ impl<'text> Parser<'text> {
         let mut vals = vec![];
         loop {
             vals.push(self.expr().unwrap());
+            self.skip_newlines();
             match self.lexer.next().kind {
                 LK::Comma => {}
                 LK::BracketRight => break,

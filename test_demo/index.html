@@ -11,8 +11,7 @@
     let compile_run_wasm = () => {
         WebAssembly.instantiateStreaming(fetch("ruby.wasm")).then(
             (obj) => {
-                console.log(obj.instance.exports.add(1, 2));
-                console.log(obj.instance.exports.add(3, 4));
+                console.log(obj.instance.exports.get_cells());
             }
         );
     }

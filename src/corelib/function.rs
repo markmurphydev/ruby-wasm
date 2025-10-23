@@ -1,8 +1,8 @@
 use crate::CompileCtx;
 use crate::corelib::alist::AListTypeDef;
-use crate::corelib::{class, method};
 use crate::corelib::class::Class;
 use crate::corelib::helpers::i64_neg;
+use crate::corelib::{class, method};
 use crate::unitype::Unitype;
 use wat_defs::func::Func;
 use wat_defs::instr::Instr;
