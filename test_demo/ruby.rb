@@ -14,3 +14,12 @@ $cells = [
 def get_cells()
   $cells
 end
+
+def toggle_cell(row, col)
+  if $cells[row][col] == 1
+    res = 0
+  else
+    res = 1
+  end
+  $cells[row][col] = res
+end

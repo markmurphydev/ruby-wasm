@@ -14,6 +14,16 @@ struct Cli {
     command: Command,
 }
 
+#[derive(Debug, clap::Args)]
+#[group(required = true, multiple = false)]
+pub struct TextOrFile {
+    #[clap(short, long)]
+    text: Option<String>,
+    #[clap(short, long)]
+    file: Option<String>,
+}
+
+
 #[derive(Subcommand)]
 enum Command {
     /// Lexes the given program, returning a list of its lexemes.
@@ -36,8 +46,8 @@ enum Command {
 
     /// Compiles the given program, printing a `.wat` text representation
     Wat {
-        /// Text of program to compile
-        text: String,
+        #[clap(flatten)]
+        group: TextOrFile,
     },
 
     /// Compiles the given program, printing a `.wasm` binary representation
@@ -92,9 +102,19 @@ fn main() {
             println!("{:?}", ctx.module);
         }
 
-        Command::Wat { text } => {
-            let wat = run::compile_ctx_to_wat(&run::text_to_compile_ctx(text));
-            println!("{}", wat);
+        Command::Wat { group } => {
+            let TextOrFile { text, file } = group;
+            match (text, file) {
+                (Some(text), None) => {
+                    let wat = run::compile_ctx_to_wat(&run::text_to_compile_ctx(text));
+                    println!("{}", wat);
+                }
+                (None, Some(file)) => {
+                    let wat = run::compile_ctx_to_wat(&run::text_to_compile_ctx(fs::read_to_string(file).unwrap()));
+                    println!("{}", wat);
+                }
+                _ => unreachable!("Clap should prevent this.")
+            }
         }
 
         Command::Wasm { text } => {

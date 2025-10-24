@@ -51,6 +51,19 @@
       (global.get $main)
       (array.new_fixed $arr_unitype 0))))
 (func
+  $toggle_cell_export
+  (export "toggle_cell")
+  (param $row i32) (param $col i32)
+  (result (ref null extern))
+  (call $unitype_to_js
+    (call $method_Object_toggle_cell
+      (global.get $main)
+      (array.new_fixed $arr_unitype 2
+        (ref.i31
+          (local.get $row))
+        (ref.i31
+          (local.get $col))))))
+(func
   $__ruby_top_level_function
   (export "__ruby_top_level_function")
   (result (ref eq))
@@ -270,6 +283,9 @@
     (i32.const 5))
   (drop)
   (ref.i31
+    (i32.const 5))
+  (drop)
+  (ref.i31
     (i32.const 5)))
 (func
   $method_Object_get_cells
@@ -277,6 +293,60 @@
   (param $self (ref $obj)) (param $args (ref $arr_unitype))
   (result (ref eq))
   (global.get $cells))
+(func
+  $method_Object_toggle_cell
+  (type $method)
+  (param $self (ref $obj)) (param $args (ref $arr_unitype))
+  (result (ref eq))
+  (local $row (ref eq)) (local $col (ref eq))
+  (local.set $row
+    (array.get $arr_unitype
+      (local.get $args)
+      (i32.const 0)))
+  (local.set $col
+    (array.get $arr_unitype
+      (local.get $args)
+      (i32.const 1)))
+  (if
+    (result (ref eq))
+    (call $from_bool
+      (call $eq_eq
+        (array.get $arr_unitype
+          (ref.cast (ref $arr_unitype)
+            (array.get $arr_unitype
+              (ref.cast (ref $arr_unitype)
+                (global.get $cells))
+              (i32.wrap_i64
+                (call $integer_to_i64
+                  (local.get $row)))))
+          (i32.wrap_i64
+            (call $integer_to_i64
+              (local.get $col))))
+        (ref.i31
+          (i32.const 1073741825))))
+    (then
+      (local.set $res
+        (ref.i31
+          (i32.const 1073741824))))
+    (else
+      (local.set $res
+        (ref.i31
+          (i32.const 1073741825)))))
+  (drop)
+  (array.set $arr_unitype
+    (ref.cast (ref $arr_unitype)
+      (array.get $arr_unitype
+        (ref.cast (ref $arr_unitype)
+          (global.get $cells))
+        (i32.wrap_i64
+          (call $integer_to_i64
+            (local.get $row)))))
+    (i32.wrap_i64
+      (call $integer_to_i64
+        (local.get $col)))
+    (local.get $res))
+  (ref.i31
+    (i32.const 5)))
 (func
   $method_Class_new
   (type $method)
@@ -847,6 +917,20 @@
     (i32.const 108)
     (i32.const 108)
     (i32.const 115)))
+(global $str_toggle_cell
+  (ref $str)
+  (array.new_fixed $str 11
+    (i32.const 116)
+    (i32.const 111)
+    (i32.const 103)
+    (i32.const 103)
+    (i32.const 108)
+    (i32.const 101)
+    (i32.const 95)
+    (i32.const 99)
+    (i32.const 101)
+    (i32.const 108)
+    (i32.const 108)))
 (global $str_new
   (ref $str)
   (array.new_fixed $str 3
@@ -901,10 +985,13 @@
     (ref.null $class)
     (ref.null $class)
     (global.get $str_Object)
-    (array.new_fixed $alist_str_method 2
+    (array.new_fixed $alist_str_method 3
       (struct.new $alist_str_method_pair
         (global.get $str_get_cells)
         (ref.func $method_Object_get_cells))
+      (struct.new $alist_str_method_pair
+        (global.get $str_toggle_cell)
+        (ref.func $method_Object_toggle_cell))
       (struct.new $alist_str_method_pair
         (global.get $str_class)
         (ref.func $method_Object_class)))))

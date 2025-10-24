@@ -7,7 +7,7 @@ use crate::node::{
 };
 use crate::unitype::Unitype;
 use std::hash::{DefaultHasher, Hash, Hasher};
-use wat_defs::func::{Exported, Func, Imported, Param};
+use wat_defs::func::{Exported, Func, Imported, Local, Param};
 use wat_defs::instr::Instr;
 use wat_defs::module::Module;
 use wat_defs::ty::{NumType, ValType};
@@ -20,6 +20,8 @@ pub struct CompileCtx {
     // Uh, additional objects that need to be considered when generating corelib...
     pub methods: Vec<Method>,
     pub classes: Vec<Class>,
+    /// Locals defined in the middle of the method
+    pub method_locals: Vec<Local>,
 }
 
 impl CompileCtx {
@@ -28,6 +30,7 @@ impl CompileCtx {
             module,
             methods: vec![],
             classes: vec![],
+            method_locals: vec![],
         }
     }
 }

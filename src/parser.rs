@@ -227,6 +227,7 @@ impl<'text> Parser<'text> {
                 if l_bp < min_bp {
                     return N::Expr::LocalVariableRead(Box::new(N::LocalVariableRead { name }));
                 }
+                self.lexer.next();
                 let rhs = self.expr_bp(r_bp).unwrap();
                 N::Expr::LocalVariableWrite(Box::new(N::LocalVariableWrite { name, val: rhs }))
             }
