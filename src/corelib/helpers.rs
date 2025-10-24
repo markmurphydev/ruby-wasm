@@ -1,8 +1,30 @@
 use crate::corelib::alist::AListTypeDef;
 use wat_defs::instr::Instr;
+use wat_defs::ty::ArrayType;
 use wat_macro::wat;
 
-pub fn helper_for_in(alist_type_def: AListTypeDef, body: Vec<Instr>) -> Vec<Instr> {
+/// Requires locals $arr, $idx, $val.
+/// Binds arr values to $val.
+pub fn for_in_arr(arr_name: String, arr_type_name: String, body: Vec<Instr>) -> Vec<Instr> {
+    wat! {
+        (local_set $idx (const_i32 0))
+        (block $exit_for
+            (loop $for
+                (if (i32_eq (local_get $idx)
+                            (array_len (local_get ,(arr_name.clone()))))
+                    (then (br $exit_for)))
+                (local_set $val
+                    (array_get ,(arr_type_name)
+                        (local_get ,(arr_name))
+                        (local_get $idx)))
+                (block $body ,(body))
+                (local_set $idx (i32_add (local_get $idx)
+                                       (const_i32 1)))
+                (br $for)))
+    }
+}
+
+pub fn for_in_alist(alist_type_def: AListTypeDef, body: Vec<Instr>) -> Vec<Instr> {
     let alist_identifier = alist_type_def.alist_type_identifier();
     let pair_identifier = alist_type_def.alist_pair_type_identifier();
 

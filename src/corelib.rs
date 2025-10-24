@@ -9,9 +9,9 @@ pub mod class;
 mod function;
 pub mod global;
 pub mod helpers;
+mod imports;
 pub mod method;
 pub mod type_def;
-mod imports;
 
 use crate::CompileCtx;
 

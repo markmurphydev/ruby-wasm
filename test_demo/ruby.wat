@@ -32,6 +32,17 @@
   (result (ref null extern))
   )
 (func
+  $js_arr_new
+  (import "arr" "new")
+  (result (ref null extern))
+  )
+(func
+  $js_arr_push
+  (import "arr" "push")
+  (param $arr (ref null extern)) (param $val (ref null extern))
+  
+  )
+(func
   $get_cells_export
   (export "get_cells")
   (result (ref null extern))
@@ -459,6 +470,18 @@
     (else
       (i32.const 0))))
 (func
+  $is_boxnum
+  (param $n (ref eq))
+  (result i32)
+  (if
+    (result i32)
+    (ref.test (ref $boxnum)
+      (local.get $n))
+    (then
+      (i32.const 1))
+    (else
+      (i32.const 0))))
+(func
   $sign_extend
   (param $val i32) (param $bit_width i32)
   (result i32)
@@ -690,6 +713,46 @@
       (call $integer_to_i64
         (local.get $b)))))
 (func
+  $arr_to_js
+  (param $arr (ref $arr_unitype))
+  (result (ref null extern))
+  (local $arr_js (ref null extern))
+  (local $idx i32)
+  (local $val (ref eq))
+  (local $val_js (ref null extern))
+  (local.set $arr_js
+    (call $js_arr_new))
+  (local.set $idx
+    (i32.const 0))
+  (block $exit_for
+    (loop $for
+      (if
+        (i32.eq
+          (local.get $idx)
+          (array.len
+            (local.get $arr)))
+        (then
+          (br $exit_for))
+        (else
+          ))
+      (local.set $val
+        (array.get $arr_unitype
+          (local.get $arr)
+          (local.get $idx)))
+      (block $body
+        (local.set $val_js
+          (call $unitype_to_js
+            (local.get $val)))
+        (call $js_arr_push
+          (local.get $arr_js)
+          (local.get $val_js)))
+      (local.set $idx
+        (i32.add
+          (local.get $idx)
+          (i32.const 1)))
+      (br $for)))
+  (local.get $arr_js))
+(func
   $unitype_to_js
   (param $x (ref eq))
   (result (ref null extern))
@@ -702,9 +765,25 @@
         (call $integer_to_i64
           (local.get $x))))
     (else
-      (call $js_i64_to_ref
-        (call $integer_to_i64
-          (local.get $x))))))
+      (if
+        (result (ref null extern))
+        (ref.test (ref $boxnum)
+          (local.get $x))
+        (then
+          (call $js_i64_to_ref
+            (call $integer_to_i64
+              (local.get $x))))
+        (else
+          (if
+            (result (ref null extern))
+            (ref.test (ref $arr_unitype)
+              (local.get $x))
+            (then
+              (call $arr_to_js
+                (ref.cast (ref $arr_unitype)
+                  (local.get $x))))
+            (else
+              (unreachable))))))))
 (global $cells
   (mut (ref eq))
   (ref.i31

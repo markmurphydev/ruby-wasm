@@ -158,7 +158,9 @@ fn function_to_doc(func: &Func) -> Doc {
 
     let imported = match imported {
         Imported::NotImported => nil(),
-        Imported::Imported(module, name) => line().append(format!("(import \"{}\" \"{}\")", module, name)),
+        Imported::Imported(module, name) => {
+            line().append(format!("(import \"{}\" \"{}\")", module, name))
+        }
     };
 
     let exported = match exported {

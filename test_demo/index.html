@@ -10,18 +10,18 @@
 <script>
     let compile_run_wasm = () => {
         const imports = {
-            // arr: {
-            //     new: () => [],
-            //     push: (arr, x) => arr.push(x)
-            // },
-            i64: { toRef: (n) => n }
+            i64: { toRef: (n) => n },
+            arr: {
+                new: () => [],
+                push: (arr, x) => arr.push(x)
+            },
         }
-        WebAssembly.instantiateStreaming(fetch("test.wasm"), imports).then(
+        WebAssembly.instantiateStreaming(fetch("ruby.wasm"), imports).then(
             (obj) => {
-                // obj.instance.exports.__ruby_top_level_function();
-                // console.log(obj.instance.exports.get_cells());
-                const a = obj.instance.exports.fn(22)
-                console.log(a);
+                obj.instance.exports.__ruby_top_level_function();
+                console.log(obj.instance.exports.get_cells());
+                // const a = obj.instance.exports.fn(22n)
+                // console.log(a);
             }
         );
     }

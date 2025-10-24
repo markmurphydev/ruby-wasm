@@ -1,9 +1,9 @@
-use crate::CompileCtx;
 use crate::corelib::alist::AListTypeDef;
 use crate::corelib::class::Class;
 use crate::corelib::helpers::i64_neg;
 use crate::corelib::{class, method};
 use crate::unitype::Unitype;
+use crate::{CompileCtx, corelib};
 use wat_defs::func::Func;
 use wat_defs::instr::Instr;
 use wat_macro::wat;
@@ -22,6 +22,7 @@ fn funcs() -> Vec<Func> {
         alist_str_method_get(),
         call(),
         is_fixnum(),
+        is_boxnum(),
         sign_extend(),
         sign_extend_fixnum(),
         fixnum_to_i64(),
@@ -41,6 +42,7 @@ fn funcs() -> Vec<Func> {
         lt(),
         gt(),
         eq_eq(),
+        arr_to_js(),
         unitype_to_js(),
     ]
 }
@@ -208,6 +210,19 @@ fn is_fixnum() -> Func {
                 (ref_test (ref i31) (local_get $n))
                 (then (i32_and (const_i32 ,(Unitype::FIXNUM_MARKER as i64))
                                (i31_get_u (ref_cast (ref i31) (local_get $n)))))
+                (else (const_i32 0))))
+    }
+}
+
+fn is_boxnum() -> Func {
+    wat! {
+        (func $is_boxnum
+            (param $n (ref eq))
+            (result i32)
+
+            (if (result i32)
+                (ref_test (ref $boxnum) (local_get $n))
+                (then (const_i32 1))
                 (else (const_i32 0))))
     }
 }
@@ -472,6 +487,36 @@ fn eq_eq() -> Func {
     }
 }
 
+fn arr_to_js() -> Func {
+    let for_loop = corelib::helpers::for_in_arr(
+        "arr".to_string(),
+        "arr_unitype".to_string(),
+        wat! {
+            (local_set $val_js
+                (call $unitype_to_js (local_get $val)))
+            (call $js_arr_push (local_get $arr_js)
+                               (local_get $val_js))
+        },
+    );
+    let wat_instrs = [
+        wat! { (local_set $arr_js (call $js_arr_new)) },
+        for_loop,
+        wat! { (local_get $arr_js) },
+    ]
+    .concat();
+    wat! {
+        (func $arr_to_js
+            (param $arr (ref $arr_unitype))
+            (result (ref null extern))
+            (local $arr_js (ref null extern))
+            (local $idx i32)
+            (local $val (ref eq))
+            (local $val_js (ref null extern))
+
+            ,(wat_instrs)
+        )
+    }
+}
 
 fn unitype_to_js() -> Func {
     wat! {
@@ -484,6 +529,16 @@ fn unitype_to_js() -> Func {
                     (call $js_i64_to_ref
                         (call $integer_to_i64 (local_get $x))))
                 (else
-                    (call $js_i64_to_ref (call $integer_to_i64 (local_get $x))))))
+                    (if (result (ref null extern))
+                        (ref_test (ref $boxnum) (local_get $x))
+                        (then
+                            (call $js_i64_to_ref
+                                (call $integer_to_i64 (local_get $x))))
+                        (else
+                            (if (result (ref null extern))
+                                (ref_test (ref $arr_unitype) (local_get $x))
+                                (then
+                                    (call $arr_to_js (ref_cast (ref $arr_unitype) (local_get $x))))
+                                (else (unreachable))))))))
     }
 }

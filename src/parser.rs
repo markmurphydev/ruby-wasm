@@ -972,4 +972,102 @@ mod tests {
             expected.assert_eq(&actual);
         }
     }
+
+    mod demo {
+        use expect_test::expect;
+        use crate::parser::tests::parse_to_sexpr;
+
+        #[test]
+        pub fn cells() {
+            let text = "
+                $cells = [
+                    [0, 0, 0, 0, 0, 0, 0, 0, 0, 0],
+                    [0, 0, 0, 0, 0, 0, 0, 0, 0, 0],
+                    [0, 0, 0, 0, 0, 0, 0, 0, 0, 0],
+                    [0, 0, 0, 0, 0, 0, 0, 0, 0, 0],
+                    [0, 0, 0, 0, 0, 0, 0, 0, 0, 0],
+                    [0, 0, 0, 0, 0, 0, 0, 0, 0, 0],
+                    [0, 0, 0, 0, 0, 0, 0, 0, 0, 0],
+                    [0, 0, 0, 0, 0, 0, 0, 0, 0, 0],
+                    [0, 0, 0, 0, 0, 0, 0, 0, 0, 0],
+                    [0, 0, 0, 0, 0, 0, 0, 0, 0, 0]
+                ]
+
+                def get_cells()
+                    $cells
+                end
+            ";
+            let expected = expect![[r#"
+                ((statements
+                  (body
+                   (GlobalVariableWrite (name . "cells")
+                			(expr Array
+                			      (vals
+                			       (Array
+                				(vals (Integer . 0) (Integer . 0)
+                				      (Integer . 0) (Integer . 0)
+                				      (Integer . 0) (Integer . 0)
+                				      (Integer . 0) (Integer . 0)
+                				      (Integer . 0) (Integer . 0)))
+                			       (Array
+                				(vals (Integer . 0) (Integer . 0)
+                				      (Integer . 0) (Integer . 0)
+                				      (Integer . 0) (Integer . 0)
+                				      (Integer . 0) (Integer . 0)
+                				      (Integer . 0) (Integer . 0)))
+                			       (Array
+                				(vals (Integer . 0) (Integer . 0)
+                				      (Integer . 0) (Integer . 0)
+                				      (Integer . 0) (Integer . 0)
+                				      (Integer . 0) (Integer . 0)
+                				      (Integer . 0) (Integer . 0)))
+                			       (Array
+                				(vals (Integer . 0) (Integer . 0)
+                				      (Integer . 0) (Integer . 0)
+                				      (Integer . 0) (Integer . 0)
+                				      (Integer . 0) (Integer . 0)
+                				      (Integer . 0) (Integer . 0)))
+                			       (Array
+                				(vals (Integer . 0) (Integer . 0)
+                				      (Integer . 0) (Integer . 0)
+                				      (Integer . 0) (Integer . 0)
+                				      (Integer . 0) (Integer . 0)
+                				      (Integer . 0) (Integer . 0)))
+                			       (Array
+                				(vals (Integer . 0) (Integer . 0)
+                				      (Integer . 0) (Integer . 0)
+                				      (Integer . 0) (Integer . 0)
+                				      (Integer . 0) (Integer . 0)
+                				      (Integer . 0) (Integer . 0)))
+                			       (Array
+                				(vals (Integer . 0) (Integer . 0)
+                				      (Integer . 0) (Integer . 0)
+                				      (Integer . 0) (Integer . 0)
+                				      (Integer . 0) (Integer . 0)
+                				      (Integer . 0) (Integer . 0)))
+                			       (Array
+                				(vals (Integer . 0) (Integer . 0)
+                				      (Integer . 0) (Integer . 0)
+                				      (Integer . 0) (Integer . 0)
+                				      (Integer . 0) (Integer . 0)
+                				      (Integer . 0) (Integer . 0)))
+                			       (Array
+                				(vals (Integer . 0) (Integer . 0)
+                				      (Integer . 0) (Integer . 0)
+                				      (Integer . 0) (Integer . 0)
+                				      (Integer . 0) (Integer . 0)
+                				      (Integer . 0) (Integer . 0)))
+                			       (Array
+                				(vals (Integer . 0) (Integer . 0)
+                				      (Integer . 0) (Integer . 0)
+                				      (Integer . 0) (Integer . 0)
+                				      (Integer . 0) (Integer . 0)
+                				      (Integer . 0) (Integer . 0))))))
+                   (Def (name . "get_cells") (params)
+                	(body (body (GlobalVariableRead (name . "cells"))))))))
+            "#]];
+            let actual = parse_to_sexpr(text);
+            expected.assert_eq(&actual);
+        }
+    }
 }

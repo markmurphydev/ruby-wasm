@@ -120,15 +120,20 @@ fn compile_def_expr(ctx: &mut CompileCtx, def_expr: &Def) -> Vec<Instr> {
     let Def { name, params, body } = def_expr;
 
     let export_fn_name = [name, "_export"].concat();
-    let export_params = params.iter().map(|p| {
-        Param {
+    let export_params = params
+        .iter()
+        .map(|p| Param {
             name: p.name.to_string(),
             ty: ValType::Num(NumType::I32),
-        }
-    }).collect();
-    let args = params.iter().map(|p| {
-        wat! { (ref_i31 (local_get ,(p.name.to_string()))) }
-    }).flatten().collect();
+        })
+        .collect();
+    let args = params
+        .iter()
+        .map(|p| {
+            wat! { (ref_i31 (local_get ,(p.name.to_string()))) }
+        })
+        .flatten()
+        .collect();
     ctx.module.funcs.push(Func {
         name: export_fn_name,
         imported: Imported::NotImported,
@@ -143,7 +148,7 @@ fn compile_def_expr(ctx: &mut CompileCtx, def_expr: &Def) -> Vec<Instr> {
                     (global_get $main)
                     (array_new_fixed $arr_unitype ,(params.len() as i64)
                         ,(args))))
-        }
+        },
     });
 
     let method_def =

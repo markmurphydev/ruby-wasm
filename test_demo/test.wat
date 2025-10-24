@@ -28,6 +28,18 @@
 
 
 (func
+  $js_arr_new
+  (import "arr" "new")
+  (result (ref null extern))
+  )
+
+(func
+  $js_arr_push
+  (import "arr" "push")
+  (param $arr (ref null extern)) (param $val (ref null extern))
+  )
+
+(func
   $js_i64_to_ref
   (import "i64" "toRef")
   (param $x i64)
@@ -136,6 +148,46 @@
       (i32.const 0))))
 
 (func
+  $arr_to_js
+  (param $arr (ref $arr_unitype))
+  (result (ref null extern))
+  (local $arr_js (ref null extern))
+  (local $idx i32)
+  (local $val (ref eq))
+  (local $val_js (ref null extern))
+  (local.set $arr_js
+    (call $js_arr_new))
+  (local.set $idx
+    (i32.const 0))
+  (block $exit_for
+    (loop $for
+      (if
+        (i32.eq
+          (local.get $idx)
+          (array.len
+            (local.get $arr)))
+        (then (br $exit_for))
+        (else
+          ))
+      (local.set $val
+        (array.get $arr_unitype
+          (local.get $arr)
+          (local.get $idx)))
+      (block $body
+        (local.set $val_js
+          (call $unitype_to_js
+            (local.get $val)))
+        (call $js_arr_push
+          (local.get $arr_js)
+          (local.get $val_js)))
+      (local.set $idx
+        (i32.add
+          (local.get $idx)
+          (i32.const 1)))
+      (br $for)))
+  (local.get $arr_js))
+
+(func
   $unitype_to_js
   (param $x (ref eq))
   (result (ref null extern))
@@ -148,9 +200,46 @@
         (call $integer_to_i64
           (local.get $x))))
     (else
-      (call $js_i64_to_ref
-        (call $integer_to_i64
-          (local.get $x))))))
+      (if
+        (result (ref null extern))
+        (ref.test (ref $boxnum)
+          (local.get $x))
+        (then
+          (call $js_i64_to_ref
+            (call $integer_to_i64
+              (local.get $x))))
+        (else
+          (if
+            (result (ref null extern))
+            (ref.test (ref $arr_unitype)
+              (local.get $x))
+            (then
+              (call $arr_to_js
+                (ref.cast (ref $arr_unitype)
+                  (local.get $x))))
+            (else
+              (unreachable))))))))
+
+(func
+  $is_boxnum
+  (param $n (ref eq))
+  (result i32)
+  (if
+    (result i32)
+    (ref.test (ref $boxnum)
+      (local.get $n))
+    (then
+      (i32.const 1))
+    (else
+      (i32.const 0))))
+
+(func
+  $i64_to_boxnum
+  (param $n i64)
+  (result (ref $boxnum))
+  (struct.new $boxnum
+    (local.get $n)))
+
 (func
   $i32_to_fixnum
   (param $n i32)
@@ -162,6 +251,8 @@
 
 (func $fn
   (export "fn")
-  (param $n i32)
+  (param $n i64)
   (result (ref null extern))
-  (call $unitype_to_js (call $i32_to_fixnum (local.get $n))))
+  (call $unitype_to_js
+      (array.new_fixed $arr_unitype 1
+        (call $i32_to_fixnum (i32.const 22)))))
