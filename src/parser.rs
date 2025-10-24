@@ -1106,5 +1106,258 @@ mod tests {
             let actual = parse_to_sexpr(text);
             expected.assert_eq(&actual);
         }
+
+        #[test]
+        pub fn count_neighbors() {
+            let text = "
+def count_neighbors(row, col)
+  count = 0
+  for neighbor in [
+    [row-1, col-1], [row-1, col], [row-1, col+1],
+    [row, col-1], [row, col+1],
+    [row+1, col-1], [row+1, col], [row+1, col+1]
+  ] do
+    neighbor_row = neighbor[0]
+    neighbor_col = neighbor[1]
+    row_lo = neighbor_row == 0 || neighbor_row > 0
+    col_lo = neighbor_col == 0 || neighbor_col > 0
+    row_hi = neighbor_row < 9 || neighbor_row == 9
+    col_lo = neighbor_col < 0 || neighbor_col == 0
+    in_bounds = row_lo && col_lo && row_hi && col_hi
+    alive = in_bounds && $cells[neighbor_row][neighbor_col] == 1
+    if alive
+      count = count + 1
+    end
+  end
+  count
+end
+            ";
+            let expected = expect![[r#"
+                ((statements
+                  (body
+                   (Def (name . "count_neighbors")
+                	(params ((name . "row")) ((name . "col")))
+                	(body
+                	 (body (LocalVariableWrite (name . "count") (val Integer . 0))
+                	       (For (idx . "neighbor")
+                		    (collection Array
+                				(vals
+                				 (Array
+                				  (vals
+                				   (Call
+                				    (receiver
+                				     (LocalVariableRead (name . "row")))
+                				    (name . "-") (args (Integer . 1)))
+                				   (Call
+                				    (receiver
+                				     (LocalVariableRead (name . "col")))
+                				    (name . "-") (args (Integer . 1)))))
+                				 (Array
+                				  (vals
+                				   (Call
+                				    (receiver
+                				     (LocalVariableRead (name . "row")))
+                				    (name . "-") (args (Integer . 1)))
+                				   (LocalVariableRead (name . "col"))))
+                				 (Array
+                				  (vals
+                				   (Call
+                				    (receiver
+                				     (LocalVariableRead (name . "row")))
+                				    (name . "-") (args (Integer . 1)))
+                				   (Call
+                				    (receiver
+                				     (LocalVariableRead (name . "col")))
+                				    (name . "+") (args (Integer . 1)))))
+                				 (Array
+                				  (vals
+                				   (LocalVariableRead (name . "row"))
+                				   (Call
+                				    (receiver
+                				     (LocalVariableRead (name . "col")))
+                				    (name . "-") (args (Integer . 1)))))
+                				 (Array
+                				  (vals
+                				   (LocalVariableRead (name . "row"))
+                				   (Call
+                				    (receiver
+                				     (LocalVariableRead (name . "col")))
+                				    (name . "+") (args (Integer . 1)))))
+                				 (Array
+                				  (vals
+                				   (Call
+                				    (receiver
+                				     (LocalVariableRead (name . "row")))
+                				    (name . "+") (args (Integer . 1)))
+                				   (Call
+                				    (receiver
+                				     (LocalVariableRead (name . "col")))
+                				    (name . "-") (args (Integer . 1)))))
+                				 (Array
+                				  (vals
+                				   (Call
+                				    (receiver
+                				     (LocalVariableRead (name . "row")))
+                				    (name . "+") (args (Integer . 1)))
+                				   (LocalVariableRead (name . "col"))))
+                				 (Array
+                				  (vals
+                				   (Call
+                				    (receiver
+                				     (LocalVariableRead (name . "row")))
+                				    (name . "+") (args (Integer . 1)))
+                				   (Call
+                				    (receiver
+                				     (LocalVariableRead (name . "col")))
+                				    (name . "+") (args (Integer . 1)))))))
+                		    (stmts
+                		     (body
+                		      (LocalVariableWrite (name . "neighbor_row")
+                					  (val Call
+                					       (receiver
+                						(LocalVariableRead
+                						 (name . "neighbor")))
+                					       (name . "[]")
+                					       (args (Integer . 0))))
+                		      (LocalVariableWrite (name . "neighbor_col")
+                					  (val Call
+                					       (receiver
+                						(LocalVariableRead
+                						 (name . "neighbor")))
+                					       (name . "[]")
+                					       (args (Integer . 1))))
+                		      (LocalVariableWrite (name . "row_lo")
+                					  (val Or
+                					       (lhs Call
+                						    (receiver
+                						     (LocalVariableRead
+                						      (name
+                						       . "neighbor_row")))
+                						    (name . "==")
+                						    (args
+                						     (Integer . 0)))
+                					       (rhs Call
+                						    (receiver
+                						     (LocalVariableRead
+                						      (name
+                						       . "neighbor_row")))
+                						    (name . ">")
+                						    (args
+                						     (Integer . 0)))))
+                		      (LocalVariableWrite (name . "col_lo")
+                					  (val Or
+                					       (lhs Call
+                						    (receiver
+                						     (LocalVariableRead
+                						      (name
+                						       . "neighbor_col")))
+                						    (name . "==")
+                						    (args
+                						     (Integer . 0)))
+                					       (rhs Call
+                						    (receiver
+                						     (LocalVariableRead
+                						      (name
+                						       . "neighbor_col")))
+                						    (name . ">")
+                						    (args
+                						     (Integer . 0)))))
+                		      (LocalVariableWrite (name . "row_hi")
+                					  (val Or
+                					       (lhs Call
+                						    (receiver
+                						     (LocalVariableRead
+                						      (name
+                						       . "neighbor_row")))
+                						    (name . "<")
+                						    (args
+                						     (Integer . 9)))
+                					       (rhs Call
+                						    (receiver
+                						     (LocalVariableRead
+                						      (name
+                						       . "neighbor_row")))
+                						    (name . "==")
+                						    (args
+                						     (Integer . 9)))))
+                		      (LocalVariableWrite (name . "col_lo")
+                					  (val Or
+                					       (lhs Call
+                						    (receiver
+                						     (LocalVariableRead
+                						      (name
+                						       . "neighbor_col")))
+                						    (name . "<")
+                						    (args
+                						     (Integer . 0)))
+                					       (rhs Call
+                						    (receiver
+                						     (LocalVariableRead
+                						      (name
+                						       . "neighbor_col")))
+                						    (name . "==")
+                						    (args
+                						     (Integer . 0)))))
+                		      (LocalVariableWrite (name . "in_bounds")
+                					  (val And
+                					       (lhs And
+                						    (lhs And
+                							 (lhs
+                							  LocalVariableRead
+                							  (name
+                							   . "row_lo"))
+                							 (rhs
+                							  LocalVariableRead
+                							  (name
+                							   . "col_lo")))
+                						    (rhs
+                						     LocalVariableRead
+                						     (name . "row_hi")))
+                					       (rhs LocalVariableRead
+                						    (name . "col_hi"))))
+                		      (LocalVariableWrite (name . "alive")
+                					  (val And
+                					       (lhs LocalVariableRead
+                						    (name
+                						     . "in_bounds"))
+                					       (rhs Call
+                						    (receiver
+                						     (Call
+                						      (receiver
+                						       (Call
+                							(receiver
+                							 (GlobalVariableRead
+                							  (name
+                							   . "cells")))
+                							(name . "[]")
+                							(args
+                							 (LocalVariableRead
+                							  (name
+                							   . "neighbor_row")))))
+                						      (name . "[]")
+                						      (args
+                						       (LocalVariableRead
+                							(name
+                							 . "neighbor_col")))))
+                						    (name . "==")
+                						    (args
+                						     (Integer . 1)))))
+                		      (If
+                		       (predicate LocalVariableRead (name . "alive"))
+                		       (statements
+                			(body
+                			 (LocalVariableWrite (name . "count")
+                					     (val Call
+                						  (receiver
+                						   (LocalVariableRead
+                						    (name . "count")))
+                						  (name . "+")
+                						  (args (Integer . 1))))))
+                		       (subsequent . None)))))
+                	       (LocalVariableRead (name . "count"))))))))
+            "#]];
+            let actual = parse_to_sexpr(text);
+            expected.assert_eq(&actual);
+        }
     }
 }

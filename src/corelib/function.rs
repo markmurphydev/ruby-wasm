@@ -35,6 +35,7 @@ fn funcs() -> Vec<Func> {
         i64_to_boxnum(),
         i64_to_integer(),
         add(),
+        sub(),
         to_bool(),
         from_bool(),
         negate(),
@@ -399,6 +400,26 @@ fn add() -> Func {
             (local_set $lhs_val (call $integer_to_i64 (local_get $lhs)))
             (local_set $rhs_val (call $integer_to_i64 (local_get $rhs)))
             (local_set $res (i64_add (local_get $lhs_val)
+                                     (local_get $rhs_val)))
+            (call $i64_to_integer (local_get $res))
+        )
+    }
+}
+
+fn sub() -> Func {
+    // TODO: Should do checked add at least.
+    wat! {
+        (func $sub
+            (param $lhs (ref eq))
+            (param $rhs (ref eq))
+            (result (ref eq))
+            (local $lhs_val i64)
+            (local $rhs_val i64)
+            (local $res i64)
+
+            (local_set $lhs_val (call $integer_to_i64 (local_get $lhs)))
+            (local_set $rhs_val (call $integer_to_i64 (local_get $rhs)))
+            (local_set $res (i64_sub (local_get $lhs_val)
                                      (local_get $rhs_val)))
             (call $i64_to_integer (local_get $res))
         )

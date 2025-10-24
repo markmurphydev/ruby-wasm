@@ -443,6 +443,10 @@ fn compile_call_expr(ctx: &mut CompileCtx, call_expr: &Call) -> Vec<Instr> {
             assert_eq!(1, args.len());
             compile_binop(ctx, wat!($add), receiver.as_ref().unwrap(), &args[0])
         }
+        "-" => {
+            assert_eq!(1, args.len());
+            compile_binop(ctx, wat!($sub), receiver.as_ref().unwrap(), &args[0])
+        }
         "-@" => {
             assert!(args.is_empty());
             wat![ (call $negate ,(compile_expr(ctx, receiver.as_ref().unwrap())))]
