@@ -151,10 +151,9 @@ fn compile_for_expr(ctx: &mut CompileCtx, for_expr: &For) -> Vec<Instr> {
     add_method_local(ctx, idx);
     let arr_name = Uuid::new_v4().to_string();
     let idx_name = Uuid::new_v4().to_string();
-    let val_name = Uuid::new_v4().to_string();
     add_method_local(ctx, &arr_name);
     add_method_local(ctx, &idx_name);
-    add_method_local(ctx, &val_name);
+    add_method_local(ctx, &idx);
     let body = compile_statements(ctx, stmts);
 
     [
@@ -165,7 +164,7 @@ fn compile_for_expr(ctx: &mut CompileCtx, for_expr: &For) -> Vec<Instr> {
             arr_name,
             "arr_unitype".to_string(),
             idx_name,
-            val_name,
+            idx.to_string(),
             body,
         ),
         vec![wat! { ,(i31_const(Unitype::NIL_BIT_PATTERN)) }]

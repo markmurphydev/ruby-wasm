@@ -19,7 +19,8 @@
         WebAssembly.instantiateStreaming(fetch("ruby.wasm"), imports).then(
             (obj) => {
                 obj.instance.exports.__ruby_top_level_function();
-                obj.instance.exports.toggle_cell(0, 0);
+                // obj.instance.exports.toggle_cell(0, 0);
+                obj.instance.exports.step();
                 console.log(obj.instance.exports.get_cells());
                 // const a = obj.instance.exports.fn(22n)
                 // console.log(a);

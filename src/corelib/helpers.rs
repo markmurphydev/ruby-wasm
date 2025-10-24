@@ -18,7 +18,7 @@ pub fn for_in_arr(
                 (then (br $exit_for)))
         },
         wat! {
-            (local_set ,(val_name)
+            (local_set ,(val_name.clone())
                 (array_get ,(arr_type_name.clone())
                     (ref_cast (ref ,(arr_type_name.clone())) (local_get ,(arr_name.clone())))
                     (i32_wrap_i64 (call $integer_to_i64 (local_get ,(idx_name.clone()))))))
