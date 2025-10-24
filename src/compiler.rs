@@ -7,7 +7,7 @@ use crate::node::{
 };
 use crate::unitype::Unitype;
 use std::hash::{DefaultHasher, Hash, Hasher};
-use wat_defs::func::{Exported, Func, Param};
+use wat_defs::func::{Exported, Func, Imported, Param};
 use wat_defs::instr::Instr;
 use wat_defs::module::Module;
 use wat_defs::ty::{NumType, ValType};
@@ -131,16 +131,18 @@ fn compile_def_expr(ctx: &mut CompileCtx, def_expr: &Def) -> Vec<Instr> {
     }).flatten().collect();
     ctx.module.funcs.push(Func {
         name: export_fn_name,
+        imported: Imported::NotImported,
         exported: Exported::Exported(name.to_string()),
         type_use: None,
         params: export_params,
-        results: vec![ValType::Ref(wat! { (ref eq) })],
+        results: vec![ValType::Ref(wat! { (ref null extern) })],
         locals: vec![],
         instrs: wat! {
-            (call ,(corelib::method::method_identifier("Object", name))
-                (global_get $main)
-                (array_new_fixed $arr_unitype ,(params.len() as i64)
-                    ,(args)))
+            (call $unitype_to_js
+                (call ,(corelib::method::method_identifier("Object", name))
+                    (global_get $main)
+                    (array_new_fixed $arr_unitype ,(params.len() as i64)
+                        ,(args))))
         }
     });
 

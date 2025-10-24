@@ -41,6 +41,7 @@ fn funcs() -> Vec<Func> {
         lt(),
         gt(),
         eq_eq(),
+        unitype_to_js(),
     ]
 }
 
@@ -471,11 +472,18 @@ fn eq_eq() -> Func {
     }
 }
 
-fn call_ruby() -> Func {
+
+fn unitype_to_js() -> Func {
     wat! {
-        (func $call_ruby
-            (export ,("call_ruby".to_string()))
-            (param )
-        )
+        (func $unitype_to_js
+            (param $x (ref eq))
+            (result (ref null extern))
+            (if (result (ref null extern))
+                (call $is_fixnum (local_get $x))
+                (then
+                    (call $js_i64_to_ref
+                        (call $integer_to_i64 (local_get $x))))
+                (else
+                    (call $js_i64_to_ref (call $integer_to_i64 (local_get $x))))))
     }
 }

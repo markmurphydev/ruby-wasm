@@ -6,7 +6,7 @@
 
 use pretty::RcDoc;
 use std::borrow::Cow;
-use wat_defs::func::{Exported, Func, Local, Param};
+use wat_defs::func::{Exported, Func, Imported, Local, Param};
 use wat_defs::global::Global;
 use wat_defs::instr::UnfoldedInstr::{
     I32WrapI64, I64Add, I64Xor, Nop, RefAsNonNull, RefI31, Return,
@@ -48,8 +48,8 @@ fn module_to_doc(module: &Module) -> Doc {
 
     let module_fields = [
         Some(module_type_defs_to_doc(types)),
-        Some(module_globals_to_doc(globals)),
         Some(module_functions_to_doc(funcs)),
+        Some(module_globals_to_doc(globals)),
         start_fn,
     ]
     .into_iter()
@@ -145,6 +145,7 @@ fn module_functions_to_doc(funcs: &Vec<Func>) -> Doc {
 fn function_to_doc(func: &Func) -> Doc {
     let Func {
         name,
+        imported,
         exported,
         type_use,
         params,
@@ -154,6 +155,11 @@ fn function_to_doc(func: &Func) -> Doc {
     } = func;
 
     let name_doc = format!("${}", name);
+
+    let imported = match imported {
+        Imported::NotImported => nil(),
+        Imported::Imported(module, name) => line().append(format!("(import \"{}\" \"{}\")", module, name)),
+    };
 
     let exported = match exported {
         Exported::NotExported => nil(),
@@ -187,6 +193,7 @@ fn function_to_doc(func: &Func) -> Doc {
     text("(func")
         .append(line())
         .append(name_doc)
+        .append(imported)
         .append(exported)
         .append(type_use)
         .append(params)

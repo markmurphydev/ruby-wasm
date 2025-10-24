@@ -130,6 +130,7 @@ pub fn make_method_def(
     };
     let Func {
         name,
+        imported,
         exported,
         type_use,
         params,
@@ -139,6 +140,7 @@ pub fn make_method_def(
     } = no_locals;
     Func {
         name,
+        imported,
         exported,
         type_use,
         params,

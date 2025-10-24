@@ -1,4 +1,10 @@
 use crate::instr::Instr;
+
+#[derive(Debug, Clone)]
+pub enum Imported {
+    NotImported,
+    Imported(String, String),
+}
 use crate::ty::ValType;
 
 #[derive(Debug, Clone)]
@@ -22,6 +28,7 @@ pub struct Local {
 #[derive(Debug, Clone)]
 pub struct Func {
     pub name: String,
+    pub imported: Imported,
     pub exported: Exported,
     pub type_use: Option<String>,
     pub params: Vec<Param>,

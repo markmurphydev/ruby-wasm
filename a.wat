@@ -25,364 +25,18 @@
   (type $alist_str_method (sub final (array (ref $alist_str_method_pair))))
   (type $alist_str_method_pair
     (sub final (struct (field $key (ref $str)) (field $val (ref $method))))))
-(global $cells
-  (mut (ref eq))
-  (ref.i31
-    (i32.const 5)))
-(global $main
-  (mut (ref $obj))
-  (struct.new $obj
-    (ref.null $class)))
-(global $empty_args
-  (ref $arr_unitype)
-  (array.new_fixed $arr_unitype 0))
-(global $str_Module
-  (ref $str)
-  (array.new_fixed $str 6
-    (i32.const 77)
-    (i32.const 111)
-    (i32.const 100)
-    (i32.const 117)
-    (i32.const 108)
-    (i32.const 101)))
-(global $str_Class
-  (ref $str)
-  (array.new_fixed $str 5
-    (i32.const 67)
-    (i32.const 108)
-    (i32.const 97)
-    (i32.const 115)
-    (i32.const 115)))
-(global $str_BasicObject
-  (ref $str)
-  (array.new_fixed $str 11
-    (i32.const 66)
-    (i32.const 97)
-    (i32.const 115)
-    (i32.const 105)
-    (i32.const 99)
-    (i32.const 79)
-    (i32.const 98)
-    (i32.const 106)
-    (i32.const 101)
-    (i32.const 99)
-    (i32.const 116)))
-(global $str_Object
-  (ref $str)
-  (array.new_fixed $str 6
-    (i32.const 79)
-    (i32.const 98)
-    (i32.const 106)
-    (i32.const 101)
-    (i32.const 99)
-    (i32.const 116)))
-(global $str_get_cells
-  (ref $str)
-  (array.new_fixed $str 9
-    (i32.const 103)
-    (i32.const 101)
-    (i32.const 116)
-    (i32.const 95)
-    (i32.const 99)
-    (i32.const 101)
-    (i32.const 108)
-    (i32.const 108)
-    (i32.const 115)))
-(global $str_new
-  (ref $str)
-  (array.new_fixed $str 3
-    (i32.const 110)
-    (i32.const 101)
-    (i32.const 119)))
-(global $str_class
-  (ref $str)
-  (array.new_fixed $str 5
-    (i32.const 99)
-    (i32.const 108)
-    (i32.const 97)
-    (i32.const 115)
-    (i32.const 115)))
-(global $str_name
-  (ref $str)
-  (array.new_fixed $str 4
-    (i32.const 110)
-    (i32.const 97)
-    (i32.const 109)
-    (i32.const 101)))
-(global $class_Module
-  (ref $class)
-  (struct.new $class
-    (ref.null $class)
-    (ref.null $class)
-    (global.get $str_Module)
-    (array.new_fixed $alist_str_method 0)))
-(global $class_Class
-  (ref $class)
-  (struct.new $class
-    (ref.null $class)
-    (ref.null $class)
-    (global.get $str_Class)
-    (array.new_fixed $alist_str_method 2
-      (struct.new $alist_str_method_pair
-        (global.get $str_new)
-        (ref.func $method_Class_new))
-      (struct.new $alist_str_method_pair
-        (global.get $str_name)
-        (ref.func $method_Class_name)))))
-(global $class_BasicObject
-  (ref $class)
-  (struct.new $class
-    (ref.null $class)
-    (ref.null $class)
-    (global.get $str_BasicObject)
-    (array.new_fixed $alist_str_method 0)))
-(global $class_Object
-  (ref $class)
-  (struct.new $class
-    (ref.null $class)
-    (ref.null $class)
-    (global.get $str_Object)
-    (array.new_fixed $alist_str_method 2
-      (struct.new $alist_str_method_pair
-        (global.get $str_get_cells)
-        (ref.func $method_Object_get_cells))
-      (struct.new $alist_str_method_pair
-        (global.get $str_class)
-        (ref.func $method_Object_class)))))
 (func
-  $get_cells_export
-  (export "get_cells")
-  (result (ref eq))
-  (call $method_Object_get_cells
-    (global.get $main)
-    (array.new_fixed $arr_unitype 0)))
+  $js_i64_to_ref
+  (import "i64" "toRef")
+  (param $x i64)
+  (result (ref null extern))
+  )
 (func
   $__ruby_top_level_function
   (export "__ruby_top_level_function")
   (result (ref eq))
-  (global.set $cells
-    (array.new_fixed $arr_unitype 10
-      (array.new_fixed $arr_unitype 10
-        (ref.i31
-          (i32.const 1073741824))
-        (ref.i31
-          (i32.const 1073741824))
-        (ref.i31
-          (i32.const 1073741824))
-        (ref.i31
-          (i32.const 1073741824))
-        (ref.i31
-          (i32.const 1073741824))
-        (ref.i31
-          (i32.const 1073741824))
-        (ref.i31
-          (i32.const 1073741824))
-        (ref.i31
-          (i32.const 1073741824))
-        (ref.i31
-          (i32.const 1073741824))
-        (ref.i31
-          (i32.const 1073741824)))
-      (array.new_fixed $arr_unitype 10
-        (ref.i31
-          (i32.const 1073741824))
-        (ref.i31
-          (i32.const 1073741824))
-        (ref.i31
-          (i32.const 1073741824))
-        (ref.i31
-          (i32.const 1073741824))
-        (ref.i31
-          (i32.const 1073741824))
-        (ref.i31
-          (i32.const 1073741824))
-        (ref.i31
-          (i32.const 1073741824))
-        (ref.i31
-          (i32.const 1073741824))
-        (ref.i31
-          (i32.const 1073741824))
-        (ref.i31
-          (i32.const 1073741824)))
-      (array.new_fixed $arr_unitype 10
-        (ref.i31
-          (i32.const 1073741824))
-        (ref.i31
-          (i32.const 1073741824))
-        (ref.i31
-          (i32.const 1073741824))
-        (ref.i31
-          (i32.const 1073741824))
-        (ref.i31
-          (i32.const 1073741824))
-        (ref.i31
-          (i32.const 1073741824))
-        (ref.i31
-          (i32.const 1073741824))
-        (ref.i31
-          (i32.const 1073741824))
-        (ref.i31
-          (i32.const 1073741824))
-        (ref.i31
-          (i32.const 1073741824)))
-      (array.new_fixed $arr_unitype 10
-        (ref.i31
-          (i32.const 1073741824))
-        (ref.i31
-          (i32.const 1073741824))
-        (ref.i31
-          (i32.const 1073741824))
-        (ref.i31
-          (i32.const 1073741824))
-        (ref.i31
-          (i32.const 1073741824))
-        (ref.i31
-          (i32.const 1073741824))
-        (ref.i31
-          (i32.const 1073741824))
-        (ref.i31
-          (i32.const 1073741824))
-        (ref.i31
-          (i32.const 1073741824))
-        (ref.i31
-          (i32.const 1073741824)))
-      (array.new_fixed $arr_unitype 10
-        (ref.i31
-          (i32.const 1073741824))
-        (ref.i31
-          (i32.const 1073741824))
-        (ref.i31
-          (i32.const 1073741824))
-        (ref.i31
-          (i32.const 1073741824))
-        (ref.i31
-          (i32.const 1073741824))
-        (ref.i31
-          (i32.const 1073741824))
-        (ref.i31
-          (i32.const 1073741824))
-        (ref.i31
-          (i32.const 1073741824))
-        (ref.i31
-          (i32.const 1073741824))
-        (ref.i31
-          (i32.const 1073741824)))
-      (array.new_fixed $arr_unitype 10
-        (ref.i31
-          (i32.const 1073741824))
-        (ref.i31
-          (i32.const 1073741824))
-        (ref.i31
-          (i32.const 1073741824))
-        (ref.i31
-          (i32.const 1073741824))
-        (ref.i31
-          (i32.const 1073741824))
-        (ref.i31
-          (i32.const 1073741824))
-        (ref.i31
-          (i32.const 1073741824))
-        (ref.i31
-          (i32.const 1073741824))
-        (ref.i31
-          (i32.const 1073741824))
-        (ref.i31
-          (i32.const 1073741824)))
-      (array.new_fixed $arr_unitype 10
-        (ref.i31
-          (i32.const 1073741824))
-        (ref.i31
-          (i32.const 1073741824))
-        (ref.i31
-          (i32.const 1073741824))
-        (ref.i31
-          (i32.const 1073741824))
-        (ref.i31
-          (i32.const 1073741824))
-        (ref.i31
-          (i32.const 1073741824))
-        (ref.i31
-          (i32.const 1073741824))
-        (ref.i31
-          (i32.const 1073741824))
-        (ref.i31
-          (i32.const 1073741824))
-        (ref.i31
-          (i32.const 1073741824)))
-      (array.new_fixed $arr_unitype 10
-        (ref.i31
-          (i32.const 1073741824))
-        (ref.i31
-          (i32.const 1073741824))
-        (ref.i31
-          (i32.const 1073741824))
-        (ref.i31
-          (i32.const 1073741824))
-        (ref.i31
-          (i32.const 1073741824))
-        (ref.i31
-          (i32.const 1073741824))
-        (ref.i31
-          (i32.const 1073741824))
-        (ref.i31
-          (i32.const 1073741824))
-        (ref.i31
-          (i32.const 1073741824))
-        (ref.i31
-          (i32.const 1073741824)))
-      (array.new_fixed $arr_unitype 10
-        (ref.i31
-          (i32.const 1073741824))
-        (ref.i31
-          (i32.const 1073741824))
-        (ref.i31
-          (i32.const 1073741824))
-        (ref.i31
-          (i32.const 1073741824))
-        (ref.i31
-          (i32.const 1073741824))
-        (ref.i31
-          (i32.const 1073741824))
-        (ref.i31
-          (i32.const 1073741824))
-        (ref.i31
-          (i32.const 1073741824))
-        (ref.i31
-          (i32.const 1073741824))
-        (ref.i31
-          (i32.const 1073741824)))
-      (array.new_fixed $arr_unitype 10
-        (ref.i31
-          (i32.const 1073741824))
-        (ref.i31
-          (i32.const 1073741824))
-        (ref.i31
-          (i32.const 1073741824))
-        (ref.i31
-          (i32.const 1073741824))
-        (ref.i31
-          (i32.const 1073741824))
-        (ref.i31
-          (i32.const 1073741824))
-        (ref.i31
-          (i32.const 1073741824))
-        (ref.i31
-          (i32.const 1073741824))
-        (ref.i31
-          (i32.const 1073741824))
-        (ref.i31
-          (i32.const 1073741824)))))
-  (ref.i31
-    (i32.const 5))
-  (drop)
   (ref.i31
     (i32.const 5)))
-(func
-  $method_Object_get_cells
-  (type $method)
-  (param $self (ref $obj)) (param $args (ref $arr_unitype))
-  (result (ref eq))
-  (global.get $cells))
 (func
   $method_Class_new
   (type $method)
@@ -806,4 +460,124 @@
         (local.get $a))
       (call $integer_to_i64
         (local.get $b)))))
+(func
+  $unitype_to_js
+  (param $x (ref eq))
+  (result (ref null extern))
+  (if
+    (result (ref null extern))
+    (call $is_fixnum
+      (local.get $x))
+    (then
+      (call $js_i64_to_ref
+        (call $integer_to_i64
+          (local.get $x))))
+    (else
+      (call $js_i64_to_ref
+        (i64.const 666)))))
+(global $main
+  (mut (ref $obj))
+  (struct.new $obj
+    (ref.null $class)))
+(global $empty_args
+  (ref $arr_unitype)
+  (array.new_fixed $arr_unitype 0))
+(global $str_Module
+  (ref $str)
+  (array.new_fixed $str 6
+    (i32.const 77)
+    (i32.const 111)
+    (i32.const 100)
+    (i32.const 117)
+    (i32.const 108)
+    (i32.const 101)))
+(global $str_Class
+  (ref $str)
+  (array.new_fixed $str 5
+    (i32.const 67)
+    (i32.const 108)
+    (i32.const 97)
+    (i32.const 115)
+    (i32.const 115)))
+(global $str_BasicObject
+  (ref $str)
+  (array.new_fixed $str 11
+    (i32.const 66)
+    (i32.const 97)
+    (i32.const 115)
+    (i32.const 105)
+    (i32.const 99)
+    (i32.const 79)
+    (i32.const 98)
+    (i32.const 106)
+    (i32.const 101)
+    (i32.const 99)
+    (i32.const 116)))
+(global $str_Object
+  (ref $str)
+  (array.new_fixed $str 6
+    (i32.const 79)
+    (i32.const 98)
+    (i32.const 106)
+    (i32.const 101)
+    (i32.const 99)
+    (i32.const 116)))
+(global $str_new
+  (ref $str)
+  (array.new_fixed $str 3
+    (i32.const 110)
+    (i32.const 101)
+    (i32.const 119)))
+(global $str_class
+  (ref $str)
+  (array.new_fixed $str 5
+    (i32.const 99)
+    (i32.const 108)
+    (i32.const 97)
+    (i32.const 115)
+    (i32.const 115)))
+(global $str_name
+  (ref $str)
+  (array.new_fixed $str 4
+    (i32.const 110)
+    (i32.const 97)
+    (i32.const 109)
+    (i32.const 101)))
+(global $class_Module
+  (ref $class)
+  (struct.new $class
+    (ref.null $class)
+    (ref.null $class)
+    (global.get $str_Module)
+    (array.new_fixed $alist_str_method 0)))
+(global $class_Class
+  (ref $class)
+  (struct.new $class
+    (ref.null $class)
+    (ref.null $class)
+    (global.get $str_Class)
+    (array.new_fixed $alist_str_method 2
+      (struct.new $alist_str_method_pair
+        (global.get $str_new)
+        (ref.func $method_Class_new))
+      (struct.new $alist_str_method_pair
+        (global.get $str_name)
+        (ref.func $method_Class_name)))))
+(global $class_BasicObject
+  (ref $class)
+  (struct.new $class
+    (ref.null $class)
+    (ref.null $class)
+    (global.get $str_BasicObject)
+    (array.new_fixed $alist_str_method 0)))
+(global $class_Object
+  (ref $class)
+  (struct.new $class
+    (ref.null $class)
+    (ref.null $class)
+    (global.get $str_Object)
+    (array.new_fixed $alist_str_method 1
+      (struct.new $alist_str_method_pair
+        (global.get $str_class)
+        (ref.func $method_Object_class)))))
 (start $_start)

@@ -11,6 +11,7 @@ pub mod global;
 pub mod helpers;
 pub mod method;
 pub mod type_def;
+mod imports;
 
 use crate::CompileCtx;
 
@@ -18,6 +19,7 @@ pub fn add_core_items(ctx: &mut CompileCtx) {
     ctx.methods.append(&mut method::corelib_methods());
     ctx.classes.append(&mut class::corelib_classes());
     type_def::add_type_defs(ctx);
+    imports::add_imports(ctx);
     global::add_globals(ctx);
     class::add_class_defs(ctx);
     method::add_method_defs(ctx);

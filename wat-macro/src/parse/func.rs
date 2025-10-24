@@ -17,6 +17,17 @@ pub fn parse_func(input: ParseInput) -> Result<TokenStream> {
     let (input, _) = &mut expect_open_paren_named(&["func"], input)?;
     let name = parse_name(input)?;
 
+    let imported = {
+        match expect_open_paren_named(&["import"], input) {
+            Ok((mut input, _)) => {
+                let module = expect_string_literal(&mut input)?;
+                let name = expect_string_literal(&mut input)?;
+                quote![ wat_defs::func::Imported::Imported(#module, #name) ]
+            }
+            Err(_) => quote![wat_defs::func::Imported::NotImported],
+        }
+    };
+
     let exported = {
         match expect_open_paren_named(&["export"], input) {
             Ok((mut input, _)) => {
@@ -42,6 +53,7 @@ pub fn parse_func(input: ParseInput) -> Result<TokenStream> {
     Ok(quote! {
         wat_defs::func::Func {
             name: #name,
+            imported: #imported,
             exported: #exported,
             type_use: #type_use,
             params: #params,
