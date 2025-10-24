@@ -35,3 +35,4 @@ wasmtime = "37.0.1"
 wasm-instr.workspace = true
 wat-defs.workspace = true
 wat-macro.workspace = true
+uuid = { version = "1.18.1", features = ["v4"] }

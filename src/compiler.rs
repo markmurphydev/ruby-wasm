@@ -2,11 +2,12 @@ use crate::corelib;
 use crate::corelib::class::Class;
 use crate::corelib::method::Method;
 use crate::node::{
-    And, Array, Call, ConstantRead, Def, Expr, GlobalVariableRead, GlobalVariableWrite, If,
+    And, Array, Call, ConstantRead, Def, Expr, For, GlobalVariableRead, GlobalVariableWrite, If,
     LocalVariableRead, LocalVariableWrite, Or, Program, Statements, Subsequent, Until, While,
 };
 use crate::unitype::Unitype;
 use std::hash::{DefaultHasher, Hash, Hasher};
+use uuid::{Uuid, uuid};
 use wat_defs::func::{Exported, Func, Imported, Local, Param};
 use wat_defs::instr::Instr;
 use wat_defs::module::Module;
@@ -38,11 +39,49 @@ impl CompileCtx {
 pub fn compile(ctx: &mut CompileCtx, program: &Program) {
     // TODO: exported.
     let stmts = compile_program(ctx, program);
-    let top_level_func = wat! {
+
+    let local_defs = ctx.method_locals
+        .iter()
+        .map(|l| {
+            wat! { (local ,(l.to_string()) (ref eq)) }
+        })
+        .collect();
+    let local_setters = ctx.method_locals
+        .iter()
+        .map(|l| {
+            wat! {
+                (local_set ,(l.to_string())
+                    (ref_i31 (const_i32 ,(Unitype::NIL_BIT_PATTERN as i64))))
+            }
+        })
+        .flatten()
+        .collect();
+    let stmts = [local_setters, stmts].concat();
+    let no_locals = wat! {
         (func ,(RUBY_TOP_LEVEL_FUNCTION_NAME.to_string())
             (export ,(RUBY_TOP_LEVEL_FUNCTION_NAME.to_string()))
             (result (ref eq))
             ,(stmts))
+    };
+    let Func {
+        name,
+        imported,
+        exported,
+        type_use,
+        params,
+        results,
+        locals: _locals,
+        instrs,
+    } = no_locals;
+    let top_level_func = Func {
+        name,
+        imported,
+        exported,
+        type_use,
+        params,
+        results,
+        locals: local_defs,
+        instrs,
     };
     ctx.module.funcs.push(top_level_func);
 }
@@ -99,7 +138,39 @@ fn compile_expr(ctx: &mut CompileCtx, expr: &Expr) -> Vec<Instr> {
             compile_local_variable_write_expr(ctx, local_variable_write_expr)
         }
         Expr::Def(def_expr) => compile_def_expr(ctx, def_expr),
+        Expr::For(for_expr) => compile_for_expr(ctx, for_expr),
     }
+}
+
+fn compile_for_expr(ctx: &mut CompileCtx, for_expr: &For) -> Vec<Instr> {
+    let For {
+        idx,
+        collection,
+        stmts,
+    } = for_expr;
+    add_method_local(ctx, idx);
+    let arr_name = Uuid::new_v4().to_string();
+    let idx_name = Uuid::new_v4().to_string();
+    let val_name = Uuid::new_v4().to_string();
+    add_method_local(ctx, &arr_name);
+    add_method_local(ctx, &idx_name);
+    add_method_local(ctx, &val_name);
+    let body = compile_statements(ctx, stmts);
+
+    [
+        wat! {
+            (local_set ,(arr_name.clone()) ,(compile_expr(ctx, collection)))
+        },
+        corelib::helpers::for_in_arr(
+            arr_name,
+            "arr_unitype".to_string(),
+            idx_name,
+            val_name,
+            body,
+        ),
+        vec![wat! { ,(i31_const(Unitype::NIL_BIT_PATTERN)) }]
+    ]
+    .concat()
 }
 
 fn compile_local_variable_write_expr(
@@ -107,9 +178,7 @@ fn compile_local_variable_write_expr(
     local_variable_write_expr: &LocalVariableWrite,
 ) -> Vec<Instr> {
     let LocalVariableWrite { name, val } = local_variable_write_expr;
-    if !ctx.method_locals.contains(name) {
-        ctx.method_locals.push(name.to_string())
-    }
+    add_method_local(ctx, name);
     wat! {
         (local_set ,(name.to_string()) ,(compile_expr(ctx, val)) )
         ,(i31_const(Unitype::NIL_BIT_PATTERN))
@@ -487,6 +556,12 @@ fn compile_expr_to_wasm_predicate(ctx: &mut CompileCtx, expr: &Expr) -> Vec<Inst
     let expr = compile_expr(ctx, expr);
     wat! {
         (call $from_bool ,(expr))
+    }
+}
+
+fn add_method_local(ctx: &mut CompileCtx, name: &String) {
+    if !ctx.method_locals.contains(name) {
+        ctx.method_locals.push(name.to_string())
     }
 }
 

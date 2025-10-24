@@ -110,9 +110,12 @@ pub fn make_method_def(
             wat! { (local ,(p.name.to_string()) (ref eq)) }
         })
         .collect();
-    let local_defs = locals.iter().map(|l| {
-        wat! { (local ,(l.to_string()) (ref eq)) }
-    }).collect();
+    let local_defs = locals
+        .iter()
+        .map(|l| {
+            wat! { (local ,(l.to_string()) (ref eq)) }
+        })
+        .collect();
     let local_defs = [param_local_defs, local_defs].concat();
     let param_local_setters: Vec<Instr> = params
         .iter()
@@ -125,12 +128,16 @@ pub fn make_method_def(
         })
         .flatten()
         .collect();
-    let local_setters = locals.iter().map(|l| {
-        wat! {
-            (local_set ,(l.to_string())
-                (ref_i31 (const_i32 ,(Unitype::NIL_BIT_PATTERN as i64))))
-        }
-    }).flatten().collect();
+    let local_setters = locals
+        .iter()
+        .map(|l| {
+            wat! {
+                (local_set ,(l.to_string())
+                    (ref_i31 (const_i32 ,(Unitype::NIL_BIT_PATTERN as i64))))
+            }
+        })
+        .flatten()
+        .collect();
     let instrs = [param_local_setters, local_setters, body].concat();
 
     // TODO: Ughhh quasiquoting is broken.

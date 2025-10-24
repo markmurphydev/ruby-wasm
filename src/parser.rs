@@ -100,6 +100,7 @@ impl<'text> Parser<'text> {
             LK::If => box_expr_variant!(self.if_expr(), N::Expr::If),
             LK::While => box_expr_variant!(self.while_expr(), N::Expr::While),
             LK::Until => box_expr_variant!(self.until_expr(), N::Expr::Until),
+            LK::For => box_expr_variant!(self.for_in_expr(), N::Expr::For),
 
             LK::Minus => self.unary_minus(),
 
@@ -208,6 +209,26 @@ impl<'text> Parser<'text> {
         Some(lhs)
     }
 
+    fn for_in_expr(&mut self) -> N::For {
+        self.expect(&[LK::For]);
+        let N::Expr::LocalVariableRead(lvr) = self.parse_ident(0) else {
+            panic!()
+        };
+        let N::LocalVariableRead { name: idx } = *lvr;
+        self.expect(&[LK::In]);
+        let collection = self.expr().unwrap();
+        self.expect(&[LK::Do]);
+        let stmts = self.statements();
+        self.expect(&[LK::End]);
+
+        N::For {
+            idx,
+            collection,
+            stmts,
+        }
+    }
+
+    /// Parse ident to LocalVariableRead, LocalVariableWrite, or Call
     fn parse_ident(&mut self, min_bp: u8) -> N::Expr {
         let LK::Identifier { text: name } = self.lexer.next().kind else {
             unreachable!()
@@ -854,6 +875,21 @@ mod tests {
                (Def (name . "x") (params ((name . "n")))
             	(body (body (LocalVariableRead (name . "n")))))
                (Call (receiver) (name . "x") (args (Integer . 22))))))
+        "#]];
+        let actual = parse_to_sexpr(text);
+        expected.assert_eq(&actual);
+    }
+
+    #[test]
+    fn for_in() {
+        let text = "for row in [1, 2, 3] do row end";
+        let expected = expect![[r#"
+            ((statements
+              (body
+               (For (idx . "row")
+            	(collection Array
+            		    (vals (Integer . 1) (Integer . 2) (Integer . 3)))
+            	(stmts (body (LocalVariableRead (name . "row"))))))))
         "#]];
         let actual = parse_to_sexpr(text);
         expected.assert_eq(&actual);

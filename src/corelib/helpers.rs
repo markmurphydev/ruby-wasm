@@ -1,26 +1,52 @@
 use crate::corelib::alist::AListTypeDef;
-use wat_defs::instr::Instr;
-use wat_defs::ty::ArrayType;
+use wat_defs::instr::{Instr, UnfoldedInstr};
 use wat_macro::wat;
 
 /// Requires locals $arr, $idx, $val.
 /// Binds arr values to $val.
-pub fn for_in_arr(arr_name: String, arr_type_name: String, body: Vec<Instr>) -> Vec<Instr> {
+pub fn for_in_arr(
+    arr_name: String,
+    arr_type_name: String,
+    idx_name: String,
+    val_name: String,
+    body: Vec<Instr>,
+) -> Vec<Instr> {
+    let loop_args = [
+        wat! {
+            (if (i32_eq (i32_wrap_i64 (call $integer_to_i64 (local_get ,(idx_name.clone()))))
+                        (array_len (ref_cast (ref ,(arr_type_name.clone())) (local_get ,(arr_name.clone())))))
+                (then (br $exit_for)))
+        },
+        wat! {
+            (local_set ,(val_name)
+                (array_get ,(arr_type_name.clone())
+                    (ref_cast (ref ,(arr_type_name.clone())) (local_get ,(arr_name.clone())))
+                    (i32_wrap_i64 (call $integer_to_i64 (local_get ,(idx_name.clone()))))))
+        },
+        body,
+        wat! {
+            (local_set ,(idx_name.clone())
+                (call $i64_to_integer
+                    (i64_add (call $integer_to_i64 (local_get ,(idx_name.clone())))
+                             (const_i64 1))))
+        },
+        wat! { (br $for) }
+    ].concat();
+    let block = Instr {
+        unfolded_instr: UnfoldedInstr::Block {
+            label: "exit_for".to_string(),
+        },
+        folded_instrs: vec![Instr {
+            unfolded_instr: UnfoldedInstr::Loop {
+                block_type: None,
+                label: "for".to_string(),
+            },
+            folded_instrs: loop_args,
+        }],
+    };
     wat! {
-        (local_set $idx (const_i32 0))
-        (block $exit_for
-            (loop $for
-                (if (i32_eq (local_get $idx)
-                            (array_len (local_get ,(arr_name.clone()))))
-                    (then (br $exit_for)))
-                (local_set $val
-                    (array_get ,(arr_type_name)
-                        (local_get ,(arr_name))
-                        (local_get $idx)))
-                (block $body ,(body))
-                (local_set $idx (i32_add (local_get $idx)
-                                       (const_i32 1)))
-                (br $for)))
+        (local_set ,(idx_name.clone()) (call $i64_to_integer (const_i64 0)))
+        ,(block)
     }
 }
 

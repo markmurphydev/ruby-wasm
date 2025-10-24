@@ -610,7 +610,11 @@ impl<'text> Lexer<'text> {
                 }
                 _ => None,
             },
-            'f' => self.check_rest_of_keyword("alse", False, start_idx),
+            'f' => match self.iter.peek() {
+                Some((_, 'a')) => self.check_rest_of_keyword("alse", False, start_idx),
+                Some((_, 'o')) => self.check_rest_of_keyword("or", For, start_idx),
+                _ => None,
+            },
             'i' => match self.iter.peek() {
                 Some((_, 'f')) => self.check_rest_of_keyword("f", If, start_idx),
                 Some((_, 'n')) => self.check_rest_of_keyword("n", In, start_idx),

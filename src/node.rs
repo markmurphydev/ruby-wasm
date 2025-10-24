@@ -33,6 +33,15 @@ pub enum Expr {
     Def(Box<Def>),
     LocalVariableRead(Box<LocalVariableRead>),
     LocalVariableWrite(Box<LocalVariableWrite>),
+    For(Box<For>),
+}
+
+/// Method definition.
+#[derive(Debug, Clone, PartialEq, Eq, Serialize)]
+pub struct For {
+    pub idx: String,
+    pub collection: Expr,
+    pub stmts: Statements,
 }
 
 /// Method definition.

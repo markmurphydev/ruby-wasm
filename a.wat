@@ -32,9 +32,76 @@
   (result (ref null extern))
   )
 (func
+  $js_arr_new
+  (import "arr" "new")
+  (result (ref null extern))
+  )
+(func
+  $js_arr_push
+  (import "arr" "push")
+  (param $arr (ref null extern)) (param $val (ref null extern))
+  
+  )
+(func
   $__ruby_top_level_function
   (export "__ruby_top_level_function")
   (result (ref eq))
+  (local $row (ref eq))
+  (local $035f8447-c995-48f3-baa3-f5ecee469018 (ref eq))
+  (local $e30d4ce5-db5f-40ec-bf8f-fb02f34a2a19 (ref eq))
+  (local $a75e5917-687e-425a-a5fb-0f97fe5d60e0 (ref eq))
+  (local.set $row
+    (ref.i31
+      (i32.const 5)))
+  (local.set $035f8447-c995-48f3-baa3-f5ecee469018
+    (ref.i31
+      (i32.const 5)))
+  (local.set $e30d4ce5-db5f-40ec-bf8f-fb02f34a2a19
+    (ref.i31
+      (i32.const 5)))
+  (local.set $a75e5917-687e-425a-a5fb-0f97fe5d60e0
+    (ref.i31
+      (i32.const 5)))
+  (local.set $035f8447-c995-48f3-baa3-f5ecee469018
+    (array.new_fixed $arr_unitype 3
+      (ref.i31
+        (i32.const 1073741825))
+      (ref.i31
+        (i32.const 1073741826))
+      (ref.i31
+        (i32.const 1073741827))))
+  (local.set $e30d4ce5-db5f-40ec-bf8f-fb02f34a2a19
+    (call $i64_to_integer
+      (i64.const 0)))
+  (block $exit_for
+    (loop $for
+      (if
+        (i32.eq
+          (i32.wrap_i64
+            (call $integer_to_i64
+              (local.get $e30d4ce5-db5f-40ec-bf8f-fb02f34a2a19)))
+          (array.len
+            (ref.cast (ref $arr_unitype)
+              (local.get $035f8447-c995-48f3-baa3-f5ecee469018))))
+        (then
+          (br $exit_for))
+        (else
+          ))
+      (local.set $a75e5917-687e-425a-a5fb-0f97fe5d60e0
+        (array.get $arr_unitype
+          (ref.cast (ref $arr_unitype)
+            (local.get $035f8447-c995-48f3-baa3-f5ecee469018))
+          (i32.wrap_i64
+            (call $integer_to_i64
+              (local.get $e30d4ce5-db5f-40ec-bf8f-fb02f34a2a19)))))
+      (local.get $row)
+      (local.set $e30d4ce5-db5f-40ec-bf8f-fb02f34a2a19
+        (call $i64_to_integer
+          (i64.add
+            (call $integer_to_i64
+              (local.get $e30d4ce5-db5f-40ec-bf8f-fb02f34a2a19))
+            (i64.const 1))))
+      (br $for)))
   (ref.i31
     (i32.const 5)))
 (func
@@ -214,6 +281,22 @@
     (local.get $args)
     (local.get $method)))
 (func
+  $is_nil
+  (param $n (ref eq))
+  (result i32)
+  (if
+    (result i32)
+    (ref.test (ref i31)
+      (local.get $n))
+    (then
+      (i32.eq
+        (i31.get_u
+          (ref.cast (ref i31)
+            (local.get $n)))
+        (i32.const 5)))
+    (else
+      (i32.const 0))))
+(func
   $is_fixnum
   (param $n (ref eq))
   (result i32)
@@ -227,6 +310,18 @@
         (i31.get_u
           (ref.cast (ref i31)
             (local.get $n)))))
+    (else
+      (i32.const 0))))
+(func
+  $is_boxnum
+  (param $n (ref eq))
+  (result i32)
+  (if
+    (result i32)
+    (ref.test (ref $boxnum)
+      (local.get $n))
+    (then
+      (i32.const 1))
     (else
       (i32.const 0))))
 (func
@@ -461,6 +556,60 @@
       (call $integer_to_i64
         (local.get $b)))))
 (func
+  $arr_to_js
+  (param $arr (ref $arr_unitype))
+  (result (ref null extern))
+  (local $arr_js (ref null extern))
+  (local $idx (ref eq))
+  (local $val (ref eq))
+  (local $val_js (ref null extern))
+  (local.set $idx
+    (ref.i31
+      (i32.const 5)))
+  (local.set $val
+    (ref.i31
+      (i32.const 5)))
+  (local.set $arr_js
+    (call $js_arr_new))
+  (local.set $idx
+    (call $i64_to_integer
+      (i64.const 0)))
+  (block $exit_for
+    (loop $for
+      (if
+        (i32.eq
+          (i32.wrap_i64
+            (call $integer_to_i64
+              (local.get $idx)))
+          (array.len
+            (ref.cast (ref $arr_unitype)
+              (local.get $arr))))
+        (then
+          (br $exit_for))
+        (else
+          ))
+      (local.set $val
+        (array.get $arr_unitype
+          (ref.cast (ref $arr_unitype)
+            (local.get $arr))
+          (i32.wrap_i64
+            (call $integer_to_i64
+              (local.get $idx)))))
+      (local.set $val_js
+        (call $unitype_to_js
+          (local.get $val)))
+      (call $js_arr_push
+        (local.get $arr_js)
+        (local.get $val_js))
+      (local.set $idx
+        (call $i64_to_integer
+          (i64.add
+            (call $integer_to_i64
+              (local.get $idx))
+            (i64.const 1))))
+      (br $for)))
+  (local.get $arr_js))
+(func
   $unitype_to_js
   (param $x (ref eq))
   (result (ref null extern))
@@ -473,8 +622,33 @@
         (call $integer_to_i64
           (local.get $x))))
     (else
-      (call $js_i64_to_ref
-        (i64.const 666)))))
+      (if
+        (result (ref null extern))
+        (call $is_nil
+          (local.get $x))
+        (then
+          (call $js_i64_to_ref
+            (i64.const 666)))
+        (else
+          (if
+            (result (ref null extern))
+            (ref.test (ref $boxnum)
+              (local.get $x))
+            (then
+              (call $js_i64_to_ref
+                (call $integer_to_i64
+                  (local.get $x))))
+            (else
+              (if
+                (result (ref null extern))
+                (ref.test (ref $arr_unitype)
+                  (local.get $x))
+                (then
+                  (call $arr_to_js
+                    (ref.cast (ref $arr_unitype)
+                      (local.get $x))))
+                (else
+                  (unreachable))))))))))
 (global $main
   (mut (ref $obj))
   (struct.new $obj

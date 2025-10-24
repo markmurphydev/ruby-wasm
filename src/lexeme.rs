@@ -275,6 +275,7 @@ pub enum LexemeKind {
     End,
     Ensure,
     False,
+    For,
     In,
     If,
     Nil,

@@ -508,6 +508,8 @@ fn arr_to_js() -> Func {
     let for_loop = corelib::helpers::for_in_arr(
         "arr".to_string(),
         "arr_unitype".to_string(),
+        "idx".to_string(),
+        "val".to_string(),
         wat! {
             (local_set $val_js
                 (call $unitype_to_js (local_get $val)))
@@ -516,6 +518,8 @@ fn arr_to_js() -> Func {
         },
     );
     let wat_instrs = [
+        wat! { (local_set $idx (ref_i31 (const_i32 ,(Unitype::NIL_BIT_PATTERN as i64)))) },
+        wat! { (local_set $val (ref_i31 (const_i32 ,(Unitype::NIL_BIT_PATTERN as i64)))) },
         wat! { (local_set $arr_js (call $js_arr_new)) },
         for_loop,
         wat! { (local_get $arr_js) },
@@ -526,7 +530,7 @@ fn arr_to_js() -> Func {
             (param $arr (ref $arr_unitype))
             (result (ref null extern))
             (local $arr_js (ref null extern))
-            (local $idx i32)
+            (local $idx (ref eq))
             (local $val (ref eq))
             (local $val_js (ref null extern))
 
