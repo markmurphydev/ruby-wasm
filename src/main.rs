@@ -23,7 +23,6 @@ pub struct TextOrFile {
     file: Option<String>,
 }
 
-
 #[derive(Subcommand)]
 enum Command {
     /// Lexes the given program, returning a list of its lexemes.
@@ -110,10 +109,12 @@ fn main() {
                     println!("{}", wat);
                 }
                 (None, Some(file)) => {
-                    let wat = run::compile_ctx_to_wat(&run::text_to_compile_ctx(fs::read_to_string(file).unwrap()));
+                    let wat = run::compile_ctx_to_wat(&run::text_to_compile_ctx(
+                        fs::read_to_string(file).unwrap(),
+                    ));
                     println!("{}", wat);
                 }
-                _ => unreachable!("Clap should prevent this.")
+                _ => unreachable!("Clap should prevent this."),
             }
         }
 

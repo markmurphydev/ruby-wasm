@@ -975,8 +975,8 @@ mod tests {
     }
 
     mod demo {
-        use expect_test::expect;
         use crate::parser::tests::parse_to_sexpr;
+        use expect_test::expect;
 
         #[test]
         pub fn cells() {

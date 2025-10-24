@@ -1,6 +1,7 @@
 use crate::CompileCtx;
 use crate::corelib::type_def::METHOD_TYPE_IDENTIFIER;
 use crate::node::RequiredParam;
+use crate::unitype::Unitype;
 use wat_defs::func::{Func, Local};
 use wat_defs::instr::Instr;
 use wat_macro::wat;
@@ -41,6 +42,7 @@ fn new_method_def(class: &str) -> Func {
         class,
         "new",
         &vec![],
+        vec![],
         wat! {
             (struct_new $obj
               // .class
@@ -64,6 +66,7 @@ fn name_method_def(class: &str) -> Func {
         class,
         "name",
         &vec![],
+        vec![],
         wat! {
             (struct_get $class $name
               (ref_cast (ref $class) (local_get $self)))
@@ -86,6 +89,7 @@ fn class_method_def(class: &str) -> Func {
         class,
         "class",
         &vec![],
+        vec![],
         wat! {
             (ref_cast (ref eq)
                 (struct_get $obj $parent (local_get $self)))
@@ -97,15 +101,20 @@ pub fn make_method_def(
     class: &str,
     name: &str,
     params: &Vec<RequiredParam>,
+    locals: Vec<String>,
     body: Vec<Instr>,
 ) -> Func {
-    let local_defs: Vec<Local> = params
+    let param_local_defs: Vec<Local> = params
         .iter()
         .map(|p| {
             wat! { (local ,(p.name.to_string()) (ref eq)) }
         })
         .collect();
-    let local_setters: Vec<Instr> = params
+    let local_defs = locals.iter().map(|l| {
+        wat! { (local ,(l.to_string()) (ref eq)) }
+    }).collect();
+    let local_defs = [param_local_defs, local_defs].concat();
+    let param_local_setters: Vec<Instr> = params
         .iter()
         .enumerate()
         .map(|(idx, p)| {
@@ -116,7 +125,13 @@ pub fn make_method_def(
         })
         .flatten()
         .collect();
-    let instrs = [local_setters, body].concat();
+    let local_setters = locals.iter().map(|l| {
+        wat! {
+            (local_set ,(l.to_string())
+                (ref_i31 (const_i32 ,(Unitype::NIL_BIT_PATTERN as i64))))
+        }
+    }).flatten().collect();
+    let instrs = [param_local_setters, local_setters, body].concat();
 
     // TODO: Ughhh quasiquoting is broken.
 

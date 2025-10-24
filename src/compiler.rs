@@ -21,7 +21,7 @@ pub struct CompileCtx {
     pub methods: Vec<Method>,
     pub classes: Vec<Class>,
     /// Locals defined in the middle of the method
-    pub method_locals: Vec<Local>,
+    pub method_locals: Vec<String>,
 }
 
 impl CompileCtx {
@@ -107,8 +107,12 @@ fn compile_local_variable_write_expr(
     local_variable_write_expr: &LocalVariableWrite,
 ) -> Vec<Instr> {
     let LocalVariableWrite { name, val } = local_variable_write_expr;
+    if !ctx.method_locals.contains(name) {
+        ctx.method_locals.push(name.to_string())
+    }
     wat! {
         (local_set ,(name.to_string()) ,(compile_expr(ctx, val)) )
+        ,(i31_const(Unitype::NIL_BIT_PATTERN))
     }
 }
 
@@ -133,7 +137,7 @@ fn compile_def_expr(ctx: &mut CompileCtx, def_expr: &Def) -> Vec<Instr> {
     let args = params
         .iter()
         .map(|p| {
-            wat! { (ref_i31 (local_get ,(p.name.to_string()))) }
+            wat! { (call $i32_to_fixnum (local_get ,(p.name.to_string()))) }
         })
         .flatten()
         .collect();
@@ -154,8 +158,11 @@ fn compile_def_expr(ctx: &mut CompileCtx, def_expr: &Def) -> Vec<Instr> {
         },
     });
 
-    let method_def =
-        corelib::method::make_method_def("Object", name, params, compile_statements(ctx, body));
+    let body = compile_statements(ctx, body);
+    let locals = ctx.method_locals.clone();
+    ctx.method_locals = vec![];
+
+    let method_def = corelib::method::make_method_def("Object", name, params, locals, body);
 
     let method = Method {
         class: "Object".to_string(),

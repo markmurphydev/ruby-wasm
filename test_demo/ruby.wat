@@ -59,9 +59,9 @@
     (call $method_Object_toggle_cell
       (global.get $main)
       (array.new_fixed $arr_unitype 2
-        (ref.i31
+        (call $i32_to_fixnum
           (local.get $row))
-        (ref.i31
+        (call $i32_to_fixnum
           (local.get $col))))))
 (func
   $__ruby_top_level_function
@@ -298,7 +298,7 @@
   (type $method)
   (param $self (ref $obj)) (param $args (ref $arr_unitype))
   (result (ref eq))
-  (local $row (ref eq)) (local $col (ref eq))
+  (local $row (ref eq)) (local $col (ref eq)) (local $res (ref eq))
   (local.set $row
     (array.get $arr_unitype
       (local.get $args)
@@ -307,6 +307,9 @@
     (array.get $arr_unitype
       (local.get $args)
       (i32.const 1)))
+  (local.set $res
+    (ref.i31
+      (i32.const 5)))
   (if
     (result (ref eq))
     (call $from_bool
@@ -327,11 +330,15 @@
     (then
       (local.set $res
         (ref.i31
-          (i32.const 1073741824))))
+          (i32.const 1073741824)))
+      (ref.i31
+        (i32.const 5)))
     (else
       (local.set $res
         (ref.i31
-          (i32.const 1073741825)))))
+          (i32.const 1073741825)))
+      (ref.i31
+        (i32.const 5))))
   (drop)
   (array.set $arr_unitype
     (ref.cast (ref $arr_unitype)
@@ -523,6 +530,22 @@
     (local.get $receiver_obj)
     (local.get $args)
     (local.get $method)))
+(func
+  $is_nil
+  (param $n (ref eq))
+  (result i32)
+  (if
+    (result i32)
+    (ref.test (ref i31)
+      (local.get $n))
+    (then
+      (i32.eq
+        (i31.get_u
+          (ref.cast (ref i31)
+            (local.get $n)))
+        (i32.const 5)))
+    (else
+      (i32.const 0))))
 (func
   $is_fixnum
   (param $n (ref eq))
@@ -837,23 +860,31 @@
     (else
       (if
         (result (ref null extern))
-        (ref.test (ref $boxnum)
+        (call $is_nil
           (local.get $x))
         (then
           (call $js_i64_to_ref
-            (call $integer_to_i64
-              (local.get $x))))
+            (i64.const 666)))
         (else
           (if
             (result (ref null extern))
-            (ref.test (ref $arr_unitype)
+            (ref.test (ref $boxnum)
               (local.get $x))
             (then
-              (call $arr_to_js
-                (ref.cast (ref $arr_unitype)
+              (call $js_i64_to_ref
+                (call $integer_to_i64
                   (local.get $x))))
             (else
-              (unreachable))))))))
+              (if
+                (result (ref null extern))
+                (ref.test (ref $arr_unitype)
+                  (local.get $x))
+                (then
+                  (call $arr_to_js
+                    (ref.cast (ref $arr_unitype)
+                      (local.get $x))))
+                (else
+                  (unreachable))))))))))
 (global $cells
   (mut (ref eq))
   (ref.i31

@@ -21,6 +21,7 @@ fn funcs() -> Vec<Func> {
         str_eq(),
         alist_str_method_get(),
         call(),
+        is_nil(),
         is_fixnum(),
         is_boxnum(),
         sign_extend(),
@@ -195,6 +196,22 @@ fn call() -> Func {
                 (local_get $args)
                 (local_get $method))
         )
+    }
+}
+
+fn is_nil() -> Func {
+    // Cast to `i31`, then test for the Unitype::FIXNUM_MARKER
+    wat! {
+        (func $is_nil
+            (param $n (ref eq))
+            (result i32)
+
+            // Wasm has no short-circuiting booleans.
+            (if (result i32)
+                (ref_test (ref i31) (local_get $n))
+                (then (i32_eq (i31_get_u (ref_cast (ref i31) (local_get $n)))
+                              (const_i32 ,(Unitype::NIL_BIT_PATTERN as i64))))
+                (else (const_i32 0))))
     }
 }
 
@@ -528,17 +545,22 @@ fn unitype_to_js() -> Func {
                 (then
                     (call $js_i64_to_ref
                         (call $integer_to_i64 (local_get $x))))
-                (else
-                    (if (result (ref null extern))
-                        (ref_test (ref $boxnum) (local_get $x))
-                        (then
-                            (call $js_i64_to_ref
-                                (call $integer_to_i64 (local_get $x))))
-                        (else
-                            (if (result (ref null extern))
-                                (ref_test (ref $arr_unitype) (local_get $x))
-                                (then
-                                    (call $arr_to_js (ref_cast (ref $arr_unitype) (local_get $x))))
-                                (else (unreachable))))))))
+                (else (if (result (ref null extern))
+                          (call $is_nil (local_get $x))
+                          (then
+                              (call $js_i64_to_ref
+                                  (const_i64 666)))
+                          (else
+                              (if (result (ref null extern))
+                                  (ref_test (ref $boxnum) (local_get $x))
+                                  (then
+                                      (call $js_i64_to_ref
+                                          (call $integer_to_i64 (local_get $x))))
+                                  (else
+                                      (if (result (ref null extern))
+                                          (ref_test (ref $arr_unitype) (local_get $x))
+                                          (then
+                                              (call $arr_to_js (ref_cast (ref $arr_unitype) (local_get $x))))
+                                          (else (unreachable))))))))))
     }
 }
