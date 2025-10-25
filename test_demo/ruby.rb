@@ -36,7 +36,7 @@ def count_neighbors(row, col)
     row_lo = neighbor_row == 0 || neighbor_row > 0
     col_lo = neighbor_col == 0 || neighbor_col > 0
     row_hi = neighbor_row < 9 || neighbor_row == 9
-    col_hi = neighbor_col < 0 || neighbor_col == 0
+    col_hi = neighbor_col < 9 || neighbor_col == 9
     in_bounds = row_lo && col_lo && row_hi && col_hi
     if in_bounds
         alive = $cells[neighbor_row][neighbor_col] == 1
@@ -67,7 +67,14 @@ def step()
     for col in [0, 1, 2, 3, 4, 5, 6, 7, 8, 9] do
       alive = $cells[row][col] == 1
       living_neighbors = count_neighbors(row, col)
-      res[row][col] = living_neighbors
+      ln3 = living_neighbors == 3
+      alive_ln2 = alive && living_neighbors == 2
+      res_alive = ln3 || alive_ln2
+      if res_alive
+        res[row][col] = 1
+      else
+        res[row][col] = 0
+      end
     end
   end
   $cells = res
