@@ -13,14 +13,22 @@
 
     const showCells = () => {
         let cells = wasm.instance.exports.get_cells();
-        let res = "";
-        cells.forEach((row) => {
-            row.forEach((cell) => {
-                res += (cell === 1n ? "X " : "_ ");
+        let res = [];
+        cells.forEach((row, rowIdx) => {
+            row.forEach((cell, colIdx) => {
+                let cellRes = document.createElement("span")
+                cellRes.setAttribute("onclick", `toggleCell(${rowIdx}, ${colIdx})`);
+                cellRes.innerText = cell === 1n ? "X " : "_ ";
+                res.push(cellRes);
             })
-            res += "\n";
+            res.push("\n");
         })
-        document.getElementById("cells").textContent = res;
+        document.getElementById("cells").replaceChildren(...res);
+    }
+
+    const toggleCell = (row, col) => {
+        wasm.instance.exports.toggle_cell(row, col);
+        showCells();
     }
 
     const step = () => {
