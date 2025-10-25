@@ -57,8 +57,8 @@ def count_neighbors(row, col)
     neighbor_col = neighbor[1]
     row_lo = neighbor_row == 0 || neighbor_row > 0
     col_lo = neighbor_col == 0 || neighbor_col > 0
-    row_hi = neighbor_row < 9 || neighbor_row == 9
-    col_hi = neighbor_col < 9 || neighbor_col == 9
+    row_hi = neighbor_row < $length
+    col_hi = neighbor_col < $length
     in_bounds = row_lo && col_lo && row_hi && col_hi
     if in_bounds
         alive = $cells[neighbor_row][neighbor_col] == 1

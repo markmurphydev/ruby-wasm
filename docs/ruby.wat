@@ -433,8 +433,8 @@
   (local $col (ref eq))
   (local $count (ref eq))
   (local $neighbor (ref eq))
-  (local $77a1d01d-37a3-43ed-9572-e0ebcd189188 (ref eq))
-  (local $fc65ad19-ade2-4fef-802d-a0d9fc843622 (ref eq))
+  (local $e2748653-3849-416f-a8bb-54ac100b4566 (ref eq))
+  (local $8103b931-b2e4-44f7-bf0e-201b41df801b (ref eq))
   (local $neighbor_row (ref eq))
   (local $neighbor_col (ref eq))
   (local $row_lo (ref eq))
@@ -457,10 +457,10 @@
   (local.set $neighbor
     (ref.i31
       (i32.const 5)))
-  (local.set $77a1d01d-37a3-43ed-9572-e0ebcd189188
+  (local.set $e2748653-3849-416f-a8bb-54ac100b4566
     (ref.i31
       (i32.const 5)))
-  (local.set $fc65ad19-ade2-4fef-802d-a0d9fc843622
+  (local.set $8103b931-b2e4-44f7-bf0e-201b41df801b
     (ref.i31
       (i32.const 5)))
   (local.set $neighbor_row
@@ -493,7 +493,7 @@
   (ref.i31
     (i32.const 5))
   (drop)
-  (local.set $77a1d01d-37a3-43ed-9572-e0ebcd189188
+  (local.set $e2748653-3849-416f-a8bb-54ac100b4566
     (array.new_fixed $arr_unitype 8
       (array.new_fixed $arr_unitype 2
         (call $sub
@@ -555,7 +555,7 @@
           (local.get $col)
           (ref.i31
             (i32.const 1073741825))))))
-  (local.set $fc65ad19-ade2-4fef-802d-a0d9fc843622
+  (local.set $8103b931-b2e4-44f7-bf0e-201b41df801b
     (call $i64_to_integer
       (i64.const 0)))
   (block $exit_for
@@ -564,10 +564,10 @@
         (i32.eq
           (i32.wrap_i64
             (call $integer_to_i64
-              (local.get $fc65ad19-ade2-4fef-802d-a0d9fc843622)))
+              (local.get $8103b931-b2e4-44f7-bf0e-201b41df801b)))
           (array.len
             (ref.cast (ref $arr_unitype)
-              (local.get $77a1d01d-37a3-43ed-9572-e0ebcd189188))))
+              (local.get $e2748653-3849-416f-a8bb-54ac100b4566))))
         (then
           (br $exit_for))
         (else
@@ -575,10 +575,10 @@
       (local.set $neighbor
         (array.get $arr_unitype
           (ref.cast (ref $arr_unitype)
-            (local.get $77a1d01d-37a3-43ed-9572-e0ebcd189188))
+            (local.get $e2748653-3849-416f-a8bb-54ac100b4566))
           (i32.wrap_i64
             (call $integer_to_i64
-              (local.get $fc65ad19-ade2-4fef-802d-a0d9fc843622)))))
+              (local.get $8103b931-b2e4-44f7-bf0e-201b41df801b)))))
       (local.set $neighbor_row
         (array.get $arr_unitype
           (ref.cast (ref $arr_unitype)
@@ -628,28 +628,16 @@
         (i32.const 5))
       (drop)
       (local.set $row_hi
-        (call $or
-          (call $lt
-            (local.get $neighbor_row)
-            (ref.i31
-              (i32.const 1073741833)))
-          (call $eq_eq
-            (local.get $neighbor_row)
-            (ref.i31
-              (i32.const 1073741833)))))
+        (call $lt
+          (local.get $neighbor_row)
+          (global.get $length)))
       (ref.i31
         (i32.const 5))
       (drop)
       (local.set $col_hi
-        (call $or
-          (call $lt
-            (local.get $neighbor_col)
-            (ref.i31
-              (i32.const 1073741833)))
-          (call $eq_eq
-            (local.get $neighbor_col)
-            (ref.i31
-              (i32.const 1073741833)))))
+        (call $lt
+          (local.get $neighbor_col)
+          (global.get $length)))
       (ref.i31
         (i32.const 5))
       (drop)
@@ -708,11 +696,11 @@
         (else
           (ref.i31
             (i32.const 5))))
-      (local.set $fc65ad19-ade2-4fef-802d-a0d9fc843622
+      (local.set $8103b931-b2e4-44f7-bf0e-201b41df801b
         (call $i64_to_integer
           (i64.add
             (call $integer_to_i64
-              (local.get $fc65ad19-ade2-4fef-802d-a0d9fc843622))
+              (local.get $8103b931-b2e4-44f7-bf0e-201b41df801b))
             (i64.const 1))))
       (br $for)))
   (ref.i31
@@ -726,12 +714,12 @@
   (result (ref eq))
   (local $res (ref eq))
   (local $row (ref eq))
-  (local $fc28190d-bc61-4291-a447-dfb424814751 (ref eq))
-  (local $046da16f-be03-495b-8110-ad107b3117ba (ref eq))
+  (local $df587114-aaa6-4898-ab0a-c880ba9facc7 (ref eq))
+  (local $7e6aabc2-1230-4e94-963c-f4a55b0d8ced (ref eq))
   (local $res_row (ref eq))
   (local $col (ref eq))
-  (local $12ca7c7f-7111-4282-a577-ea00a4469f80 (ref eq))
-  (local $4f143fc5-8504-4152-a7f5-2e9cc3398204 (ref eq))
+  (local $458279c1-f02b-4d2b-9db5-93b46e7745bd (ref eq))
+  (local $052a86aa-0a62-4c55-9823-eecbe32fed4b (ref eq))
   (local $alive (ref eq))
   (local $living_neighbors (ref eq))
   (local $ln3 (ref eq))
@@ -743,10 +731,10 @@
   (local.set $row
     (ref.i31
       (i32.const 5)))
-  (local.set $fc28190d-bc61-4291-a447-dfb424814751
+  (local.set $df587114-aaa6-4898-ab0a-c880ba9facc7
     (ref.i31
       (i32.const 5)))
-  (local.set $046da16f-be03-495b-8110-ad107b3117ba
+  (local.set $7e6aabc2-1230-4e94-963c-f4a55b0d8ced
     (ref.i31
       (i32.const 5)))
   (local.set $res_row
@@ -755,10 +743,10 @@
   (local.set $col
     (ref.i31
       (i32.const 5)))
-  (local.set $12ca7c7f-7111-4282-a577-ea00a4469f80
+  (local.set $458279c1-f02b-4d2b-9db5-93b46e7745bd
     (ref.i31
       (i32.const 5)))
-  (local.set $4f143fc5-8504-4152-a7f5-2e9cc3398204
+  (local.set $052a86aa-0a62-4c55-9823-eecbe32fed4b
     (ref.i31
       (i32.const 5)))
   (local.set $alive
@@ -781,13 +769,13 @@
   (ref.i31
     (i32.const 5))
   (drop)
-  (local.set $fc28190d-bc61-4291-a447-dfb424814751
+  (local.set $df587114-aaa6-4898-ab0a-c880ba9facc7
     (call $call
       (global.get $main)
       (global.get $str_range)
       (array.new_fixed $arr_unitype 1
         (global.get $length))))
-  (local.set $046da16f-be03-495b-8110-ad107b3117ba
+  (local.set $7e6aabc2-1230-4e94-963c-f4a55b0d8ced
     (call $i64_to_integer
       (i64.const 0)))
   (block $exit_for
@@ -796,10 +784,10 @@
         (i32.eq
           (i32.wrap_i64
             (call $integer_to_i64
-              (local.get $046da16f-be03-495b-8110-ad107b3117ba)))
+              (local.get $7e6aabc2-1230-4e94-963c-f4a55b0d8ced)))
           (array.len
             (ref.cast (ref $arr_unitype)
-              (local.get $fc28190d-bc61-4291-a447-dfb424814751))))
+              (local.get $df587114-aaa6-4898-ab0a-c880ba9facc7))))
         (then
           (br $exit_for))
         (else
@@ -807,22 +795,22 @@
       (local.set $row
         (array.get $arr_unitype
           (ref.cast (ref $arr_unitype)
-            (local.get $fc28190d-bc61-4291-a447-dfb424814751))
+            (local.get $df587114-aaa6-4898-ab0a-c880ba9facc7))
           (i32.wrap_i64
             (call $integer_to_i64
-              (local.get $046da16f-be03-495b-8110-ad107b3117ba)))))
+              (local.get $7e6aabc2-1230-4e94-963c-f4a55b0d8ced)))))
       (local.set $res_row
         (array.new_fixed $arr_unitype 0))
       (ref.i31
         (i32.const 5))
       (drop)
-      (local.set $12ca7c7f-7111-4282-a577-ea00a4469f80
+      (local.set $458279c1-f02b-4d2b-9db5-93b46e7745bd
         (call $call
           (global.get $main)
           (global.get $str_range)
           (array.new_fixed $arr_unitype 1
             (global.get $length))))
-      (local.set $4f143fc5-8504-4152-a7f5-2e9cc3398204
+      (local.set $052a86aa-0a62-4c55-9823-eecbe32fed4b
         (call $i64_to_integer
           (i64.const 0)))
       (block $exit_for
@@ -831,10 +819,10 @@
             (i32.eq
               (i32.wrap_i64
                 (call $integer_to_i64
-                  (local.get $4f143fc5-8504-4152-a7f5-2e9cc3398204)))
+                  (local.get $052a86aa-0a62-4c55-9823-eecbe32fed4b)))
               (array.len
                 (ref.cast (ref $arr_unitype)
-                  (local.get $12ca7c7f-7111-4282-a577-ea00a4469f80))))
+                  (local.get $458279c1-f02b-4d2b-9db5-93b46e7745bd))))
             (then
               (br $exit_for))
             (else
@@ -842,10 +830,10 @@
           (local.set $col
             (array.get $arr_unitype
               (ref.cast (ref $arr_unitype)
-                (local.get $12ca7c7f-7111-4282-a577-ea00a4469f80))
+                (local.get $458279c1-f02b-4d2b-9db5-93b46e7745bd))
               (i32.wrap_i64
                 (call $integer_to_i64
-                  (local.get $4f143fc5-8504-4152-a7f5-2e9cc3398204)))))
+                  (local.get $052a86aa-0a62-4c55-9823-eecbe32fed4b)))))
           (local.set $alive
             (call $eq_eq
               (array.get $arr_unitype
@@ -921,11 +909,11 @@
                     (i32.const 1073741824))))
               (ref.i31
                 (i32.const 5))))
-          (local.set $4f143fc5-8504-4152-a7f5-2e9cc3398204
+          (local.set $052a86aa-0a62-4c55-9823-eecbe32fed4b
             (call $i64_to_integer
               (i64.add
                 (call $integer_to_i64
-                  (local.get $4f143fc5-8504-4152-a7f5-2e9cc3398204))
+                  (local.get $052a86aa-0a62-4c55-9823-eecbe32fed4b))
                 (i64.const 1))))
           (br $for)))
       (ref.i31
@@ -938,11 +926,11 @@
           (local.get $res_row)))
       (ref.i31
         (i32.const 5))
-      (local.set $046da16f-be03-495b-8110-ad107b3117ba
+      (local.set $7e6aabc2-1230-4e94-963c-f4a55b0d8ced
         (call $i64_to_integer
           (i64.add
             (call $integer_to_i64
-              (local.get $046da16f-be03-495b-8110-ad107b3117ba))
+              (local.get $7e6aabc2-1230-4e94-963c-f4a55b0d8ced))
             (i64.const 1))))
       (br $for)))
   (ref.i31
