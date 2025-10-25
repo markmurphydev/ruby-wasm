@@ -5,32 +5,50 @@
     <title>Ruby-Wasm</title>
 </head>
 <body>
-  <button onclick="compile_run_wasm()">Compile and run Wasm</button>
+    <button onclick="step()">step</button>
+    <pre id="cells"></pre>
 </body>
 <script>
-    let compile_run_wasm = () => {
-        const imports = {
-            i64: { toRef: (n) => n },
-            arr: {
-                new: () => [],
-                push: (arr, x) => arr.push(x)
-            },
-        }
+    let wasm = null;
+
+    const showCells = () => {
+        let cells = wasm.instance.exports.get_cells();
+        let res = "";
+        cells.forEach((row) => {
+            row.forEach((cell) => {
+                res += (cell === 1n ? "X " : "_ ");
+            })
+            res += "\n";
+        })
+        document.getElementById("cells").textContent = res;
+    }
+
+    const step = () => {
+        wasm.instance.exports.step();
+        showCells();
+    }
+
+    const imports = {
+        i64: { toRef: (n) => n },
+        arr: {
+            new: () => [],
+            push: (arr, x) => arr.push(x)
+        },
+    }
+
+    addEventListener("load", () => {
         WebAssembly.instantiateStreaming(fetch("ruby.wasm"), imports).then(
             (obj) => {
+                wasm = obj
                 obj.instance.exports.__ruby_top_level_function();
                 obj.instance.exports.toggle_cell(4, 5)
                 obj.instance.exports.toggle_cell(5, 6)
                 obj.instance.exports.toggle_cell(6, 4)
                 obj.instance.exports.toggle_cell(6, 5)
                 obj.instance.exports.toggle_cell(6, 6)
-                console.log(obj.instance.exports.get_cells());
-                obj.instance.exports.step();
-                console.log(obj.instance.exports.get_cells());
-                // const a = obj.instance.exports.fn(22n)
-                // console.log(a);
+                showCells();
             }
         );
-    }
+    });
 </script>
 </html>
