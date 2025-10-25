@@ -1,8 +1,18 @@
+def range(length)
+  res = []
+  col = 0
+  while col < length
+    res = res.push(col)
+    col = col + 1
+  end
+  res
+end
+
 def line(length)
   res = []
   col = 0
   while col < length
-    res.push(0)
+    res = res.push(0)
     col = col + 1
   end
   res
@@ -12,7 +22,7 @@ def grid()
   grid = []
   row = 0
   while row < $length
-    grid.push(line($length))
+    grid = grid.push(line($length))
     row = row + 1
   end
   grid
@@ -64,24 +74,25 @@ end
 
 def step()
   res = []
-  for row in line($length) do
+  for row in range($length) do
     res_row = []
-    for col in line($length) do
+    for col in range($length) do
       alive = $cells[row][col] == 1
       living_neighbors = count_neighbors(row, col)
+
       ln3 = living_neighbors == 3
       alive_ln2 = alive && living_neighbors == 2
       res_alive = ln3 || alive_ln2
       if res_alive
-        res_row.push(1)
+        res_row = res_row.push(1)
       else
-        res_row.push(0)
+        res_row = res_row.push(0)
       end
     end
-  res.push(res_row)
+    res = res.push(res_row)
   end
   $cells = res
 end
 
-$length = 10
+$length = 20
 $cells = grid()

@@ -43,6 +43,47 @@
   
   )
 (func
+  $range_export
+  (export "range")
+  (param $length i32)
+  (result (ref null extern))
+  (call $unitype_to_js
+    (call $method_Object_range
+      (global.get $main)
+      (array.new_fixed $arr_unitype 1
+        (call $i32_to_fixnum
+          (local.get $length))))))
+(func
+  $line_export
+  (export "line")
+  (param $length i32)
+  (result (ref null extern))
+  (call $unitype_to_js
+    (call $method_Object_line
+      (global.get $main)
+      (array.new_fixed $arr_unitype 1
+        (call $i32_to_fixnum
+          (local.get $length))))))
+(func
+  $grid_export
+  (export "grid")
+  (result (ref null extern))
+  (call $unitype_to_js
+    (call $method_Object_grid
+      (global.get $main)
+      (array.new_fixed $arr_unitype 0))))
+(func
+  $reset_cells_export
+  (export "reset_cells")
+  (param $length i32)
+  (result (ref null extern))
+  (call $unitype_to_js
+    (call $method_Object_reset_cells
+      (global.get $main)
+      (array.new_fixed $arr_unitype 1
+        (call $i32_to_fixnum
+          (local.get $length))))))
+(func
   $get_cells_export
   (export "get_cells")
   (result (ref null extern))
@@ -88,230 +129,232 @@
   $__ruby_top_level_function
   (export "__ruby_top_level_function")
   (result (ref eq))
+  (ref.i31
+    (i32.const 5))
+  (drop)
+  (ref.i31
+    (i32.const 5))
+  (drop)
+  (ref.i31
+    (i32.const 5))
+  (drop)
+  (ref.i31
+    (i32.const 5))
+  (drop)
+  (ref.i31
+    (i32.const 5))
+  (drop)
+  (ref.i31
+    (i32.const 5))
+  (drop)
+  (ref.i31
+    (i32.const 5))
+  (drop)
+  (ref.i31
+    (i32.const 5))
+  (drop)
+  (global.set $length
+    (ref.i31
+      (i32.const 1073741844)))
+  (ref.i31
+    (i32.const 5))
+  (drop)
   (global.set $cells
-    (array.new_fixed $arr_unitype 10
-      (array.new_fixed $arr_unitype 10
-        (ref.i31
-          (i32.const 1073741824))
-        (ref.i31
-          (i32.const 1073741824))
-        (ref.i31
-          (i32.const 1073741824))
-        (ref.i31
-          (i32.const 1073741824))
-        (ref.i31
-          (i32.const 1073741824))
-        (ref.i31
-          (i32.const 1073741824))
-        (ref.i31
-          (i32.const 1073741824))
-        (ref.i31
-          (i32.const 1073741824))
-        (ref.i31
-          (i32.const 1073741824))
-        (ref.i31
-          (i32.const 1073741824)))
-      (array.new_fixed $arr_unitype 10
-        (ref.i31
-          (i32.const 1073741824))
-        (ref.i31
-          (i32.const 1073741824))
-        (ref.i31
-          (i32.const 1073741824))
-        (ref.i31
-          (i32.const 1073741824))
-        (ref.i31
-          (i32.const 1073741824))
-        (ref.i31
-          (i32.const 1073741824))
-        (ref.i31
-          (i32.const 1073741824))
-        (ref.i31
-          (i32.const 1073741824))
-        (ref.i31
-          (i32.const 1073741824))
-        (ref.i31
-          (i32.const 1073741824)))
-      (array.new_fixed $arr_unitype 10
-        (ref.i31
-          (i32.const 1073741824))
-        (ref.i31
-          (i32.const 1073741824))
-        (ref.i31
-          (i32.const 1073741824))
-        (ref.i31
-          (i32.const 1073741824))
-        (ref.i31
-          (i32.const 1073741824))
-        (ref.i31
-          (i32.const 1073741824))
-        (ref.i31
-          (i32.const 1073741824))
-        (ref.i31
-          (i32.const 1073741824))
-        (ref.i31
-          (i32.const 1073741824))
-        (ref.i31
-          (i32.const 1073741824)))
-      (array.new_fixed $arr_unitype 10
-        (ref.i31
-          (i32.const 1073741824))
-        (ref.i31
-          (i32.const 1073741824))
-        (ref.i31
-          (i32.const 1073741824))
-        (ref.i31
-          (i32.const 1073741824))
-        (ref.i31
-          (i32.const 1073741824))
-        (ref.i31
-          (i32.const 1073741824))
-        (ref.i31
-          (i32.const 1073741824))
-        (ref.i31
-          (i32.const 1073741824))
-        (ref.i31
-          (i32.const 1073741824))
-        (ref.i31
-          (i32.const 1073741824)))
-      (array.new_fixed $arr_unitype 10
-        (ref.i31
-          (i32.const 1073741824))
-        (ref.i31
-          (i32.const 1073741824))
-        (ref.i31
-          (i32.const 1073741824))
-        (ref.i31
-          (i32.const 1073741824))
-        (ref.i31
-          (i32.const 1073741824))
-        (ref.i31
-          (i32.const 1073741824))
-        (ref.i31
-          (i32.const 1073741824))
-        (ref.i31
-          (i32.const 1073741824))
-        (ref.i31
-          (i32.const 1073741824))
-        (ref.i31
-          (i32.const 1073741824)))
-      (array.new_fixed $arr_unitype 10
-        (ref.i31
-          (i32.const 1073741824))
-        (ref.i31
-          (i32.const 1073741824))
-        (ref.i31
-          (i32.const 1073741824))
-        (ref.i31
-          (i32.const 1073741824))
-        (ref.i31
-          (i32.const 1073741824))
-        (ref.i31
-          (i32.const 1073741824))
-        (ref.i31
-          (i32.const 1073741824))
-        (ref.i31
-          (i32.const 1073741824))
-        (ref.i31
-          (i32.const 1073741824))
-        (ref.i31
-          (i32.const 1073741824)))
-      (array.new_fixed $arr_unitype 10
-        (ref.i31
-          (i32.const 1073741824))
-        (ref.i31
-          (i32.const 1073741824))
-        (ref.i31
-          (i32.const 1073741824))
-        (ref.i31
-          (i32.const 1073741824))
-        (ref.i31
-          (i32.const 1073741824))
-        (ref.i31
-          (i32.const 1073741824))
-        (ref.i31
-          (i32.const 1073741824))
-        (ref.i31
-          (i32.const 1073741824))
-        (ref.i31
-          (i32.const 1073741824))
-        (ref.i31
-          (i32.const 1073741824)))
-      (array.new_fixed $arr_unitype 10
-        (ref.i31
-          (i32.const 1073741824))
-        (ref.i31
-          (i32.const 1073741824))
-        (ref.i31
-          (i32.const 1073741824))
-        (ref.i31
-          (i32.const 1073741824))
-        (ref.i31
-          (i32.const 1073741824))
-        (ref.i31
-          (i32.const 1073741824))
-        (ref.i31
-          (i32.const 1073741824))
-        (ref.i31
-          (i32.const 1073741824))
-        (ref.i31
-          (i32.const 1073741824))
-        (ref.i31
-          (i32.const 1073741824)))
-      (array.new_fixed $arr_unitype 10
-        (ref.i31
-          (i32.const 1073741824))
-        (ref.i31
-          (i32.const 1073741824))
-        (ref.i31
-          (i32.const 1073741824))
-        (ref.i31
-          (i32.const 1073741824))
-        (ref.i31
-          (i32.const 1073741824))
-        (ref.i31
-          (i32.const 1073741824))
-        (ref.i31
-          (i32.const 1073741824))
-        (ref.i31
-          (i32.const 1073741824))
-        (ref.i31
-          (i32.const 1073741824))
-        (ref.i31
-          (i32.const 1073741824)))
-      (array.new_fixed $arr_unitype 10
-        (ref.i31
-          (i32.const 1073741824))
-        (ref.i31
-          (i32.const 1073741824))
-        (ref.i31
-          (i32.const 1073741824))
-        (ref.i31
-          (i32.const 1073741824))
-        (ref.i31
-          (i32.const 1073741824))
-        (ref.i31
-          (i32.const 1073741824))
-        (ref.i31
-          (i32.const 1073741824))
-        (ref.i31
-          (i32.const 1073741824))
-        (ref.i31
-          (i32.const 1073741824))
-        (ref.i31
-          (i32.const 1073741824)))))
+    (call $call
+      (global.get $main)
+      (global.get $str_grid)
+      (array.new_fixed $arr_unitype 0)))
+  (ref.i31
+    (i32.const 5)))
+(func
+  $method_Object_range
+  (type $method)
+  (param $self (ref $obj)) (param $args (ref $arr_unitype))
+  (result (ref eq))
+  (local $length (ref eq)) (local $res (ref eq)) (local $col (ref eq))
+  (local.set $length
+    (array.get $arr_unitype
+      (local.get $args)
+      (i32.const 0)))
+  (local.set $res
+    (ref.i31
+      (i32.const 5)))
+  (local.set $col
+    (ref.i31
+      (i32.const 5)))
+  (local.set $res
+    (array.new_fixed $arr_unitype 0))
   (ref.i31
     (i32.const 5))
   (drop)
+  (local.set $col
+    (ref.i31
+      (i32.const 1073741824)))
   (ref.i31
     (i32.const 5))
   (drop)
+  (loop $while(result (ref eq))
+    (if
+      (result (ref eq))
+      (call $from_bool
+        (call $lt
+          (local.get $col)
+          (local.get $length)))
+      (then
+        (local.set $res
+          (call $push
+            (ref.cast (ref $arr_unitype)
+              (local.get $res))
+            (local.get $col)))
+        (ref.i31
+          (i32.const 5))
+        (drop)
+        (local.set $col
+          (call $add
+            (local.get $col)
+            (ref.i31
+              (i32.const 1073741825))))
+        (ref.i31
+          (i32.const 5))
+        (br $while))
+      (else
+        (ref.i31
+          (i32.const 5)))))
+  (drop)
+  (local.get $res))
+(func
+  $method_Object_line
+  (type $method)
+  (param $self (ref $obj)) (param $args (ref $arr_unitype))
+  (result (ref eq))
+  (local $length (ref eq)) (local $res (ref eq)) (local $col (ref eq))
+  (local.set $length
+    (array.get $arr_unitype
+      (local.get $args)
+      (i32.const 0)))
+  (local.set $res
+    (ref.i31
+      (i32.const 5)))
+  (local.set $col
+    (ref.i31
+      (i32.const 5)))
+  (local.set $res
+    (array.new_fixed $arr_unitype 0))
   (ref.i31
     (i32.const 5))
   (drop)
+  (local.set $col
+    (ref.i31
+      (i32.const 1073741824)))
   (ref.i31
     (i32.const 5))
   (drop)
+  (loop $while(result (ref eq))
+    (if
+      (result (ref eq))
+      (call $from_bool
+        (call $lt
+          (local.get $col)
+          (local.get $length)))
+      (then
+        (local.set $res
+          (call $push
+            (ref.cast (ref $arr_unitype)
+              (local.get $res))
+            (ref.i31
+              (i32.const 1073741824))))
+        (ref.i31
+          (i32.const 5))
+        (drop)
+        (local.set $col
+          (call $add
+            (local.get $col)
+            (ref.i31
+              (i32.const 1073741825))))
+        (ref.i31
+          (i32.const 5))
+        (br $while))
+      (else
+        (ref.i31
+          (i32.const 5)))))
+  (drop)
+  (local.get $res))
+(func
+  $method_Object_grid
+  (type $method)
+  (param $self (ref $obj)) (param $args (ref $arr_unitype))
+  (result (ref eq))
+  (local $grid (ref eq)) (local $row (ref eq))
+  (local.set $grid
+    (ref.i31
+      (i32.const 5)))
+  (local.set $row
+    (ref.i31
+      (i32.const 5)))
+  (local.set $grid
+    (array.new_fixed $arr_unitype 0))
+  (ref.i31
+    (i32.const 5))
+  (drop)
+  (local.set $row
+    (ref.i31
+      (i32.const 1073741824)))
+  (ref.i31
+    (i32.const 5))
+  (drop)
+  (loop $while(result (ref eq))
+    (if
+      (result (ref eq))
+      (call $from_bool
+        (call $lt
+          (local.get $row)
+          (global.get $length)))
+      (then
+        (local.set $grid
+          (call $push
+            (ref.cast (ref $arr_unitype)
+              (local.get $grid))
+            (call $call
+              (global.get $main)
+              (global.get $str_line)
+              (array.new_fixed $arr_unitype 1
+                (global.get $length)))))
+        (ref.i31
+          (i32.const 5))
+        (drop)
+        (local.set $row
+          (call $add
+            (local.get $row)
+            (ref.i31
+              (i32.const 1073741825))))
+        (ref.i31
+          (i32.const 5))
+        (br $while))
+      (else
+        (ref.i31
+          (i32.const 5)))))
+  (drop)
+  (local.get $grid))
+(func
+  $method_Object_reset_cells
+  (type $method)
+  (param $self (ref $obj)) (param $args (ref $arr_unitype))
+  (result (ref eq))
+  (local $length (ref eq))
+  (local.set $length
+    (array.get $arr_unitype
+      (local.get $args)
+      (i32.const 0)))
+  (global.set $length
+    (local.get $length))
+  (ref.i31
+    (i32.const 5))
+  (drop)
+  (global.set $cells
+    (call $call
+      (global.get $main)
+      (global.get $str_grid)
+      (array.new_fixed $arr_unitype 0)))
   (ref.i31
     (i32.const 5)))
 (func
@@ -390,8 +433,8 @@
   (local $col (ref eq))
   (local $count (ref eq))
   (local $neighbor (ref eq))
-  (local $16ccaa66-4b39-45a7-9b20-611b2714c134 (ref eq))
-  (local $21cf1a9d-703d-40fd-96c5-f4bea7a6faea (ref eq))
+  (local $607a10a4-ad4c-4e7b-9727-710e2ea2b88e (ref eq))
+  (local $b8e6befc-c15f-4c79-8249-7f60cf2bc442 (ref eq))
   (local $neighbor_row (ref eq))
   (local $neighbor_col (ref eq))
   (local $row_lo (ref eq))
@@ -414,10 +457,10 @@
   (local.set $neighbor
     (ref.i31
       (i32.const 5)))
-  (local.set $16ccaa66-4b39-45a7-9b20-611b2714c134
+  (local.set $607a10a4-ad4c-4e7b-9727-710e2ea2b88e
     (ref.i31
       (i32.const 5)))
-  (local.set $21cf1a9d-703d-40fd-96c5-f4bea7a6faea
+  (local.set $b8e6befc-c15f-4c79-8249-7f60cf2bc442
     (ref.i31
       (i32.const 5)))
   (local.set $neighbor_row
@@ -450,7 +493,7 @@
   (ref.i31
     (i32.const 5))
   (drop)
-  (local.set $16ccaa66-4b39-45a7-9b20-611b2714c134
+  (local.set $607a10a4-ad4c-4e7b-9727-710e2ea2b88e
     (array.new_fixed $arr_unitype 8
       (array.new_fixed $arr_unitype 2
         (call $sub
@@ -512,7 +555,7 @@
           (local.get $col)
           (ref.i31
             (i32.const 1073741825))))))
-  (local.set $21cf1a9d-703d-40fd-96c5-f4bea7a6faea
+  (local.set $b8e6befc-c15f-4c79-8249-7f60cf2bc442
     (call $i64_to_integer
       (i64.const 0)))
   (block $exit_for
@@ -521,10 +564,10 @@
         (i32.eq
           (i32.wrap_i64
             (call $integer_to_i64
-              (local.get $21cf1a9d-703d-40fd-96c5-f4bea7a6faea)))
+              (local.get $b8e6befc-c15f-4c79-8249-7f60cf2bc442)))
           (array.len
             (ref.cast (ref $arr_unitype)
-              (local.get $16ccaa66-4b39-45a7-9b20-611b2714c134))))
+              (local.get $607a10a4-ad4c-4e7b-9727-710e2ea2b88e))))
         (then
           (br $exit_for))
         (else
@@ -532,10 +575,10 @@
       (local.set $neighbor
         (array.get $arr_unitype
           (ref.cast (ref $arr_unitype)
-            (local.get $16ccaa66-4b39-45a7-9b20-611b2714c134))
+            (local.get $607a10a4-ad4c-4e7b-9727-710e2ea2b88e))
           (i32.wrap_i64
             (call $integer_to_i64
-              (local.get $21cf1a9d-703d-40fd-96c5-f4bea7a6faea)))))
+              (local.get $b8e6befc-c15f-4c79-8249-7f60cf2bc442)))))
       (local.set $neighbor_row
         (array.get $arr_unitype
           (ref.cast (ref $arr_unitype)
@@ -665,11 +708,11 @@
         (else
           (ref.i31
             (i32.const 5))))
-      (local.set $21cf1a9d-703d-40fd-96c5-f4bea7a6faea
+      (local.set $b8e6befc-c15f-4c79-8249-7f60cf2bc442
         (call $i64_to_integer
           (i64.add
             (call $integer_to_i64
-              (local.get $21cf1a9d-703d-40fd-96c5-f4bea7a6faea))
+              (local.get $b8e6befc-c15f-4c79-8249-7f60cf2bc442))
             (i64.const 1))))
       (br $for)))
   (ref.i31
@@ -683,11 +726,12 @@
   (result (ref eq))
   (local $res (ref eq))
   (local $row (ref eq))
-  (local $467fd3df-2f59-414c-b7f9-dfe0016df2de (ref eq))
-  (local $17e3e626-6571-47ae-8a85-279b58e8e2e5 (ref eq))
+  (local $dca73f39-c2ac-4910-9c4a-d6530650ea43 (ref eq))
+  (local $83b17551-3626-4499-add9-3dfa9c79b9f6 (ref eq))
+  (local $res_row (ref eq))
   (local $col (ref eq))
-  (local $0c339fde-5d74-4746-b26b-d0ddbe6af25e (ref eq))
-  (local $71b9b2c7-ed1c-4790-882a-d256a9cb65d8 (ref eq))
+  (local $06fb6e1c-a08f-473d-994d-d010f1ad22f3 (ref eq))
+  (local $456d4a9f-f5e8-4fb9-b848-e52aefd660a8 (ref eq))
   (local $alive (ref eq))
   (local $living_neighbors (ref eq))
   (local $ln3 (ref eq))
@@ -699,19 +743,22 @@
   (local.set $row
     (ref.i31
       (i32.const 5)))
-  (local.set $467fd3df-2f59-414c-b7f9-dfe0016df2de
+  (local.set $dca73f39-c2ac-4910-9c4a-d6530650ea43
     (ref.i31
       (i32.const 5)))
-  (local.set $17e3e626-6571-47ae-8a85-279b58e8e2e5
+  (local.set $83b17551-3626-4499-add9-3dfa9c79b9f6
+    (ref.i31
+      (i32.const 5)))
+  (local.set $res_row
     (ref.i31
       (i32.const 5)))
   (local.set $col
     (ref.i31
       (i32.const 5)))
-  (local.set $0c339fde-5d74-4746-b26b-d0ddbe6af25e
+  (local.set $06fb6e1c-a08f-473d-994d-d010f1ad22f3
     (ref.i31
       (i32.const 5)))
-  (local.set $71b9b2c7-ed1c-4790-882a-d256a9cb65d8
+  (local.set $456d4a9f-f5e8-4fb9-b848-e52aefd660a8
     (ref.i31
       (i32.const 5)))
   (local.set $alive
@@ -730,243 +777,17 @@
     (ref.i31
       (i32.const 5)))
   (local.set $res
-    (array.new_fixed $arr_unitype 10
-      (array.new_fixed $arr_unitype 10
-        (ref.i31
-          (i32.const 1073741824))
-        (ref.i31
-          (i32.const 1073741824))
-        (ref.i31
-          (i32.const 1073741824))
-        (ref.i31
-          (i32.const 1073741824))
-        (ref.i31
-          (i32.const 1073741824))
-        (ref.i31
-          (i32.const 1073741824))
-        (ref.i31
-          (i32.const 1073741824))
-        (ref.i31
-          (i32.const 1073741824))
-        (ref.i31
-          (i32.const 1073741824))
-        (ref.i31
-          (i32.const 1073741824)))
-      (array.new_fixed $arr_unitype 10
-        (ref.i31
-          (i32.const 1073741824))
-        (ref.i31
-          (i32.const 1073741824))
-        (ref.i31
-          (i32.const 1073741824))
-        (ref.i31
-          (i32.const 1073741824))
-        (ref.i31
-          (i32.const 1073741824))
-        (ref.i31
-          (i32.const 1073741824))
-        (ref.i31
-          (i32.const 1073741824))
-        (ref.i31
-          (i32.const 1073741824))
-        (ref.i31
-          (i32.const 1073741824))
-        (ref.i31
-          (i32.const 1073741824)))
-      (array.new_fixed $arr_unitype 10
-        (ref.i31
-          (i32.const 1073741824))
-        (ref.i31
-          (i32.const 1073741824))
-        (ref.i31
-          (i32.const 1073741824))
-        (ref.i31
-          (i32.const 1073741824))
-        (ref.i31
-          (i32.const 1073741824))
-        (ref.i31
-          (i32.const 1073741824))
-        (ref.i31
-          (i32.const 1073741824))
-        (ref.i31
-          (i32.const 1073741824))
-        (ref.i31
-          (i32.const 1073741824))
-        (ref.i31
-          (i32.const 1073741824)))
-      (array.new_fixed $arr_unitype 10
-        (ref.i31
-          (i32.const 1073741824))
-        (ref.i31
-          (i32.const 1073741824))
-        (ref.i31
-          (i32.const 1073741824))
-        (ref.i31
-          (i32.const 1073741824))
-        (ref.i31
-          (i32.const 1073741824))
-        (ref.i31
-          (i32.const 1073741824))
-        (ref.i31
-          (i32.const 1073741824))
-        (ref.i31
-          (i32.const 1073741824))
-        (ref.i31
-          (i32.const 1073741824))
-        (ref.i31
-          (i32.const 1073741824)))
-      (array.new_fixed $arr_unitype 10
-        (ref.i31
-          (i32.const 1073741824))
-        (ref.i31
-          (i32.const 1073741824))
-        (ref.i31
-          (i32.const 1073741824))
-        (ref.i31
-          (i32.const 1073741824))
-        (ref.i31
-          (i32.const 1073741824))
-        (ref.i31
-          (i32.const 1073741824))
-        (ref.i31
-          (i32.const 1073741824))
-        (ref.i31
-          (i32.const 1073741824))
-        (ref.i31
-          (i32.const 1073741824))
-        (ref.i31
-          (i32.const 1073741824)))
-      (array.new_fixed $arr_unitype 10
-        (ref.i31
-          (i32.const 1073741824))
-        (ref.i31
-          (i32.const 1073741824))
-        (ref.i31
-          (i32.const 1073741824))
-        (ref.i31
-          (i32.const 1073741824))
-        (ref.i31
-          (i32.const 1073741824))
-        (ref.i31
-          (i32.const 1073741824))
-        (ref.i31
-          (i32.const 1073741824))
-        (ref.i31
-          (i32.const 1073741824))
-        (ref.i31
-          (i32.const 1073741824))
-        (ref.i31
-          (i32.const 1073741824)))
-      (array.new_fixed $arr_unitype 10
-        (ref.i31
-          (i32.const 1073741824))
-        (ref.i31
-          (i32.const 1073741824))
-        (ref.i31
-          (i32.const 1073741824))
-        (ref.i31
-          (i32.const 1073741824))
-        (ref.i31
-          (i32.const 1073741824))
-        (ref.i31
-          (i32.const 1073741824))
-        (ref.i31
-          (i32.const 1073741824))
-        (ref.i31
-          (i32.const 1073741824))
-        (ref.i31
-          (i32.const 1073741824))
-        (ref.i31
-          (i32.const 1073741824)))
-      (array.new_fixed $arr_unitype 10
-        (ref.i31
-          (i32.const 1073741824))
-        (ref.i31
-          (i32.const 1073741824))
-        (ref.i31
-          (i32.const 1073741824))
-        (ref.i31
-          (i32.const 1073741824))
-        (ref.i31
-          (i32.const 1073741824))
-        (ref.i31
-          (i32.const 1073741824))
-        (ref.i31
-          (i32.const 1073741824))
-        (ref.i31
-          (i32.const 1073741824))
-        (ref.i31
-          (i32.const 1073741824))
-        (ref.i31
-          (i32.const 1073741824)))
-      (array.new_fixed $arr_unitype 10
-        (ref.i31
-          (i32.const 1073741824))
-        (ref.i31
-          (i32.const 1073741824))
-        (ref.i31
-          (i32.const 1073741824))
-        (ref.i31
-          (i32.const 1073741824))
-        (ref.i31
-          (i32.const 1073741824))
-        (ref.i31
-          (i32.const 1073741824))
-        (ref.i31
-          (i32.const 1073741824))
-        (ref.i31
-          (i32.const 1073741824))
-        (ref.i31
-          (i32.const 1073741824))
-        (ref.i31
-          (i32.const 1073741824)))
-      (array.new_fixed $arr_unitype 10
-        (ref.i31
-          (i32.const 1073741824))
-        (ref.i31
-          (i32.const 1073741824))
-        (ref.i31
-          (i32.const 1073741824))
-        (ref.i31
-          (i32.const 1073741824))
-        (ref.i31
-          (i32.const 1073741824))
-        (ref.i31
-          (i32.const 1073741824))
-        (ref.i31
-          (i32.const 1073741824))
-        (ref.i31
-          (i32.const 1073741824))
-        (ref.i31
-          (i32.const 1073741824))
-        (ref.i31
-          (i32.const 1073741824)))))
+    (array.new_fixed $arr_unitype 0))
   (ref.i31
     (i32.const 5))
   (drop)
-  (local.set $467fd3df-2f59-414c-b7f9-dfe0016df2de
-    (array.new_fixed $arr_unitype 10
-      (ref.i31
-        (i32.const 1073741824))
-      (ref.i31
-        (i32.const 1073741825))
-      (ref.i31
-        (i32.const 1073741826))
-      (ref.i31
-        (i32.const 1073741827))
-      (ref.i31
-        (i32.const 1073741828))
-      (ref.i31
-        (i32.const 1073741829))
-      (ref.i31
-        (i32.const 1073741830))
-      (ref.i31
-        (i32.const 1073741831))
-      (ref.i31
-        (i32.const 1073741832))
-      (ref.i31
-        (i32.const 1073741833))))
-  (local.set $17e3e626-6571-47ae-8a85-279b58e8e2e5
+  (local.set $dca73f39-c2ac-4910-9c4a-d6530650ea43
+    (call $call
+      (global.get $main)
+      (global.get $str_range)
+      (array.new_fixed $arr_unitype 1
+        (global.get $length))))
+  (local.set $83b17551-3626-4499-add9-3dfa9c79b9f6
     (call $i64_to_integer
       (i64.const 0)))
   (block $exit_for
@@ -975,10 +796,10 @@
         (i32.eq
           (i32.wrap_i64
             (call $integer_to_i64
-              (local.get $17e3e626-6571-47ae-8a85-279b58e8e2e5)))
+              (local.get $83b17551-3626-4499-add9-3dfa9c79b9f6)))
           (array.len
             (ref.cast (ref $arr_unitype)
-              (local.get $467fd3df-2f59-414c-b7f9-dfe0016df2de))))
+              (local.get $dca73f39-c2ac-4910-9c4a-d6530650ea43))))
         (then
           (br $exit_for))
         (else
@@ -986,33 +807,22 @@
       (local.set $row
         (array.get $arr_unitype
           (ref.cast (ref $arr_unitype)
-            (local.get $467fd3df-2f59-414c-b7f9-dfe0016df2de))
+            (local.get $dca73f39-c2ac-4910-9c4a-d6530650ea43))
           (i32.wrap_i64
             (call $integer_to_i64
-              (local.get $17e3e626-6571-47ae-8a85-279b58e8e2e5)))))
-      (local.set $0c339fde-5d74-4746-b26b-d0ddbe6af25e
-        (array.new_fixed $arr_unitype 10
-          (ref.i31
-            (i32.const 1073741824))
-          (ref.i31
-            (i32.const 1073741825))
-          (ref.i31
-            (i32.const 1073741826))
-          (ref.i31
-            (i32.const 1073741827))
-          (ref.i31
-            (i32.const 1073741828))
-          (ref.i31
-            (i32.const 1073741829))
-          (ref.i31
-            (i32.const 1073741830))
-          (ref.i31
-            (i32.const 1073741831))
-          (ref.i31
-            (i32.const 1073741832))
-          (ref.i31
-            (i32.const 1073741833))))
-      (local.set $71b9b2c7-ed1c-4790-882a-d256a9cb65d8
+              (local.get $83b17551-3626-4499-add9-3dfa9c79b9f6)))))
+      (local.set $res_row
+        (array.new_fixed $arr_unitype 0))
+      (ref.i31
+        (i32.const 5))
+      (drop)
+      (local.set $06fb6e1c-a08f-473d-994d-d010f1ad22f3
+        (call $call
+          (global.get $main)
+          (global.get $str_range)
+          (array.new_fixed $arr_unitype 1
+            (global.get $length))))
+      (local.set $456d4a9f-f5e8-4fb9-b848-e52aefd660a8
         (call $i64_to_integer
           (i64.const 0)))
       (block $exit_for
@@ -1021,10 +831,10 @@
             (i32.eq
               (i32.wrap_i64
                 (call $integer_to_i64
-                  (local.get $71b9b2c7-ed1c-4790-882a-d256a9cb65d8)))
+                  (local.get $456d4a9f-f5e8-4fb9-b848-e52aefd660a8)))
               (array.len
                 (ref.cast (ref $arr_unitype)
-                  (local.get $0c339fde-5d74-4746-b26b-d0ddbe6af25e))))
+                  (local.get $06fb6e1c-a08f-473d-994d-d010f1ad22f3))))
             (then
               (br $exit_for))
             (else
@@ -1032,10 +842,10 @@
           (local.set $col
             (array.get $arr_unitype
               (ref.cast (ref $arr_unitype)
-                (local.get $0c339fde-5d74-4746-b26b-d0ddbe6af25e))
+                (local.get $06fb6e1c-a08f-473d-994d-d010f1ad22f3))
               (i32.wrap_i64
                 (call $integer_to_i64
-                  (local.get $71b9b2c7-ed1c-4790-882a-d256a9cb65d8)))))
+                  (local.get $456d4a9f-f5e8-4fb9-b848-e52aefd660a8)))))
           (local.set $alive
             (call $eq_eq
               (array.get $arr_unitype
@@ -1094,51 +904,45 @@
             (call $from_bool
               (local.get $res_alive))
             (then
-              (array.set $arr_unitype
-                (ref.cast (ref $arr_unitype)
-                  (array.get $arr_unitype
-                    (ref.cast (ref $arr_unitype)
-                      (local.get $res))
-                    (i32.wrap_i64
-                      (call $integer_to_i64
-                        (local.get $row)))))
-                (i32.wrap_i64
-                  (call $integer_to_i64
-                    (local.get $col)))
-                (ref.i31
-                  (i32.const 1073741825)))
+              (local.set $res_row
+                (call $push
+                  (ref.cast (ref $arr_unitype)
+                    (local.get $res_row))
+                  (ref.i31
+                    (i32.const 1073741825))))
               (ref.i31
                 (i32.const 5)))
             (else
-              (array.set $arr_unitype
-                (ref.cast (ref $arr_unitype)
-                  (array.get $arr_unitype
-                    (ref.cast (ref $arr_unitype)
-                      (local.get $res))
-                    (i32.wrap_i64
-                      (call $integer_to_i64
-                        (local.get $row)))))
-                (i32.wrap_i64
-                  (call $integer_to_i64
-                    (local.get $col)))
-                (ref.i31
-                  (i32.const 1073741824)))
+              (local.set $res_row
+                (call $push
+                  (ref.cast (ref $arr_unitype)
+                    (local.get $res_row))
+                  (ref.i31
+                    (i32.const 1073741824))))
               (ref.i31
                 (i32.const 5))))
-          (local.set $71b9b2c7-ed1c-4790-882a-d256a9cb65d8
+          (local.set $456d4a9f-f5e8-4fb9-b848-e52aefd660a8
             (call $i64_to_integer
               (i64.add
                 (call $integer_to_i64
-                  (local.get $71b9b2c7-ed1c-4790-882a-d256a9cb65d8))
+                  (local.get $456d4a9f-f5e8-4fb9-b848-e52aefd660a8))
                 (i64.const 1))))
           (br $for)))
       (ref.i31
         (i32.const 5))
-      (local.set $17e3e626-6571-47ae-8a85-279b58e8e2e5
+      (drop)
+      (local.set $res
+        (call $push
+          (ref.cast (ref $arr_unitype)
+            (local.get $res))
+          (local.get $res_row)))
+      (ref.i31
+        (i32.const 5))
+      (local.set $83b17551-3626-4499-add9-3dfa9c79b9f6
         (call $i64_to_integer
           (i64.add
             (call $integer_to_i64
-              (local.get $17e3e626-6571-47ae-8a85-279b58e8e2e5))
+              (local.get $83b17551-3626-4499-add9-3dfa9c79b9f6))
             (i64.const 1))))
       (br $for)))
   (ref.i31
@@ -1710,6 +1514,36 @@
                       (local.get $x))))
                 (else
                   (unreachable))))))))))
+(func
+  $push
+  (param $arr (ref $arr_unitype)) (param $val (ref eq))
+  (result (ref eq))
+  (local $new_arr (ref $arr_unitype))
+  (local.set $new_arr
+    (array.new $arr_unitype
+      (ref.i31
+        (i32.const 5))
+      (i32.add
+        (array.len
+          (local.get $arr))
+        (i32.const 1))))
+  (array.copy $arr_unitype $arr_unitype
+    (local.get $new_arr)
+    (i32.const 0)
+    (local.get $arr)
+    (i32.const 0)
+    (array.len
+      (local.get $arr)))
+  (array.set $arr_unitype
+    (local.get $new_arr)
+    (array.len
+      (local.get $arr))
+    (local.get $val))
+  (local.get $new_arr))
+(global $length
+  (mut (ref eq))
+  (ref.i31
+    (i32.const 5)))
 (global $cells
   (mut (ref eq))
   (ref.i31
@@ -1761,6 +1595,42 @@
     (i32.const 101)
     (i32.const 99)
     (i32.const 116)))
+(global $str_range
+  (ref $str)
+  (array.new_fixed $str 5
+    (i32.const 114)
+    (i32.const 97)
+    (i32.const 110)
+    (i32.const 103)
+    (i32.const 101)))
+(global $str_line
+  (ref $str)
+  (array.new_fixed $str 4
+    (i32.const 108)
+    (i32.const 105)
+    (i32.const 110)
+    (i32.const 101)))
+(global $str_grid
+  (ref $str)
+  (array.new_fixed $str 4
+    (i32.const 103)
+    (i32.const 114)
+    (i32.const 105)
+    (i32.const 100)))
+(global $str_reset_cells
+  (ref $str)
+  (array.new_fixed $str 11
+    (i32.const 114)
+    (i32.const 101)
+    (i32.const 115)
+    (i32.const 101)
+    (i32.const 116)
+    (i32.const 95)
+    (i32.const 99)
+    (i32.const 101)
+    (i32.const 108)
+    (i32.const 108)
+    (i32.const 115)))
 (global $str_get_cells
   (ref $str)
   (array.new_fixed $str 9
@@ -1866,7 +1736,19 @@
     (ref.null $class)
     (ref.null $class)
     (global.get $str_Object)
-    (array.new_fixed $alist_str_method 5
+    (array.new_fixed $alist_str_method 9
+      (struct.new $alist_str_method_pair
+        (global.get $str_range)
+        (ref.func $method_Object_range))
+      (struct.new $alist_str_method_pair
+        (global.get $str_line)
+        (ref.func $method_Object_line))
+      (struct.new $alist_str_method_pair
+        (global.get $str_grid)
+        (ref.func $method_Object_grid))
+      (struct.new $alist_str_method_pair
+        (global.get $str_reset_cells)
+        (ref.func $method_Object_reset_cells))
       (struct.new $alist_str_method_pair
         (global.get $str_get_cells)
         (ref.func $method_Object_get_cells))

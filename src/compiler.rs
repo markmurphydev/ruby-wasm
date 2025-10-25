@@ -465,6 +465,18 @@ fn compile_call_expr(ctx: &mut CompileCtx, call_expr: &Call) -> Vec<Instr> {
             assert_eq!(2, args.len());
             compile_array_index_assign(ctx, receiver.as_ref().unwrap(), &args[0], &args[1])
         }
+        "push" => {
+            assert_eq!(1, args.len());
+            let arr = wat! {
+                (ref_cast (ref $arr_unitype)
+                    ,(compile_expr(ctx, receiver.as_ref().unwrap())))
+            };
+            let val = compile_expr(ctx, &args[0]);
+            let wat_args = [arr, val].concat();
+            wat! {
+                (call $push ,(wat_args))
+            }
+        }
         _ => {
             let name = corelib::global::string_identifier(name);
             let mut receiver = match receiver {

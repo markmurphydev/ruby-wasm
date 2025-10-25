@@ -118,6 +118,10 @@ pub enum UnfoldedInstr {
         name: String,
     },
 
+    ArrayNew {
+        type_idx: String,
+    },
+
     ArrayNewFixed {
         type_idx: String,
         len: i64,
@@ -136,6 +140,11 @@ pub enum UnfoldedInstr {
     },
 
     ArrayLen,
+
+    ArrayCopy {
+        type_idx_into: String,
+        type_idx_from: String,
+    },
 
     StructNew {
         ty: String,
@@ -218,11 +227,13 @@ impl Instr {
             || str == "local_set"
             || str == "global_get"
             || str == "global_set"
+            || str == "array_new"
             || str == "array_new_fixed"
             || str == "array_get"
             || str == "array_get_u"
             || str == "array_set"
             || str == "array_len"
+            || str == "array_copy"
             || str == "struct_new"
             || str == "struct_get"
             || str == "struct_set"

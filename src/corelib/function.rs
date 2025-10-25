@@ -46,6 +46,7 @@ fn funcs() -> Vec<Func> {
         eq_eq(),
         arr_to_js(),
         unitype_to_js(),
+        push(),
     ]
 }
 
@@ -587,5 +588,32 @@ fn unitype_to_js() -> Func {
                                           (then
                                               (call $arr_to_js (ref_cast (ref $arr_unitype) (local_get $x))))
                                           (else (unreachable))))))))))
+    }
+}
+
+fn push() -> Func {
+    wat! {
+        (func $push
+            (param $arr (ref $arr_unitype))
+            (param $val (ref eq))
+            (result (ref eq))
+            (local $new_arr (ref $arr_unitype))
+
+            (local_set $new_arr
+                (array_new $arr_unitype
+                    (ref_i31 (const_i32 ,(Unitype::NIL_BIT_PATTERN as i64)))
+                    (i32_add (array_len (local_get $arr))
+                             (const_i32 1))))
+            (array_copy $arr_unitype $arr_unitype
+                (local_get $new_arr)
+                (const_i32 0)
+                (local_get $arr)
+                (const_i32 0)
+                (array_len (local_get $arr)))
+            (array_set $arr_unitype
+                (local_get $new_arr)
+                (array_len (local_get $arr))
+                (local_get $val))
+            (local_get $new_arr))
     }
 }

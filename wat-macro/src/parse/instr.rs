@@ -173,6 +173,14 @@ fn parse_unfolded_instr(name: Ident, input: ParseInput) -> Result<TokenStream> {
             let name = parse_name(input)?;
             quote![ #path::GlobalSet { name: #name } ]
         }
+        "array_new" => {
+            let type_idx = parse_name(input)?;
+            quote! {
+                #path::ArrayNew {
+                    type_idx: #type_idx,
+                }
+            }
+        }
         "array_new_fixed" => {
             let type_idx = parse_name(input)?;
             let len = expect_int_literal(input)?;
@@ -196,6 +204,16 @@ fn parse_unfolded_instr(name: Ident, input: ParseInput) -> Result<TokenStream> {
             quote![ #path::ArraySet { ty: #ty } ]
         }
         "array_len" => quote![ #path::ArrayLen ],
+        "array_copy" => {
+            let type_idx_into = parse_name(input)?;
+            let type_idx_from = parse_name(input)?;
+            quote! {
+                #path::ArrayCopy {
+                    type_idx_into: #type_idx_into,
+                    type_idx_from: #type_idx_from,
+                }
+            }
+        }
         "struct_new" => {
             let ty = parse_name(input)?;
             quote![ #path::StructNew { ty: #ty } ]
