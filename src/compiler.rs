@@ -400,13 +400,11 @@ fn compile_while_expr(ctx: &mut CompileCtx, while_expr: &While) -> Vec<Instr> {
     let stmts = compile_statements(ctx, statements);
 
     wat! {
-        (loop $while
+        (loop $while (result (ref eq))
             (if (result (ref eq))
                 (call $from_bool ,(predicate))
-                (then ,(stmts))
-                (else (br $while))
-            )
-        )
+                (then ,(vec![stmts, wat! { (br $while) }].concat()))
+                (else ,(vec![i31_const(Unitype::NIL_BIT_PATTERN)]))))
     }
 }
 
@@ -419,11 +417,11 @@ fn compile_until_expr(ctx: &mut CompileCtx, until_expr: &Until) -> Vec<Instr> {
     let predicate = compile_expr_to_wasm_predicate(ctx, predicate);
     let stmts = compile_statements(ctx, statements);
     wat! {
-        (loop $until
-            (i32_eqz ,(predicate))
-            (then ,(stmts))
-            (br $label)
-        )
+        (loop $until (result (ref eq))
+            (if (result (ref eq))
+                (i32_eqz (call $from_bool ,(predicate)))
+                (then ,(vec![stmts, wat! { (br $until) }].concat()))
+                (else ,(vec![i31_const(Unitype::NIL_BIT_PATTERN)]))))
     }
 }
 

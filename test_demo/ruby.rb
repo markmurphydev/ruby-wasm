@@ -1,15 +1,27 @@
-$cells = [
-  [0, 0, 0, 0, 0, 0, 0, 0, 0, 0],
-  [0, 0, 0, 0, 0, 0, 0, 0, 0, 0],
-  [0, 0, 0, 0, 0, 0, 0, 0, 0, 0],
-  [0, 0, 0, 0, 0, 0, 0, 0, 0, 0],
-  [0, 0, 0, 0, 0, 0, 0, 0, 0, 0],
-  [0, 0, 0, 0, 0, 0, 0, 0, 0, 0],
-  [0, 0, 0, 0, 0, 0, 0, 0, 0, 0],
-  [0, 0, 0, 0, 0, 0, 0, 0, 0, 0],
-  [0, 0, 0, 0, 0, 0, 0, 0, 0, 0],
-  [0, 0, 0, 0, 0, 0, 0, 0, 0, 0]
-]
+def line(length)
+  res = []
+  col = 0
+  while col < length
+    res.push(0)
+    col = col + 1
+  end
+  res
+end
+
+def grid()
+  grid = []
+  row = 0
+  while row < $length
+    grid.push(line($length))
+    row = row + 1
+  end
+  grid
+end
+
+def reset_cells(length)
+  $length = length
+  $cells = grid()
+end
 
 def get_cells()
   $cells
@@ -51,31 +63,25 @@ def count_neighbors(row, col)
 end
 
 def step()
-  res = [
-    [0, 0, 0, 0, 0, 0, 0, 0, 0, 0],
-    [0, 0, 0, 0, 0, 0, 0, 0, 0, 0],
-    [0, 0, 0, 0, 0, 0, 0, 0, 0, 0],
-    [0, 0, 0, 0, 0, 0, 0, 0, 0, 0],
-    [0, 0, 0, 0, 0, 0, 0, 0, 0, 0],
-    [0, 0, 0, 0, 0, 0, 0, 0, 0, 0],
-    [0, 0, 0, 0, 0, 0, 0, 0, 0, 0],
-    [0, 0, 0, 0, 0, 0, 0, 0, 0, 0],
-    [0, 0, 0, 0, 0, 0, 0, 0, 0, 0],
-    [0, 0, 0, 0, 0, 0, 0, 0, 0, 0]
-  ]
-  for row in [0, 1, 2, 3, 4, 5, 6, 7, 8, 9] do
-    for col in [0, 1, 2, 3, 4, 5, 6, 7, 8, 9] do
+  res = []
+  for row in line($length) do
+    res_row = []
+    for col in line($length) do
       alive = $cells[row][col] == 1
       living_neighbors = count_neighbors(row, col)
       ln3 = living_neighbors == 3
       alive_ln2 = alive && living_neighbors == 2
       res_alive = ln3 || alive_ln2
       if res_alive
-        res[row][col] = 1
+        res_row.push(1)
       else
-        res[row][col] = 0
+        res_row.push(0)
       end
     end
+  res.push(res_row)
   end
   $cells = res
 end
+
+$length = 10
+$cells = grid()

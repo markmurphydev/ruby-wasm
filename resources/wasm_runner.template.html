@@ -6,11 +6,18 @@ Strategy from:
 https://stackoverflow.com/questions/52582367/a-single-file-webassembly-html-demo
 -->
 <script>
+    const imports = {
+        i64: { toRef: (n) => n },
+        arr: {
+            new: () => [],
+            push: (arr, x) => arr.push(x)
+        },
+    }
     function compile_run_wasm() {
         const wasm_base64 = "%{wasm_base64}";
         const wasm_buffer = Uint8Array.from(atob(wasm_base64), c => c.charCodeAt(0)).buffer;
         WebAssembly.compile(wasm_buffer).then(wasm => {
-            const wasm_instance = new WebAssembly.Instance(wasm);
+            const wasm_instance = new WebAssembly.Instance(wasm, imports);
             const output = wasm_instance.exports["__ruby_top_level_function"]();
             console.log(output);
         });
