@@ -5,11 +5,38 @@
     <title>Ruby-Wasm</title>
 </head>
 <body>
-    <button onclick="step()">step</button>
-    <pre id="cells"></pre>
+    <button class="button" onclick="step()">Step</button>
+    <button class="button" id="timer" onclick="startPause()">Start</button>
+    <pre class="unselectable" id="cells"></pre>
 </body>
+<style>
+    .unselectable {
+        /*
+        Attribution: From MDN `user-select` page:
+            https://developer.mozilla.org/en-US/docs/Web/CSS/user-select
+         */
+        -webkit-user-select: none; /* Safari */
+        user-select: none;
+    }
+    .button {
+        cursor: pointer;
+    }
+</style>
 <script>
     let wasm = null;
+    let timer = null;
+
+    const startPause = () => {
+        if (timer === null) {
+            step();
+            timer = setInterval(step, 700);
+            document.getElementById("timer").innerText = "Pause"
+        } else {
+            clearInterval(timer);
+            timer = null;
+            document.getElementById("timer").innerText = "Start"
+        }
+    }
 
     const showCells = () => {
         let cells = wasm.instance.exports.get_cells();
@@ -18,6 +45,7 @@
             row.forEach((cell, colIdx) => {
                 let cellRes = document.createElement("span")
                 cellRes.setAttribute("onclick", `toggleCell(${rowIdx}, ${colIdx})`);
+                cellRes.setAttribute("style", "cursor: pointer");
                 cellRes.innerText = cell === 1n ? "X " : "_ ";
                 res.push(cellRes);
             })
