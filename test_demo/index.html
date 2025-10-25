@@ -5,6 +5,9 @@
     <title>Ruby-Wasm</title>
 </head>
 <body>
+    <form id="update_length">
+        <label>Grid length: <input id="length" type="number" min="0" max="30" value="15"/></label>
+    </form>
     <button class="button" onclick="step()">Step</button>
     <button class="button" id="timer" onclick="startPause()">Start</button>
     <pre class="unselectable" id="cells"></pre>
@@ -38,6 +41,11 @@
         }
     }
 
+    const updateLength = () => {
+        let length = document.getElementById("length").value;
+        wasm.instance.exports.update_length(length);
+        showCells();
+    }
 
     const showCells = () => {
         let cells = wasm.instance.exports.get_cells();
@@ -73,6 +81,11 @@
             push: (arr, x) => arr.push(x)
         },
     }
+
+    document.getElementById("update_length").addEventListener("submit", (event) => {
+        event.preventDefault();
+        updateLength();
+    })
 
     addEventListener("load", () => {
         WebAssembly.instantiateStreaming(fetch("ruby.wasm"), imports).then(

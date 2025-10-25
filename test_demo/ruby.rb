@@ -28,7 +28,7 @@ def grid()
   grid
 end
 
-def reset_cells(length)
+def update_length(length)
   $length = length
   $cells = grid()
 end
@@ -94,5 +94,5 @@ def step()
   $cells = res
 end
 
-$length = 20
+$length = 15
 $cells = grid()
