@@ -56,7 +56,6 @@
                 cellRes.setAttribute("onclick", `toggleCell(${rowIdx}, ${colIdx})`);
                 cellRes.setAttribute("style", "cursor: pointer");
                 cellRes.innerText = cell === 1n ? "X " : "_ ";
-                // cellRes.innerText = `${cell} `;
                 res.push(cellRes);
             })
             res.push("\n");
